@@ -16,6 +16,8 @@ Personal skills organized by agent runtime.
 | [claude-cookbook](claude/claude-cookbook/SKILL.md) | Find Anthropic Claude Cookbook recipes for a topic. |
 | [openai-cookbook](claude/openai-cookbook/SKILL.md) | Find OpenAI Cookbook examples for a topic. |
 | [osiri](claude/osiri/SKILL.md) | Technical reviews of code, designs, and PRs, plus peer audits of reports, claims, evidence, and figures. |
+| [ds](claude/ds/SKILL.md) ([Codex](codex/ds/SKILL.md)) | 저장소 아키텍처와 근거를 대조하는 read-only 설계 기획. |
+| [problem-modeling](claude/problem-modeling/SKILL.md) ([Codex](codex/problem-modeling/SKILL.md)) | 해법 선택 전 문제의 입력·출력·경계 사례와 평가 기준 정의. |
 | [rv](claude/rv/SKILL.md) ([Codex](codex/rv/SKILL.md)) | Adversarial code, design, and PR review with evidence and follow-up findings. |
 | [pov](claude/pov/SKILL.md) ([Codex](codex/pov/SKILL.md)) | 제품과 관련 기술을 조사하고 일곱 전문가 관점의 의견, 근거와 이견을 종합한다. |
 | [teqr](claude/teqr/SKILL.md) ([Codex](codex/teqr/SKILL.md)) | Write and revise technical reports, runbooks, experiment notes, and test or benchmark plans. |
