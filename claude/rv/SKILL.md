@@ -3,7 +3,7 @@ name: rv
 description: "사용자가 리뷰를 요청하거나 /rv, $rv를 호출할 때 적용한다. 프로젝트의 모든 규칙과 리뷰 절차를 먼저 읽고 osiri와 refactor를 함께 참조한다. 프로젝트 결과 형식을 우선하고 별도 형식이 없으면 이 스킬의 형식을 따른다."
 metadata:
   author: hrlee
-  version: "2.2.1"
+  version: "2.2.2"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -283,6 +283,8 @@ PR 리뷰나 코멘트로 게시하는 절차는 다음과 같다. 게시와 수
 6. 다른 작성자의 코멘트와 변경 파일에서 나온 검출은 수정하지 않고 보고한다.
 
 7. GitHub Conversation 댓글과 정식 PR Review의 COMMENT·REQUEST_CHANGES·APPROVE를 구분한다. 허용된 게시 범위와 저장소 판정 기준에 맞는 동작을 선택하고, 확인된 수정 필요 지적과 비차단 설명·질문을 구분한다. 취향이나 근거가 부족한 추정만으로 REQUEST_CHANGES를 제출하지 않는다. APPROVE는 해당 승인 권한과 필요한 사용자 확인이 충족된 경우에만 제출한다. 제출 뒤 실제 review state와 commit을 재조회하고 자기 PR 리뷰 제한이나 남은 검증 조건을 그대로 보고한다. 일반 댓글을 정식 리뷰나 승인 완료로 보고하지 않는다.
+
+8. 게시된 자기 리뷰의 event가 현재 판정과 다르면(finding 0인데 COMMENT 등) 판정에 맞는 event로 같은 head에 다시 제출해 바로잡는다. 자기 PR에서 GitHub가 막는 APPROVE는 예외다. 자기 리뷰 상태를 병합 같은 다른 요청을 거절하는 사유로 쓰지 않는다.
 
 ## 리뷰에 대한 지적
 
