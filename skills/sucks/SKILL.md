@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.6.0"
+  version: "2.7.0"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -29,8 +29,7 @@ Apply to all prose written in Korean.
 - Issues, PR bodies, commit message bodies
 - Slide bodies
 - Code comments and docstrings
-
-Do not apply to conversational replies sent to the user. Replies follow the plain-style rules of the global CLAUDE.md.
+- Conversational replies and reports sent to the user, as the global instructions require
 
 ## Two failure modes
 
@@ -140,6 +139,11 @@ When an adnominal clause grows long, split the sentence. Do not nest it before t
 
 - 나쁜 예: `파트 이름을 정규화하는 이유가 있습니다. 스크립트가 생성한 덱은...`
 - 좋은 예: `decomp는 기본적으로 파트 이름을 정규화합니다. 스크립트가 생성한 덱은...`
+
+**Do not write symbols in place of sentences.** Arrows, verbless fragments, and abbreviations make the reader decode instead of read. Write whole sentences with their subject and predicate, and spell out what an arrow means. Arrows inside a diagram or code block are not prose and are out of scope.
+
+- 나쁜 예: `날짜 오류 → exit 2, 쓰기 없음`
+- 좋은 예: `파서는 잘못된 날짜를 거부하고 종료 코드 2로 끝나며 아무것도 쓰지 않는다`
 
 ## Verbs
 
@@ -265,6 +269,11 @@ Introduction comes with three conditions.
 
 **A stated fact must connect to the claim by causality.** Even a true fact, placed in a paragraph where it explains nothing, keeps the reader from moving on. That a file is a zip is not why version control is hard; it is why it can be unzipped.
 
+**A sentence that could appear unchanged in another project's documents says nothing about this one.** Ask what the sentence tells the reader to do or know, and write that as a mechanism, a number, or a concrete instruction. If it cannot be restated that way, delete it.
+
+- 나쁜 예: `확장 가능하고 유지보수가 쉬운 구조입니다`
+- 좋은 예: `저장 backend를 바꿀 때 교체하는 파일은 질의 파일 하나다`
+
 **Do not use intensifying adverbs.** Words like `완전히`, `전혀`, `매우`, `아주`, `훨씬`, `크게` claim a large degree without measuring it. If the degree matters, write the measurement; if not, delete the adverb. Deleting it does not change whether the sentence is true.
 
 - 나쁜 예: `기존 주장을 완전히 뒤집었다`, `응답이 훨씬 빨라졌다`
@@ -346,31 +355,33 @@ After writing prose, check each section and paragraph.
 11. Is subject, object, predicate order kept? Are adnominal clauses nested before the subject?
 12. Is there an exclamation mark or question mark in the body?
 13. Do two sentences point to the same fact? Merge them.
+14. Is there an arrow, symbol, or abbreviation standing in for a sentence outside diagrams and code? Write the whole sentence.
 
 ### Verbs
 
-14. Did you check for each verb whether a corresponding technical predicate exists?
-15. Does the chosen word fit the meaning in that sentence?
+15. Did you check for each verb whether a corresponding technical predicate exists?
+16. Does the chosen word fit the meaning in that sentence?
 
 ### Words
 
-16. Is there a place where a domain term was replaced with another word?
-17. Is there an English technical term replaced with Korean or translated literally? Did you add a Korean name in parentheses after an English term?
-18. Is each noun used a word that exists in code or settings? If not, it is made up.
-19. Is there a noun used without introduction? Does the introducing sentence come before the context? Does one everyday word point to different concepts in the code together?
-20. Does one noun point to different things two or more times in the document? `자리`, `부분`, `것`, `내용`, `방식` especially.
-21. Did you join words with overlapping meanings?
-22. Is there a coinage made with `재-`, `-화`, or `-성`? Check that it is an existing word.
-23. Is there a place that uses `~` in a numeric range?
+17. Is there a place where a domain term was replaced with another word?
+18. Is there an English technical term replaced with Korean or translated literally? Did you add a Korean name in parentheses after an English term?
+19. Is each noun used a word that exists in code or settings? If not, it is made up.
+20. Is there a noun used without introduction? Does the introducing sentence come before the context? Does one everyday word point to different concepts in the code together?
+21. Does one noun point to different things two or more times in the document? `자리`, `부분`, `것`, `내용`, `방식` especially.
+22. Did you join words with overlapping meanings?
+23. Is there a coinage made with `재-`, `-화`, or `-성`? Check that it is an existing word.
+24. Is there a place that uses `~` in a numeric range?
 
 ### Information
 
-24. Does each stated fact connect by causality to the claims right before and after it?
-25. Is there an intensifying adverb? Replace it with a measurement or delete it.
-26. Is there a sentence that became a broader claim because a qualifier was dropped?
-27. If a limitation was written, does it answer all four questions?
-28. Can the content of a deleted sentence be obtained from code or other documents?
+25. Does each stated fact connect by causality to the claims right before and after it?
+26. Is there an intensifying adverb? Replace it with a measurement or delete it.
+27. Is there a sentence that became a broader claim because a qualifier was dropped?
+28. If a limitation was written, does it answer all four questions?
+29. Can the content of a deleted sentence be obtained from code or other documents?
+30. Could a sentence appear unchanged in another project's documents? Replace it with a mechanism, number, or instruction, or delete it.
 
 ### Head sentences
 
-29. Is the head sentence a list of components or a list of callers?
+31. Is the head sentence a list of components or a list of callers?
