@@ -1,80 +1,80 @@
 ---
 name: tdd-is-dead
-description: 코드 작업 순서. 범위와 의도를 먼저 파악하고, 목표 테스트를 작성하고, 기존 의도를 존중하며 구현하고, 스스로 재검토한 뒤 최소 테스트만 실행하고, 마지막에 전체 테스트나 PR CI로 검증한다. TDD식 작성-실행-수정 반복을 금지한다. 저장소 밖에서 기능 PoC를 만들고 /ds로 이식 설계를 거쳐 제품 코드에 반영하는 경로도 다룬다. 코드 구현, 버그 수정, 테스트 작성, PoC 실험, PoC의 제품 이식을 시작할 때와 사용자가 /tdd-is-dead 를 호출할 때 사용한다.
+description: Coding work order. Understand scope and intent first, write target tests, implement while respecting existing intent, self-review, run only the minimal tests, and verify last with the full suite or PR CI. Bans the TDD-style write-run-fix loop. Also covers building a feature PoC outside the repository and porting it into product code via a /ds port design. Use when starting code implementation, bug fixes, test writing, PoC experiments, or porting a PoC into the product, and when the user calls /tdd-is-dead.
 ---
 
 # tdd-is-dead
 
-TDD를 하지 않는다. 테스트는 작성하되, 코드의 맥락을 이해하지 않은 채 테스트를 대충 작성하고 실행과 수정을 반복하는 방식은 시간 낭비이므로 금지한다. 테스트 실행은 이해를 대신하지 않고, 이해한 내용을 확인하는 수단이다.
+Do not do TDD. Write tests, but writing tests carelessly without understanding the code's context and then looping on run and fix is a waste of time and is prohibited. Running tests does not replace understanding; it is a means to confirm what you understood.
 
-전역 지침(`AGENTS.md`)의 네 단계(의도 확정, 구현 확정, 최적화, 테스트 루프)와 사용자의 직접 지시가 이 스킬보다 우선한다. 이 스킬은 그 네 단계의 세부 절차다.
+The four steps of the global instructions (`AGENTS.md`) (fix the intent, fix the implementation, optimize, test loop) and the user's direct instructions take precedence over this skill. This skill is the detailed procedure for those four steps.
 
-## 조사 선행
+## Research first
 
-작업 계획은 공유 지침의 연구 원칙대로 문제를 정의하고 알려진 해법을 조사한 뒤에 세운다. 근거로 쓰는 자료의 기준도 공유 지침을 따른다. 이 스킬에서 덧붙이는 것은 다음 하나다.
+Make the work plan after defining the problem and surveying known solutions, following the research principle of the shared instructions. The standard for material used as evidence also follows the shared instructions. This skill adds one thing.
 
-1. 계획의 각 단계가 끝나면 스스로 `/zoom-out` 을 호출한다. 전체 목표, 사용자 지시 원문, 남은 단계와 대조해 지금 작업이 한 부분 문제에 매몰되지 않았는지 확인하고 다음 단계를 정한다.
+1. When each step of the plan ends, call `/zoom-out` yourself. Check against the overall goal, the user's original instruction, and the remaining steps that the current work is not sunk into one subproblem, then decide the next step.
 
-## 경로 선택
+## Choosing a path
 
-작업을 시작할 때 두 경로 중 하나를 고른다.
+At the start of the work, choose one of two paths.
 
-1. 직접 작업 경로. 목표 동작을 코드와 단위 시험만으로 판정할 수 있는 작업이다. 결함 수정, 계약이 정해진 기능 추가, 리팩토링이 여기에 속한다.
-2. PoC 선행 경로. 해법의 유망성을 실행해 보기 전에는 판정할 수 없는 작업이다. 모델 출력 품질에 좌우되는 파이프라인, 여러 설계 대안 중 하나를 골라야 하는 기능, 사용자가 PoC나 외부 실험을 지시한 작업이 여기에 속한다. 이 경로는 PoC 단계와 이식 단계를 거친 뒤 직접 작업 경로의 검증으로 끝난다.
+1. Direct path. Work whose target behavior can be judged by code and unit tests alone. Defect fixes, feature additions with a fixed contract, and refactoring belong here.
+2. PoC-first path. Work whose promise cannot be judged before running the solution. Pipelines that depend on model output quality, features that must choose one of several design alternatives, and work where the user ordered a PoC or external experiment belong here. This path goes through a PoC stage and a port stage, then ends with the verification of the direct path.
 
-## 공통 기준
+## Common criteria
 
-두 경로의 구현에 모두 적용한다.
+Apply to the implementation on both paths.
 
-1. 계산 복잡도. 최악 계산 복잡도는 입력 크기에 대해 O(n) 이하다. 경로마다 입력 크기를 기호로 적어 확인한다. 중첩 루프, 상관 subquery, 반복마다 전체 후보를 다시 평가하는 greedy, 정렬(O(n log n))도 초과로 보고, 소비자가 순서를 요구하지 않으면 정렬을 뺀다. SQL은 플래너가 고를 수 있는 나쁜 계획까지 질의 구조로 막고 입력 크기를 배로 늘린 측정으로 선형을 확인한다. 위임 지시서에도 이 조건을 적는다.
-2. 모델 호출. 모델 호출 수는 입력 크기가 아니라 출력 공간이나 변경분에 묶는다. 판정이 끝난 것과 바뀌지 않은 것은 다시 묻지 않는다. 계산 복잡도와 호출 수는 따로 보고한다. 모델 호출은 한 번이 T_llm이므로 선형이어도 느리다.
-3. 안티패턴 정리. 구현 커밋이 모이면 측정과 `/rv` 전에 구현하지 않은 작업자에게 PR diff 전체(`origin/main..HEAD`)를 안티패턴, 유지보수성, 단순화 기준으로 정리하게 하고, 동작은 보존하게 한다. 지시서에 이 기준을 적는다.
+1. Computational complexity. Worst-case complexity is at most O(n) in the input size. Write the input size as a symbol for each path to check it. Nested loops, correlated subqueries, greedy algorithms that re-evaluate all candidates every iteration, and sorting (O(n log n)) also count as exceeding it; if the consumer does not require order, remove the sort. For SQL, block even the bad plans the planner could choose through the query structure, and confirm linearity by measuring with the input size doubled. Write this condition into delegation briefs too.
+2. Model calls. Bind the number of model calls to the output space or the changed delta, not the input size. Do not ask again about what has already been judged or has not changed. Report computational complexity and call count separately. One model call costs T_llm, so it is slow even if linear.
+3. Anti-pattern cleanup. Once implementation commits accumulate, before measurement and `/rv`, have a worker who did not implement it clean up the whole PR diff (`origin/main..HEAD`) by anti-pattern, maintainability, and simplification criteria while preserving behavior. Write these criteria into the brief.
 
-## 직접 작업 경로
+## Direct path
 
-1. 의도 확정. 이슈, 요구, 사용자 결정, 기존 코드와 커밋이 해결하려는 문제를 읽고 작업 범위, 목표 동작, 완료 조건을 정한다. 의도가 불분명하면 구현 전에 사용자에게 확인한다.
-2. 범위 확정. 바꾸는 함수, 열, 테이블, 질의 이름을 저장소 전체에서 LSP나 Serena로 검색해 호출자와 쓰기 경로를 나열한다. 다른 백엔드 구현과 시험용 fake도 목록에 넣고, 경로마다 바꿀지와 그 이유를 적는다. fake가 실제 구현과 같은 형태를 반환하는지 대조한다.
-3. 목표 테스트 작성. 합의한 동작을 검증하는 테스트를 작성한다. 구현 세부를 단언하지 않는다.
-4. 구현. 기존 구조, 명명, 관례와 설계 판단을 유지하고 범위 밖의 코드는 고치지 않는다. 다른 구현의 동작을 옮길 때는 그 동작이 어떤 제약 때문에 있었는지 확인하고, 기준 구현의 계산 위치(DB 질의, 코드)를 그대로 따른다.
-5. 재검토. 실행 전에 diff를 다시 읽고 경계 조건, 오류 경로, 빠진 호출자, 타입과 계약 위반을 점검한다. diff가 2의 목록을 모두 덮는지 대조한다.
-6. 최적화. 확정한 동작을 유지하면서 불필요한 처리, 중복, DB 왕복, 모델 호출을 줄인다. 복잡도와 호출 수는 `공통 기준`을 따른다. 동작이나 구조의 의도가 바뀌면 1이나 4로 돌아간다.
-7. 최소 테스트 실행. 아래 시험 실행 규칙에 따라 바꾼 이름에 닿는 시험만 돌리고, 실행한 시험과 그 범위를 고른 근거를 기록한다.
-8. 실패 시 복귀. 실패 원인이 의도, 범위, 테스트, 구현 중 어디에 있는지 판단하고 해당 단계부터 다시 수행한다. 원인을 이해하지 않은 채 코드나 테스트를 고쳐 다시 실행하지 않는다.
-9. 전체 검증. 전체 테스트 또는 PR CI로 검증한다. 전체 스위트는 사용자가 요청할 때만 직접 돌리고, 실행 시간이 길면 명령을 사용자에게 전달한다. 설계 판단이나 위험이 남아 있으면 사용자에게 리뷰를 요청한다.
+1. Fix the intent. Read the problem that the issue, requirements, user decisions, and existing code and commits try to solve, and decide the work scope, target behavior, and completion criteria. If the intent is unclear, confirm with the user before implementing.
+2. Fix the scope. Search the whole repository with LSP or Serena for the names of the functions, columns, tables, and queries being changed, and list callers and write paths. Include other backend implementations and test fakes in the list, and record for each path whether to change it and why. Check that fakes return the same shape as the real implementation.
+3. Write target tests. Write tests that verify the agreed behavior. Do not assert implementation details.
+4. Implement. Keep the existing structure, naming, conventions, and design judgments, and do not edit code outside the scope. When porting another implementation's behavior, confirm what constraint that behavior existed for, and follow the reference implementation's place of computation (DB query, code) as is.
+5. Review again. Before running, reread the diff and check boundary conditions, error paths, missed callers, and type and contract violations. Check that the diff covers the whole list from 2.
+6. Optimize. Keeping the settled behavior, reduce unnecessary processing, duplication, DB round trips, and model calls. Complexity and call count follow `Common criteria`. If the intent of behavior or structure changes, go back to 1 or 4.
+7. Run the minimal tests. Following the test-running rules below, run only the tests that touch the changed names, and record the tests run and the grounds for choosing that scope.
+8. Return on failure. Judge whether the cause of failure lies in the intent, scope, tests, or implementation, and redo from that step. Do not edit code or tests and rerun without understanding the cause.
+9. Full verification. Verify with the full suite or PR CI. Run the full suite yourself only when the user asks, and if it takes long, hand the command to the user. If design judgments or risks remain, ask the user for a review.
 
-## PoC 선행 경로
+## PoC-first path
 
-### PoC 단계
+### PoC stage
 
-1. 문제 정의. 해법을 고르기 전에 문제를 정의한다(`problem-modeling`). 진행 순서는 정답 확정, 구조 확정, 개선 반복이다. 정답지와 품질 기준을 먼저 정하고, 파이프라인 구조를 정한 뒤, 프롬프트와 매개변수를 다듬는다. 기능 결함을 먼저 고쳐 코드 구조를 확정하고, 품질 개선은 프롬프트와 최소한의 파이프라인 수정으로 한다.
-2. 실험 위치. PoC는 시간 상한을 두고 끝낸다. 실험 코드는 저장소 밖의 실험 디렉터리에 쓰고 제품 파일을 고치지 않는다. 제품이 만드는 데이터가 입력이면 실제 제품으로 적재해 만들고, PoC는 그 DB를 읽기만 한다. 단계를 사용자가 정한 단위보다 더 잘게 나누지 않고, 각 단계를 튜닝하는 실험으로 유망성을 본다. PoC 지시서마다 입력 출처 대조 표를 둔다. 모델과 판정에 들어가는 필드마다 PoC 값의 출처, 비교 기준 제품 commit에서 같은 필드를 채우는 코드 위치(`파일:줄`)와 그 값(빈 값 포함)을 적는다. 다르면 그 차이를 조건으로 명시하거나 입력을 제품 경로로 다시 만든다. 레코드 형식이 같다는 시험은 이 대조를 대신하지 않는다. 제품 계약을 바꾸거나 되돌린 commit 뒤에는 그 전에 만든 고정 입력과 라벨을 쓰는 실험을 모두 나열해 다시 검증한다. 판정 신호(유사도, 후보 채널)는 "무엇이 같은 대상을 정하는가"에서 고르고, 작은 표본의 수치나 기존 코드의 관성을 근거로 고르지 않는다.
-3. 대안 비교. 조사로 확인한 알려진 해법에서 안을 여럿 세워 같은 입력으로 비교한다. 각 안에 출처를 붙인다.
-4. 설계 조건. 모든 안이 다음 조건을 만족하는지 본다.
-  4.1 `공통 기준`의 복잡도와 호출 수 상한을 만족한다.
-  4.2 모델 호출은 서로 기다리지 않는 병렬 묶음으로 보낸다. 전체 시간은 모델 응답 한 번의 시간(T_llm)의 배수로 보고하며, T_llm 이하가 목표다.
-  4.3 코드 구조는 이식할 제품의 계층과 계약에 옮겨 놓을 수 있어야 한다.
-5. 평가. 산출물을 사례별로 읽는 정성평가를 결론의 근거로 삼고 수치는 보조로 쓴다. 실패마다 원인이 파이프라인 구조(단계 구성, 순서, 데이터 흐름, 단계에 맡긴 판정)인지 프롬프트인지 그 호출의 실제 입력으로 가른다.
-6. 고정과 보고. 더 개선할 수 없다고 판단하면 PoC를 그 상태로 고정하고(코드, 입력, 결과, 남은 결함 목록) 사용자에게 보고한 뒤 이식으로 넘어간다.
+1. Problem definition. Define the problem before choosing a solution (`problem-modeling`). The order of progress is: settle the ground truth, settle the structure, iterate improvements. Set the answer key and quality criteria first, decide the pipeline structure, then refine prompts and parameters. Fix functional defects first to settle the code structure, and do quality improvement with prompts and minimal pipeline changes.
+2. Experiment location. End the PoC within a time cap. Write experiment code in an experiment directory outside the repository and do not edit product files. If data the product produces is the input, produce it by actually loading it with the product, and the PoC only reads that DB. Do not split stages finer than the unit the user set, and judge promise by experiments that tune each stage. Every PoC brief carries an input-source cross-check table. For each field that goes into the model and the judgment, write the source of the PoC value, the code location (`file:line`) in the comparison-baseline product commit that fills the same field, and its value (including empty). If they differ, state the difference as a condition or rebuild the input through the product path. A test that the record format is the same does not replace this cross-check. After a commit that changes or reverts a product contract, list every experiment that uses fixed inputs and labels made before it and verify them again. Choose judgment signals (similarity, candidate channels) from "what determines the same target", not from small-sample numbers or the inertia of existing code.
+3. Compare alternatives. Build several options from the known solutions confirmed in research and compare them on the same input. Attach a source to each option.
+4. Design conditions. Check that every option meets the following conditions.
+  4.1 It meets the complexity and call-count caps of `Common criteria`.
+  4.2 Model calls go out as parallel batches that do not wait on each other. Report total time as a multiple of one model response time (T_llm), with T_llm or less as the goal.
+  4.3 The code structure can be moved onto the layers and contracts of the product being ported to.
+5. Evaluation. Base conclusions on qualitative evaluation that reads outputs case by case, and use numbers as support. For each failure, separate with that call's actual input whether the cause is the pipeline structure (stage composition, order, data flow, judgments assigned to stages) or the prompt.
+6. Freeze and report. When you judge it cannot be improved further, freeze the PoC in that state (code, input, results, remaining defect list), report to the user, then move to the port.
 
-### 이식 단계
+### Port stage
 
-1. 이식 설계. `/ds`로 PoC의 판정 구조가 제품 아키텍처의 어느 구성요소에 어떤 책임으로 놓여야 하는지 정한다. `ds`는 파일을 만들지 않으므로, 그 결과를 실험 디렉터리의 이식 설계 문서로 남긴 뒤 구현을 시작한다. 문서에는 기준 커밋, 목표, 완료 조건, 호환성과 범위에 관한 결정, PoC 평가에서 찾은 결함과 그 수정 위치를 적는다.
-2. 이식 구현. 기준 브랜치에서 worktree를 만들고 직접 작업 경로의 1-6을 따른다. PoC 코드를 그대로 붙이지 않고, 판정 구조를 제품의 계약과 관례에 맞춰 옮긴다. PoC에서 찾은 결함은 이식 중에 고친다. PoC의 임시 우회나 비표준 구현은 제품에 옮기지 않고 표준 구현으로 바꾼다. 저장 질의를 더하면 모든 백엔드와 시험용 fake가 같은 의미를 반환하는지 하나의 매개변수화 시험으로 확인한다. 기준 구현이 DB 안에서 계산하면 그 SQL을 옮기고 Python fallback을 옮기지 않는다. 계산을 DB에서 Python으로 옮기려면 사용자 승인이 필요하다. 공유 helper의 트랜잭션이나 commit 방식을 바꾸면 호출자를 모두 나열해 호출자마다 기준 구현과 대조하고, 반드시 롤백돼야 하는 경로의 음성 시험을 둔다. 두 백엔드의 기능 동등성은 각자의 시험 파일이 아니라 두 구현에 매개변수화한 시험 함수 하나로 보장하며, 기록과 재생으로 동등성을 보는 하네스의 재생 cache miss는 줄일 비용이 아니라 두 구현이 다른 요청을 보냈다는 결함 신호다.
-3. draft PR. 이식 구현이 끝나면 PR을 draft(미확정)로 열고 CI를 통과시킨다. 측정과 `/rv` 전에 `공통 기준`의 안티패턴 정리를 마친다.
-4. 기능 검증. 모델 입력 구성, 후보 제한, 게이트, 저장 전 검증처럼 모델 출력을 통제하는 코드는 기능이다. 기능은 가짜 모델로 입력과 저장 결과를 단언하는 단위 시험으로 확인하고 끝낸다. 적재 측정으로 기능을 확인하지 않는다.
-5. 품질 검증. draft 상태에서 기능 결함을 모두 닫은 뒤 기준 브랜치(main)와 이식 브랜치를 한 번 비교한다. 두 조건은 코드만 다르고 새 빈 DB, 같은 입력, 같은 모델을 쓴다. 측정은 실제 제품 경로 전체로 하고, 속도와 품질을 함께 본다. 이식은 모든 지표가 기준 이상일 때 끝난다. 나빠진 지표는 trade-off가 아니라 결함이며, 원인 단계로 돌아가 고친다.
-6. 리뷰와 병합. 구현하지 않은 새 리뷰어에게 `/rv`로 독립 리뷰를 맡기고, 지적을 반영해 CI 통과를 확인한 뒤 PR을 ready(확정, 미검증)로 전환한다. 이후 리뷰 지적이 없어질 때까지 고치고 재리뷰를 요청한 뒤 병합한다. 사용자가 지시하지 않았으면 PR을 나누지 않는다.
+1. Port design. Use `/ds` to decide in which component of the product architecture, with what responsibility, the PoC's judgment structure should sit. `ds` creates no files, so record its result as a port design document in the experiment directory before starting implementation. The document records the base commit, goal, completion criteria, decisions on compatibility and scope, and the defects found in the PoC evaluation with their fix locations.
+2. Port implementation. Create a worktree from the base branch and follow 1-6 of the direct path. Do not paste PoC code as is; move the judgment structure to fit the product's contracts and conventions. Fix defects found in the PoC during the port. Do not carry the PoC's temporary workarounds or non-standard implementations into the product; replace them with standard implementations. When adding a storage query, confirm with one parameterized test that every backend and test fake returns the same meaning. If the reference implementation computes inside the DB, port that SQL and do not port a Python fallback. Moving computation from the DB to Python requires user approval. If you change the transaction or commit behavior of a shared helper, list every caller and compare each against the reference implementation, and keep a negative test for paths that must roll back. Guarantee functional equivalence of two backends with one test function parameterized over both implementations, not with each one's own test file; a replay cache miss in a harness that checks equivalence by record and replay is not a cost to reduce but a defect signal that the two implementations sent different requests.
+3. draft PR. When the port implementation is done, open the PR as draft (unsettled) and get CI passing. Finish the anti-pattern cleanup of `Common criteria` before measurement and `/rv`.
+4. Functional verification. Code that controls model output, such as model input composition, candidate limits, gates, and pre-save validation, is functionality. Confirm functionality with unit tests that assert inputs and saved results using a fake model, and stop there. Do not confirm functionality with load measurements.
+5. Quality verification. After closing all functional defects in draft state, compare the base branch (main) and the port branch once. The two conditions differ only in code and use a new empty DB, the same input, and the same model. Measure through the whole real product path and look at speed and quality together. The port ends when every metric is at or above the baseline. A worsened metric is not a trade-off but a defect; go back to the step that caused it and fix it.
+6. Review and merge. Give an independent review via `/rv` to a new reviewer who did not implement it, address the comments, confirm CI passes, then switch the PR to ready (settled, unverified). Then fix until no review comments remain, request re-review, and merge. Do not split the PR unless the user instructed it.
 
-## 시험 실행 규칙
+## Test-running rules
 
-시험 실행은 우선순위가 가장 낮다. 측정이나 기능 작업을 시험 때문에 기다리게 하지 않는다.
+Running tests has the lowest priority. Do not make measurement or feature work wait for tests.
 
-1. 작업 단위가 끝났을 때 바꾼 이름에 직접 닿는 시험 파일만 한 번 돌린다. SQL이나 Cypher를 바꿨으면 그 질의의 통합 시험을 더한다. 수정 뒤에는 실패한 시험만 다시 돌린다.
-2. 사용자가 요청하지 않은 전체 스위트를 돌리지 않는다. 작업자에게 시험을 맡길 때도 "바꾼 이름에 닿는 시험 파일만"이라고 지시서에 적는다.
-3. 테스트를 통과시키려고 기대값을 바꾸거나, 단언을 넓히거나, 테스트를 건너뛰지 않는다. 기준 커밋에서도 실패하는 시험은 단언을 넓혀 통과시키지 말고 보고한다.
-4. "이 변경이 X를 깨는가" 같은 질문에는 diff와 호출 관계를 읽어 답하고, 긴 실행으로 답을 대신하지 않는다.
-5. 검증은 실패를 가장 빨리 찾는 시험에서 시작해 범위를 넓히고 오래 걸리는 전체 시험을 마지막에 둔다. 순서를 기계적으로 따르지 않고 그 변경에서 가장 먼저 깨질 곳을 보고 정한다. 단계가 실패하면 다음 단계로 가지 않는다.
+1. When a work unit ends, run once only the test files that directly touch the changed names. If you changed SQL or Cypher, add that query's integration test. After a fix, rerun only the failed tests.
+2. Do not run a full suite the user did not request. When handing tests to a worker, write "only the test files that touch the changed names" in the brief.
+3. Do not change expected values, widen assertions, or skip tests to make them pass. Report a test that also fails on the base commit instead of widening its assertion to pass it.
+4. Answer questions like "does this change break X" by reading the diff and call relationships, not by substituting a long run for the answer.
+5. Start verification from the test that finds failure fastest, widen the scope, and put the long full test last. Do not follow the order mechanically; decide by where the change would break first. If a stage fails, do not go to the next stage.
 
-## 보고
+## Report
 
-결과를 보고할 때 실제로 실행한 테스트, 측정, 커밋과 범위를 밝힌다. 실행하지 않은 검증과 실패한 검증을 통과로 계산하지 않는다. PoC 선행 경로에서는 지금 PoC, 이식 구현, draft PR, 기능 검증, 품질 검증, 리뷰 중 어느 단계인지 함께 밝힌다.
+When reporting results, state the tests, measurements, commits, and scope actually run. Do not count unrun or failed verification as passed. On the PoC-first path, also state which stage you are in: PoC, port implementation, draft PR, functional verification, quality verification, or review.
