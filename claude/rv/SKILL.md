@@ -3,7 +3,7 @@ name: rv
 description: "코드, 설계, PR의 적대적 리뷰 절차. 결함이 존재한다고 전제하고 입력 계약으로 범위를 받아 분할 단위마다 검토한 뒤 BLOCKER·MAJOR finding을 독립 검증하고 조립한다. 사용자가 리뷰를 요청하거나 /rv, $rv를 호출할 때 사용한다."
 metadata:
   author: hrlee
-  version: "2.1.0"
+  version: "2.1.1"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -261,9 +261,9 @@ PR 리뷰나 코멘트로 게시하는 절차는 다음과 같다. 게시와 수
 
 7. GitHub Conversation 댓글과 정식 PR Review의 COMMENT·REQUEST_CHANGES·APPROVE를 구분한다. 허용된 게시 범위와 저장소 판정 기준에 맞는 동작을 선택하고, 확인된 수정 필요 지적과 비차단 설명·질문을 구분한다. 취향이나 근거가 부족한 추정만으로 REQUEST_CHANGES를 제출하지 않는다. APPROVE는 해당 승인 권한과 필요한 사용자 확인이 충족된 경우에만 제출한다. 제출 뒤 실제 review state와 commit을 재조회하고 자기 PR 리뷰 제한이나 남은 검증 조건을 그대로 보고한다. 일반 댓글을 정식 리뷰나 승인 완료로 보고하지 않는다.
 
-## 하네스별 실행
+## 에이전트별 실행
 
-rv의 단위 구조를 각 하네스가 매핑하는 방식을 제시한다. rv는 실행 방식을 강제하지 않는다. 하네스의 에이전트 위임 규칙(AGENTS.md 등)이 이 절보다 우선한다.
+rv의 단위 구조를 각 에이전트가 매핑하는 방식을 제시한다. rv는 실행 방식을 강제하지 않는다. 에이전트의 위임 규칙(AGENTS.md 등)이 이 절보다 우선한다.
 
 ### Claude Code
 
