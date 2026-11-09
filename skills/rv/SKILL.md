@@ -1,6 +1,6 @@
 ---
 name: rv
-description: "사용자가 리뷰를 요청하거나 /rv, $rv를 호출할 때 적용한다. 프로젝트의 모든 규칙과 리뷰 절차를 먼저 읽고 osiri와 refactor를 함께 참조한다. 프로젝트 결과 형식을 우선하고 별도 형식이 없으면 이 스킬의 형식을 따른다."
+description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. Prefer the project's result format; if there is none, follow this skill's format."
 metadata:
   author: hrlee
   version: "2.3.0"
@@ -14,323 +14,322 @@ metadata:
 
 # rv
 
-사용자가 리뷰를 요청하거나 `/rv`, `$rv`를 호출한 경우 이 절차를 적용한다. 에이전트는 프로젝트의 모든 규칙을 먼저 정독하고 프로젝트 리뷰 규칙, `osiri`와 `refactor`를 함께 참조한다. `osiri` 참조는 사용자가 허용한 이 리뷰 절차 안에서 수행하며 `teqr`는 직접 호출 없이 적용하지 않는다. 결과 형식은 프로젝트 규칙을 우선한다.
+Apply this procedure when the user asks for a review or calls `/rv` or `$rv`. The agent first reads all project rules closely and consults the project review rules, `osiri`, and `refactor` together. Consulting `osiri` happens inside this review procedure that the user allowed, and `teqr` is not applied without a direct call. The result format prefers the project rules.
 
-결함이 존재한다고 전제하고, 검토 범위의 모든 결함을 찾는다. 동작과 완료 주장을 반박할 입력·실행 순서를 찾고, 결함을 발견하면 같은 원인이 전파되는 경로까지 추적한다. 지적은 발생 조건과 도달 가능한 실행 경로로 입증한다.
+Assume defects exist and find every defect in the review scope. Look for inputs and execution orders that refute the behavior and completion claims, and when you find a defect, trace the paths along which the same cause propagates. Prove each finding with its occurrence condition and a reachable execution path.
 
-이 스킬은 일곱 단위(U0-U6)로 나뉜다. 단일 에이전트가 순차 실행하거나, 작업을 분배하는 에이전트가 단위별로 작업자를 기동한다. 작업을 분배하는 에이전트를 coordinator라고 한다. 각 단위는 입력과 출력이 정의되어 있어 독립 실행이 가능하다. 절은 비용이 적은 검토부터 차례로 둔다.
+This skill is divided into seven units (U0-U6). A single agent runs them in sequence, or an agent that distributes work starts workers per unit. The agent that distributes work is called the coordinator. Each unit has defined inputs and outputs, so it can run independently. Sections are ordered from the cheapest review onward.
 
-## 입력 계약
+## Input contract
 
-호출자가 제공하는 값이다. 빠진 필수 값이 있으면 실행을 중단하고 보고한다. 실행 중 호출자에게 질문하지 않는다.
+Values the caller provides. If a required value is missing, stop and report. Do not ask the caller questions during the run.
 
-| 항목 | 설명 | 필수 |
+| Item | Description | Required |
 |---|---|---|
-| repo | 저장소 경로 또는 GitHub URL | 예 |
-| target | PR 번호, 브랜치 이름, 파일 경로 목록, 또는 비교 대상 설명 | 예 |
-| head | 검토 대상 commit SHA (git 대상일 때) | 조건부 |
-| merge_base | 비교 기준 commit SHA (git 대상일 때) | 조건부 |
-| prior_ids | 이전 리뷰의 R-ID 목록 (첫 리뷰이면 빈 목록) | 예 |
-| approval_scope | 게시, 수정, DB 실행·모델 실행·벤치마크 실행 각각의 허용 여부 | 아니오 |
-| rule_paths | 프로젝트 규칙 파일 경로 목록 | 아니오 |
-| expert_hints | 영역별 expert type 매핑 힌트 | 아니오 |
+| repo | Repository path or GitHub URL | yes |
+| target | PR number, branch name, list of file paths, or description of the comparison target | yes |
+| head | Commit SHA under review (for git targets) | conditional |
+| merge_base | Comparison base commit SHA (for git targets) | conditional |
+| prior_ids | List of R-IDs from previous reviews (empty for a first review) | yes |
+| approval_scope | Whether posting, editing, DB runs, model runs, and benchmark runs are each allowed | no |
+| rule_paths | List of project rule file paths | no |
+| expert_hints | Mapping hints of expert types per area | no |
 
-head와 merge_base는 target이 PR, 브랜치, 파일 경로처럼 git diff를 생성하는 대상일 때 필수다. 스킬 비교, 문서 리뷰처럼 diff가 없는 대상에는 불필요하다.
+head and merge_base are required when the target produces a git diff, such as a PR, branch, or file paths. They are unnecessary for targets without a diff, such as skill comparisons or document reviews.
 
-approval_scope의 기본값은 모두 불허다. 게시를 허용하지 않으면 결과를 대화로만 보고한다.
+The default of approval_scope is to disallow everything. If posting is not allowed, report the result only in the conversation.
 
-사용자가 `/rv`로 직접 호출하면 에이전트가 현재 저장소와 브랜치에서 head, merge_base, target을 자동으로 채운다. prior_ids는 기존 리뷰 코멘트에서 수집한다.
+When the user calls `/rv` directly, the agent fills head, merge_base, and target automatically from the current repository and branch. prior_ids are collected from existing review comments.
 
-checkout이 없으면 연결된 저장소 도구(GitHub API, gh CLI)로 head SHA에 고정된 파일, diff, 메타데이터를 읽는다.
+Without a checkout, read files, diffs, and metadata pinned to the head SHA through the connected repository tools (GitHub API, gh CLI).
 
-여러 에이전트가 한 저장소에서 fetch하면 `FETCH_HEAD`를 서로 덮어쓰므로, 검토 대상은 SHA나 `git fetch origin <브랜치>:refs/review/<이름>`으로 받는다. 결과 문서의 첫머리에 실제로 검토한 commit SHA를 적는다.
+When several agents fetch in one repository they overwrite each other's `FETCH_HEAD`, so take the review target by SHA or with `git fetch origin <branch>:refs/review/<name>`. Write the commit SHA actually reviewed at the top of the result document.
 
-## Finding 스키마
+## Finding schema
 
-한 행이 한 지적이다.
+One row is one finding.
 
-| 필드 | 값 | 설명 |
+| Field | Value | Description |
 |---|---|---|
-| id | R-nnn | 절 안에서 순번 |
-| severity | BLOCKER, MAJOR, MINOR, NIT | 심각도 |
-| evidence_class | 프로젝트 분류 또는 재현, 관찰, 추론 | 근거 구분 |
-| condition | 문장 | 발생 조건과 결과 |
-| file | 파일:줄 | head의 위치 |
-| action | 문장 | 조치 |
-| propagation | 파일 경로 목록 또는 "확인 완료" | 같은 원인의 전파 위치 |
-| verdict | CONFIRMED, PLAUSIBLE, REJECTED | U4 검증 결과 (BLOCKER·MAJOR만) |
+| id | R-nnn | Sequence number within the section |
+| severity | BLOCKER, MAJOR, MINOR, NIT | Severity |
+| evidence_class | Project classification, or reproduced, observed, inferred | Kind of evidence |
+| condition | Sentence | Occurrence condition and result |
+| file | file:line | Location in head |
+| action | Sentence | Action |
+| propagation | List of file paths or "checked" | Locations where the same cause propagates |
+| verdict | CONFIRMED, PLAUSIBLE, REJECTED | U4 verification result (BLOCKER and MAJOR only) |
 
-evidence_class는 프로젝트의 분류 체계가 있으면 그것을 쓴다. 없으면 세 분류를 기본으로 쓴다: 재현(실행이나 측정으로 확인), 관찰(코드·문서에서 직접 확인), 추론(근거에서 추론하거나 검증되지 않은 가설).
+Use the project's classification for evidence_class if it has one. Otherwise use three classes by default: reproduced (confirmed by running or measuring), observed (confirmed directly in code or documents), inferred (inferred from evidence, or an unverified hypothesis).
 
-MINOR·NIT finding의 verdict는 생산한 에이전트가 자기 검증으로 CONFIRMED 또는 PLAUSIBLE을 설정한다.
+For MINOR and NIT findings, the agent that produced them sets the verdict to CONFIRMED or PLAUSIBLE by self-verification.
 
-## 단위 구조
+## Unit structure
 
 ```
-U0 준비 ─→ U1 코드베이스 검토 ─→ U3 세부 검토 ─→ U4 검증 ─→ U5 전파 점검 ─→ U6 조립·게시
-             ↘                    ↗
-          U2 구조·품질 판단 ──────┘
+U0 prepare ─→ U1 codebase review ─→ U3 detailed review ─→ U4 verify ─→ U5 propagation check ─→ U6 assemble and post
+                 ↘                      ↗
+              U2 structure and quality judgment
 ```
 
-U1과 U2는 병렬 실행이 가능하다. U3는 변경 영역별로 분할해 병렬 실행할 수 있다. U4는 finding을 생산한 에이전트와 다른 에이전트가 수행한다.
+U1 and U2 can run in parallel. U3 can be split per changed area and run in parallel. U4 is performed by an agent other than the one that produced the finding.
 
-### 단위 간 입출력
+### Inputs and outputs between units
 
-| 단위 | 입력 | 출력 |
+| Unit | Input | Output |
 |---|---|---|
-| U0 | 입력 계약 전체 | 검토 범위, 재확인 결과, 참조 규칙, 진입점·공개 인터페이스·데이터 모델 식별, 영역별 분할 제안 |
-| U1 | U0의 검토 범위, 참조 규칙 | findings, U3의 대상 파일 경로 |
-| U2 | U0의 검토 범위, 진입점, 공개 인터페이스·데이터 모델 | 구조 판정, 품질 판정, findings |
-| U3 | U0의 검토 범위와 규칙, U1의 대상 파일 경로, U2의 구조 판정 | findings |
-| U4 | U1-U3의 finding 목록 | 각 finding에 verdict 부여 |
-| U5 | U4에서 CONFIRMED·PLAUSIBLE인 findings | 전파 findings |
-| U6 | 모든 단위의 출력, approval_scope | 리뷰 문서 |
+| U0 | The whole input contract | Review scope, recheck results, reference rules, identification of entry points, public interfaces, and data models, proposed split per area |
+| U1 | U0's review scope and reference rules | findings, target file paths for U3 |
+| U2 | U0's review scope, entry points, public interfaces and data models | Structure verdict, quality verdict, findings |
+| U3 | U0's review scope and rules, U1's target file paths, U2's structure verdict | findings |
+| U4 | The finding lists of U1-U3 | A verdict for each finding |
+| U5 | findings that are CONFIRMED or PLAUSIBLE in U4 | Propagation findings |
+| U6 | The outputs of all units, approval_scope | Review document |
 
-## U0 준비
+## U0 Prepare
 
-대상 head, 비교 기준과 미커밋 변경을 확인한다. 프로젝트의 모든 규칙과 참조 규칙을 정독하고 적용 경로를 대조한다. osiri의 해당 가이드와 refactor를 함께 참조한다.
+Check the target head, the comparison base, and uncommitted changes. Read all project rules and reference rules closely and match their application paths. Consult the relevant osiri guide and refactor together.
 
-기존 리뷰, 응답, 사용자 결정·검증 결과를 현재 코드에 대조한다. prior_ids의 각 지적은 발생 조건과 관련 호출 경로까지 재확인하고, 판정이 달라지면 새 근거와 이유를 남긴다. 지적의 근거로 삼는 사용자 결정은 이후 지시로 취소되거나 대체되지 않았는지 확인한다.
+Compare existing reviews, responses, and user decisions and verification results against the current code. Recheck each finding in prior_ids down to its occurrence condition and related call paths, and when a verdict changes, leave the new evidence and reason. Confirm that a user decision used as grounds for a finding has not been cancelled or replaced by later instructions.
 
-후속 리뷰에서는 같은 head라도 새 응답·질문·반론·본문 변경을 읽고 대응 여부를 판단한다. head 기록은 같은 전체 리뷰의 중복 게시를 막는 용도이며 후속 검토의 생략 근거가 아니다. 기존 R-ID와 리뷰 링크를 연결해 바뀐 근거와 확인 범위만 보고하고, 마지막으로 확인한 댓글·리뷰의 ID와 시각, 본문 변경, 답변 여부를 기록해 같은 요청에 두 번 답하지 않는다. 자신의 리뷰를 복제한 알림은 새 요청으로 취급하지 않는다.
+In a follow-up review, even at the same head, read new responses, questions, rebuttals, and body changes and decide whether to respond. The head record exists to prevent duplicate posting of the same full review and is not grounds for skipping a follow-up review. Link existing R-IDs and review links and report only the changed evidence and checked scope; record the ID and time of the last checked comment or review, body changes, and whether it was answered, so you do not answer the same request twice. Do not treat a notification that duplicates your own review as a new request.
 
-GitHub의 requested_reviewers는 대기 중인 요청 목록이다. 리뷰 제출 뒤 목록에서 빠졌다는 사실만으로 기존 요청의 철회나 후속 작업 종료를 추정하지 않는다. 명시적 취소·담당 변경과 PR 종료는 최신 대화와 상태로 확인한다.
+GitHub's requested_reviewers is the list of pending requests. Do not infer the withdrawal of an existing request or the end of follow-up work solely from removal from the list after a review is submitted. Confirm explicit cancellation, reassignment, and PR closing from the latest conversation and state.
 
-problem-modeling 관점에서 검토한다: 변경이 해결하는 문제의 입력·출력 정의, 경계 사례, 제약, 정확도·비용 지표가 실제 사례와 맞는지 확인한다.
+Review from the problem-modeling perspective: confirm that the input and output definitions of the problem the change solves, its boundary cases, constraints, and accuracy and cost metrics match the real cases.
 
-ds 관점에서 검토한다: 책임·상태 소유·계약이 모든 호출자와 구현체에 대해 정합한지, 현재 구조보다 단순한 대안이 있는지 확인한다.
+Review from the ds perspective: confirm that responsibilities, state ownership, and contracts are consistent across all callers and implementations, and whether there is an alternative simpler than the current structure.
 
-리뷰만 요청받았으면 새 문제 정의·설계 문서, 코드 수정이나 시험 실행을 선행 조건으로 만들지 않는다. 패턴과의 차이나 미측정만으로 버그를 단정하지 않는다.
+If only a review was requested, do not make a new problem definition or design document, code edits, or test runs preconditions. Do not conclude a bug from a difference with a pattern or a lack of measurement alone.
 
-변경의 진입점, 공개 인터페이스, 데이터 모델을 식별한다. `git diff --stat`으로 변경 파일 목록을 확인하고, 변경의 성격(DB, 프롬프트, 동시성, Python 구조 등)에 따라 영역을 분할한다. expert type 매핑을 제안한다.
+Identify the change's entry points, public interfaces, and data models. Check the list of changed files with `git diff --stat`, and split areas by the nature of the change (DB, prompts, concurrency, Python structure, etc.). Propose an expert type mapping.
 
-## U1 코드베이스 검토
+## U1 Codebase review
 
-파일 본문을 읽기 전에 구조 정보만으로 끝내는 단계다. 목록, 이름, import 관계, 규모는 도구 출력(`git diff --stat`, `git ls-files`, 검색, import 계약, LSP 참조)으로 확인하고, 의심스러운 파일만 연다.
+This step ends with structural information only, before reading file bodies. Confirm lists, names, import relationships, and size with tool output (`git diff --stat`, `git ls-files`, search, import contracts, LSP references), and open only suspicious files.
 
-코드 내용과 별개로, 변경이 남기는 코드베이스 자체의 모양을 검토한다. 범위는 diff 줄이 아니라 변경이 닿은 패키지와 그 이웃이며, 변경 전부터 있던 문제라도 변경이 그것에 기대거나 키우면 지적한다. 아래 유형은 동작과 검사 통과 여부와 무관하게 결함으로 지적하고, 지적에는 원인인 책임 배치와 옮길 위치·바꿀 이름을 함께 적는다.
+Separately from code content, review the shape of the codebase the change leaves behind. The scope is not the diff lines but the packages the change touched and their neighbors, and even problems that existed before the change are flagged if the change relies on or grows them. The types below are flagged as defects regardless of behavior and whether checks pass, and each finding states the responsibility placement that causes it and the location to move to or the name to change.
 
-1. import 관계와 `__init__.py`
-  1.1 계층 역전: 아래 계층이 위 계층을 import 한다(프로젝트의 계층 규칙과 import 계약 기준).
-  1.2 공개 경로 우회: 패키지가 공개한 경로 대신 내부 모듈을 직접 import 한다.
-  1.3 `__init__.py` 이상: 내부 구현의 이유 없는 re-export, 같은 심볼의 여러 import 경로, 쓰지 않는 공개 이름, import 시점의 무거운 로딩·부작용, 하위 모듈과 대칭이 아닌 이름.
-  1.4 private 이름 접근: 다른 모듈의 `_name`을 import 하거나 시험이 내부를 단언한다.
-  1.5 순환 회피 흔적: 함수 안 import, `TYPE_CHECKING` 은닉, 지연 import로 순환을 피한다.
-  1.6 검사 우회: import 계약의 ignore 줄이나 `noqa`로 경계 위반을 덮는다.
-  1.7 소유자 중복: 한 개념을 여러 패키지가 정의하고 서로 import 한다.
+1. Import relationships and `__init__.py`
+  1.1 Layer inversion: a lower layer imports an upper layer (by the project's layer rules and import contracts).
+  1.2 Public path bypass: importing an internal module directly instead of the path the package exposes.
+  1.3 `__init__.py` anomalies: unjustified re-exports of internal implementation, several import paths for the same symbol, unused public names, heavy loading or side effects at import time, names not symmetric with submodules.
+  1.4 Private name access: importing another module's `_name`, or tests asserting internals.
+  1.5 Traces of cycle avoidance: imports inside functions, `TYPE_CHECKING` hiding, or lazy imports used to avoid cycles.
+  1.6 Check bypass: covering boundary violations with ignore lines in import contracts or `noqa`.
+  1.7 Duplicate owners: several packages define one concept and import each other.
 
-2. 디렉터리 구조
-  2.1 배치: 한 개념이 여러 디렉터리에 흩어지거나, 한 디렉터리가 서로 무관한 개념을 섞는다. 외부 인터페이스는 리소스 단위, 내부 core는 기능 단위라는 프로젝트 배치 규칙을 어긴다. 최상위 디렉터리가 기능이 아니라 구현 계층이나 조회 유형을 드러낸다.
-  2.2 분할과 껍데기: 내용이 거의 없는 파일·디렉터리, 다른 모듈을 그대로 넘기기만 하는 모듈, 한 곳에서만 쓰는 작은 파일 분할.
-  2.3 시험, fake, fixture 배치가 제품 코드의 배치와 대응하지 않는다.
+2. Directory structure
+  2.1 Placement: one concept scattered across several directories, or one directory mixing unrelated concepts. Breaking the project placement rule that external interfaces are per resource and the internal core is per feature. Top-level directories exposing implementation layers or query types instead of features.
+  2.2 Splits and shells: files and directories with almost no content, modules that only pass other modules through, small file splits used in only one place.
+  2.3 Placement of tests, fakes, and fixtures does not correspond to the placement of product code.
 
-3. 파일, 모듈, 식별자 이름
-  3.1 이름과 내용의 불일치: 이름이 담은 책임을 가리키지 않거나, 같은 개념이 곳마다 다른 이름이거나, 짝을 이루는 모듈(예: 프롬프트 모듈과 그 사용 모듈)의 이름이 대칭이 아니다.
-  3.2 이름 품질: 도메인과 코드에 없는 말, 뭉뚱그린 이름(`utils`, `helpers`, `common`, `misc` 류), 대상과 맞지 않는 단·복수, 프로젝트 이름 규칙(검사기, AGENTS.md, main의 기존 배치) 위반.
-  3.3 이동·이름 변경의 잔재: 옛 이름이 문서, 시험, patch 대상, 직렬화 키, 설정에 남아 있다.
+3. File, module, and identifier names
+  3.1 Mismatch between name and content: a name does not point to the responsibility it holds, the same concept has different names in different places, or paired modules (e.g. a prompt module and the module that uses it) are not named symmetrically.
+  3.2 Name quality: words absent from the domain and code, catch-all names (`utils`, `helpers`, `common`, `misc` and the like), singular or plural not matching the target, violations of the project naming rules (checkers, AGENTS.md, existing layout on main).
+  3.3 Leftovers of moves and renames: old names remain in documents, tests, patch targets, serialization keys, and settings.
 
-4. 규모와 잔재
-  4.1 변경 전후의 파일, 줄, 모듈, 클래스, 함수 수를 비교하고, 문제 해결에 비해 커진 부분을 지적한다.
-  4.2 호출자 없는 코드, 쓰이지 않는 설정 키, 질의, schema 객체, 폐기한 기능의 시험·문서가 남아 있다.
-  4.3 디렉터리 AGENTS.md, README, 설계 문서가 실제 배치, 이름, 계약과 다르다.
+4. Size and leftovers
+  4.1 Compare the number of files, lines, modules, classes, and functions before and after the change, and flag parts that grew relative to solving the problem.
+  4.2 Code without callers, unused config keys, queries, schema objects, and tests and documents of retired features remain.
+  4.3 Directory AGENTS.md, README, and design documents differ from the actual placement, names, and contracts.
 
-5. 선례 인용
-  5.1 근거의 지위: 변경 근거가 "기존 코드와 일치", "관례상", "원래 이렇게 한다", "다른 모듈도 같다"이면 그 선례를 만든 commit과 PR을 `git log -S`, `git blame`, `rg`로 모으고, 후보가 0건이면 주장 자체를 지적한다. 코드가 그렇게 되어 있다는 사실은 그렇게 해야 한다는 근거가 아니다.
-  5.2 1차 근거: 선례마다 그 결정을 답한 이슈 본문, 설계 문서, 의도를 고정한 시험, 사용자 결정 기록 중 하나를 확인한다. commit 메시지와 리뷰 승인은 근거가 아니다. 근거 없는 선례를 규범 근거로 인용하면 지적하고, 규범을 문서나 이슈로 새로 대게 한다.
-  5.3 반복: 같은 패턴이 근거 없이 여러 변경에 걸쳐 반복되면 그것을 저장소 표준으로 읽지 않는다. 반복 횟수와 commit 목록을 적고 결함 후보로 보고하며, 표준 승격 여부는 사람이 정한다.
+5. Citing precedent
+  5.1 Status of the grounds: if the grounds for a change are "matches existing code", "by convention", "it was always done this way", or "other modules do the same", collect the commits and PRs that created that precedent with `git log -S`, `git blame`, and `rg`, and if there are zero candidates, flag the claim itself. That the code is a certain way is not grounds that it should be.
+  5.2 Primary grounds: for each precedent, confirm one of the issue body, design document, test that pins the intent, or user decision record that answered for that decision. Commit messages and review approvals are not grounds. Flag citing an ungrounded precedent as normative grounds, and have the norm newly backed by a document or issue.
+  5.3 Repetition: if the same pattern repeats across several changes without grounds, do not read it as a repository standard. Write the repetition count and the commit list and report it as a defect candidate; a person decides whether to promote it to a standard.
 
-## U2 구조·품질 판단
+## U2 Structure and quality judgment
 
-변경의 진입점, 공개 인터페이스, 데이터 모델과 설계 문서만 읽고 판단한다. 구조가 대안보다 못하다는 판정이 나오면 그 판정을 먼저 기록하고, U3의 세부 검토는 바뀌지 않을 부분에 집중한다.
+Judge by reading only the change's entry points, public interfaces, data models, and design documents. If the verdict is that the structure is worse than an alternative, record that verdict first, and focus U3's detailed review on the parts that will not change.
 
-설계 결정과 결함은 다른 축이다. 결과가 품질 기준을 어기면 결함이고, 그 원인이 설계 결정이면 설계에서 비롯된 결함으로 센다. 설계상 의도된 동작이라는 이유로 결함에서 제외하지 않는다.
+Design decisions and defects are different axes. If a result violates the quality criteria it is a defect, and if its cause is a design decision it counts as a defect arising from the design. Do not exclude something from defects because it is the behavior the design intended.
 
-리뷰는 결함 탐색과 별도로 다음 두 질문에 근거와 함께 답한다. 이 판단은 생략하지 않으며 결과 문서에 별도 절로 남긴다.
+Separately from the defect search, the review answers the following two questions with evidence. This judgment is not skipped and stays in its own section of the result document.
 
-1. 이 구조가 문제를 논리적으로 실제 해결하는 가장 적합한 구조인가.
-  1.1 해결하려는 문제를 원인 수준으로 다시 서술하고, 변경이 그 원인을 제거하는지, 증상만 우회하는지 판정한다.
-  1.2 데이터 흐름, 상태 소유, 책임 배치, 단계 분할, 호출 비용(DB 왕복, 모델 호출)을 기준으로 실현 가능한 대안 구조를 최소 하나 세우고, 현재 구조와 비교해 어느 쪽이 정확성, 성능, 단순성에서 나은지 판정한다.
-  1.3 현재 구조가 대안보다 못하면 구조 결함으로 지적한다. 동작이 맞아도 지적한다.
+1. Is this structure the most suitable structure that actually solves the problem logically?
+  1.1 Restate the problem being solved at the level of its cause, and judge whether the change removes that cause or only bypasses the symptom.
+  1.2 Build at least one feasible alternative structure based on data flow, state ownership, responsibility placement, stage splitting, and call cost (DB round trips, model calls), compare it with the current structure, and judge which is better in correctness, performance, and simplicity.
+  1.3 If the current structure is worse than the alternative, flag it as a structural defect. Flag it even if the behavior is correct.
 
-2. 그 구조 안에서 낼 수 있는 최고의 품질에 도달했는가.
-  2.1 구현, 프롬프트, 질의, 시험, 문서가 그 구조가 허용하는 상한에 비해 어디서 손실을 내는지 찾는다.
-  2.2 측정이 있으면 기준(main 등) 대비 모든 지표를 대조하고, 나빠진 지표는 원인과 함께 지적한다. 측정이 없으면 측정 공백으로 기록한다.
-  2.3 남은 차이가 구조의 한계인지 구현의 미흡인지 구분한다. 구조의 한계는 1번 판정으로, 구현의 미흡은 결함으로 기록한다.
+2. Has it reached the highest quality possible within that structure?
+  2.1 Find where the implementation, prompts, queries, tests, and documents lose relative to the ceiling the structure allows.
+  2.2 If there are measurements, compare every metric against the baseline (main etc.), and flag worsened metrics with their causes. If there are none, record it as a measurement gap.
+  2.3 Distinguish whether the remaining gap is a limit of the structure or a shortfall of the implementation. Record a structural limit under verdict 1, and an implementation shortfall as a defect.
 
-사용자가 명시적으로 후속 범위로 합의한 품질 차이는 결함이 아니라 후속 범위로 분류하되, 두 판정 자체는 수행해 기록한다.
+A quality gap the user explicitly agreed to as follow-up scope is classified as follow-up scope, not a defect, but both verdicts are still performed and recorded.
 
-## U3 세부 검토
+## U3 Detailed review
 
-앞 단계가 좁힌 파일 경로를 따라 본문을 읽는 가장 비싼 단계다. U2의 구조 판정이 대안보다 못하다는 결론이면 바뀌지 않을 부분에 집중한다. 변경 영역별로 분할해 병렬 실행할 수 있다. 분할할 때 영역의 성격에 맞는 expert type(sql-expert, llm-expert, parallel-expert, python-expert)을 매핑한다.
+The most expensive step, reading bodies along the file paths the previous steps narrowed down. If U2's structure verdict concluded it is worse than an alternative, focus on the parts that will not change. It can be split per changed area and run in parallel. When splitting, map an expert type suited to the area (sql-expert, llm-expert, parallel-expert, python-expert).
 
-관련 파일 전체와 호출자, 백엔드, fake를 읽고 입력→상태 소유→쓰기→실패→복구를 추적한다. 부분 완료, 복구 중 실패, 재시도, 동시 실행·취소에서 계약과 자원 정리가 유지되는지 공격적으로 검증한다. 방어 로직과 시험이 놓치는 반례를 찾는다.
+Read all related files with their callers, backends, and fakes, and trace input → state ownership → write → failure → recovery. Aggressively verify that contracts and resource cleanup hold under partial completion, failure during recovery, retries, and concurrent execution and cancellation. Find counterexamples that the defensive logic and tests miss.
 
-수정이 원인을 직접 해결하고 구조를 단순하게 만드는지 확인한다. 동작하더라도 불필요한 분기, 중복, wrapper, 추상화와 폐기되지 않은 옛 경로는 구체적인 영향과 단순화 방향을 지적한다.
+Check that the fix solves the cause directly and simplifies the structure. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact and the direction of simplification.
 
-수정이 원인을 직접 해결하고 구조를 단순하게 만드는지 확인한다. 기존 구현을 재사용할 수 있는지 먼저 대조하고, 모든 호출자 계약과 오류·재시도·회귀 경로를 보존하는 최소한의 충분한 변경인지 판단한다. 줄 수가 적어도 예외를 은폐하거나 특정 사례만 우회하면 충분한 수정이 아니다. 동작하더라도 불필요한 분기, 중복, wrapper, 추상화와 폐기되지 않은 옛 경로는 유지보수·변경·검증에 미치는 구체적인 영향과 단순화 방향을 지적한다.
+Check that the fix solves the cause directly and simplifies the structure. First check whether an existing implementation can be reused, and judge whether it is the minimal sufficient change that preserves every caller contract and the error, retry, and regression paths. Even with few lines, hiding an exception or bypassing only a specific case is not a sufficient fix. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact on maintenance, change, and verification and the direction of simplification.
 
-품질, 성능, 완료 주장을 실제 결과와 대조한다. 검증은 SHA, 입력, 환경, 범위와 최신 실행 결과를 확인한다. CI 통과를 다른 경로의 정확성이나 품질 보장으로 확대하지 않는다. 결함, 검증 공백과 명시적으로 합의된 후속 범위를 구분한다.
+Compare quality, performance, and completion claims with actual results. For verification, check the SHA, input, environment, scope, and latest run results. Do not extend a CI pass into a guarantee of the correctness or quality of other paths. Distinguish defects, verification gaps, and explicitly agreed follow-up scope.
 
-핵심 경로, 기존 미해결 지적과 필수 검증을 끝까지 대조한다. 확인하지 못한 범위는 남기며 결함을 모두 찾았다고 단정하지 않는다. 수정·외부 게시, DB, 모델, 벤치마크 실행은 approval_scope를 따른다.
+Check the core paths, existing unresolved findings, and required verification to the end. Leave the scope you could not confirm, and do not assert that every defect was found. Edits and external posting, DB, model, and benchmark runs follow approval_scope.
 
-### DB 스키마와 사용 방식
+### DB schema and usage
 
-DB에 닿는 변경은 질의와 호출자를 함께 읽고, 기존 구현 및 해당 DB의 기능으로 같은 계약을 더 적은 비용에 충족할 수 있는지 검토한다. 결과가 맞거나 CI가 통과해도 비효율을 검토에서 제외하지 않는다.
+For changes that touch the DB, read the queries together with their callers, and review whether the existing implementation and the DB's own features could satisfy the same contract at lower cost. Do not exclude inefficiency from the review because the result is correct or CI passes.
 
-1. DB 스키마 변경은 크기와 자동 검사 결과에 관계없이 반드시 사람의 리뷰를 권고한다. 테이블·컬럼·타입·제약·인덱스와 데이터 모델 변경을 포함하며, migration 파일이 없다는 이유로 제외하지 않는다. 변경 대상과 함께 데이터 호환성, migration·backfill, 잠금, 배포 순서, rollback 중 사람이 확인할 위험을 보고한다. 권고 자체를 결함이나 GitHub 필수 승인 설정으로 오인하지 않는다.
-2. 호출 횟수와 데이터 이동을 추적한다. N+1, 중복 조회, 행마다 수행하는 쓰기, 과도한 조회 범위, 애플리케이션에서 수행하는 필터·집계·정렬·pagination을 확인하고, batch·집합 연산·DB 내부 처리 등 실현 가능한 대안과 비교한다. 호출 수만 줄이려고 무제한 결과나 과도한 메모리 사용을 유발하지 않는지도 확인한다.
-3. 질의가 사용하는 조건·join·정렬과 schema·index를 대조한다. 입력 크기와 선택도에 따른 scan, 불필요한 정렬, index를 활용하지 못하는 조건, 중복 index의 쓰기 비용을 검토한다. 기존 실행 계획과 측정이 있으면 대상 데이터 규모와 함께 확인한다.
-4. transaction 경계, 잠금 범위, 연결·cursor 수명, 동시 실행과 재시도가 비용과 정합성에 미치는 영향을 검토한다. 대안을 제시할 때 순서·중복·NULL·격리 수준과 모든 backend·fake의 반환 계약을 보존한다.
+1. Always recommend human review for DB schema changes, regardless of size and automatic check results. This includes table, column, type, constraint, index, and data model changes, and they are not excluded because there is no migration file. Report, along with the change target, the risks a person should check among data compatibility, migration and backfill, locking, deployment order, and rollback. Do not mistake the recommendation itself for a defect or a GitHub required-approval setting.
+2. Trace call counts and data movement. Check N+1, duplicate lookups, per-row writes, excessive lookup ranges, and filtering, aggregation, sorting, and pagination done in the application, and compare with feasible alternatives such as batching, set operations, and in-DB processing. Also check that reducing call counts does not cause unbounded results or excessive memory use.
+3. Compare the conditions, joins, and sorts a query uses with the schema and indexes. Review scans depending on input size and selectivity, unnecessary sorts, conditions that cannot use an index, and the write cost of duplicate indexes. If there are existing execution plans and measurements, check them together with the target data size.
+4. Review the effect of transaction boundaries, lock scope, connection and cursor lifetimes, concurrent execution, and retries on cost and consistency. When proposing alternatives, preserve order, duplicates, NULLs, isolation level, and the return contracts of every backend and fake.
 
-DB 비효율 지적에는 호출 경로, 발생 조건·규모, 불필요한 작업과 대안을 적는다. 코드로 확인 가능한 왕복 수·처리량 증가를 측정이 없다는 이유로 무시하지 않되, 실제 지연 시간이나 실행 계획은 추측을 측정 결과로 쓰지 않는다. 단순 취향이나 index 존재 여부만으로 결함을 확정하지 않고, 영향과 근거에 따라 심각도를 정한다. 확인에 필요한 DB 실행·EXPLAIN ANALYZE·벤치마크는 approval_scope를 따르며, 실행하지 못한 항목은 검증 공백으로 남긴다.
+A DB inefficiency finding states the call path, the occurrence condition and scale, the unnecessary work, and the alternative. Do not ignore increases in round trips and processing that code can confirm because there is no measurement, but do not write guesses about actual latency or execution plans as measurement results. Do not confirm a defect from mere taste or the presence of an index alone; set severity by impact and evidence. DB runs, EXPLAIN ANALYZE, and benchmarks needed for confirmation follow approval_scope, and items that could not be run remain as verification gaps.
 
-### 문서의 의미와 짜임
+### Meaning and organization of documents
 
-변경 문서·PR 설명·주석도 리뷰 대상이다. sucks를 금칙어 치환이나 예시 표시 검사로 축소하지 말고 절·문단 단위로 읽는다. 목적에 필요한 내용인지, 독자의 이해 순서와 주제·서술 수준이 유지되는지, 용어를 도입하기 전에 사용하지 않는지, 문장 사이의 인과가 맞는지 판단한다.
+Changed documents, PR descriptions, and comments are also review targets. Do not reduce sucks to substituting banned words or checking example markers; read by section and paragraph. Judge whether the content is needed for the purpose, whether the reader's order of understanding and the topic and level of description are kept, whether terms are used before being introduced, and whether the causality between sentences holds.
 
-예시는 먼저 필요한지 판단한다. 필요한 예시는 앞 설명과 자연스럽게 연결되고 무엇을 설명하는지 드러나야 한다. ID·주소·경로·설정값이 예시인지 실제 기본값·상수·규약인지 소스와 대조하고, 예시라면 실제 사용 시 무엇으로 교체해야 하는지 확인한다. 현재 대상을 고르는 값과 변경할 목적값처럼 값의 역할도 호출 계약과 대조한다. 실제 기본값을 임의로 예시로 바꾸거나 모든 문서에 같은 설명 순서와 '예를 들어'를 강제하지 않는다.
+For examples, first judge whether they are needed. A needed example connects naturally to the preceding explanation and makes clear what it explains. Check against the source whether an ID, address, path, or setting value is an example or an actual default, constant, or convention, and if it is an example, confirm what it must be replaced with in real use. Also check the role of values, such as a value that selects the current target versus a target value to change, against the call contract. Do not arbitrarily turn actual defaults into examples, and do not force the same order of explanation and "for example" on every document.
 
-문서 지적에는 구체적인 원문과 독자에게 발생할 오해를 적는다. anti-slop 통과를 문서 품질 충족으로 간주하지 않으며, 리뷰 권한을 원문 수정 권한으로 확대하지 않는다.
+A document finding states the concrete original text and the misunderstanding the reader will have. Do not treat passing anti-slop as meeting document quality, and do not extend review authority into authority to edit the original.
 
-## U4 검증
+## U4 Verify
 
-BLOCKER·MAJOR finding을 생산한 에이전트와 다른 에이전트가 독립 검증한다. 병렬 실행에서 검증자는 finding과 head SHA만 받는 새 에이전트다(fork가 아닌 fresh agent). 단일 에이전트 실행에서는 finding의 condition이 성립하는 실행 경로를 생산 시점과 다른 진입점에서 다시 추적해 재확인한다.
+An agent other than the one that produced a BLOCKER or MAJOR finding verifies it independently. In parallel runs, the verifier is a new agent that receives only the finding and the head SHA (a fresh agent, not a fork). In a single-agent run, recheck by tracing again the execution path where the finding's condition holds, from an entry point different from the one at production time.
 
-### 검증 세션 규격
+### Verification session specification
 
-finding 검증은 매번 맥락을 모르는 빈 세션에서 한다. 빈 세션이란 다음을 받지 않은 세션이다: finding 생산자의 대화 이력, 생산자의 결론과 계획, 이전 검증 결과, 다른 영역 산출물. 브리프에는 finding, head SHA, 아래 verdict 기준만 넣는다. 맥락을 알아야 검증이 된다면 그것은 브리프 결함이므로 검증하지 않고 결함으로 보고한다.
+Verify findings each time in an empty session that does not know the context. An empty session is one that did not receive: the finding producer's conversation history, the producer's conclusions and plans, previous verification results, or other areas' outputs. Put only the finding, the head SHA, and the verdict criteria below in the brief. If verification needs the context, that is a brief defect, so do not verify; report it as a defect.
 
-finding 생산자 세션과 검증 세션이 같으면 검증으로 인정하지 않는다. 자기가 찾은 결함을 자기가 확인하는 경로는 근거를 남겨도 독립 검증이 아니다.
+If the finding producer's session and the verification session are the same, it does not count as verification. A path where one confirms the defect one found oneself is not independent verification even if it leaves evidence.
 
-검증자는 finding의 condition을 실제 코드에서 재현하거나 반박한다.
+The verifier reproduces or refutes the finding's condition in the actual code.
 
-| verdict | 기준 |
+| verdict | Criterion |
 |---|---|
-| CONFIRMED | 발생 조건에서 실행 경로를 따라 결함에 도달함을 확인 |
-| PLAUSIBLE | 실행 경로는 존재하나 발생 조건을 실행으로 확인하지 못함 |
-| REJECTED | 발생 조건이 도달 불가능하거나 방어 로직이 차단함을 확인 |
+| CONFIRMED | Confirmed that the execution path from the occurrence condition reaches the defect |
+| PLAUSIBLE | The execution path exists, but the occurrence condition could not be confirmed by running |
+| REJECTED | Confirmed that the occurrence condition is unreachable or defensive logic blocks it |
 
-REJECTED된 finding은 첫 리뷰에서는 결과 문서에서 제외한다. 후속 리뷰에서 이전 R-ID가 REJECTED되면 SKIP으로 상태를 바꾸고 이유를 적는다.
+A REJECTED finding is excluded from the result document in a first review. In a follow-up review, if a previous R-ID is REJECTED, change its status to SKIP and write the reason.
 
-finding이 재현 evidence_class를 주장하려면 실행이나 측정으로 확인해야 한다. 코드를 읽어 판단한 것은 관찰이고, 근거에서 추론한 것은 추론이다.
+For a finding to claim the reproduced evidence_class, it must be confirmed by running or measuring. A judgment made by reading code is observed, and one inferred from evidence is inferred.
 
-## U5 전파 점검
+## U5 Propagation check
 
-확인된 결함의 원인이 같은 패턴으로 다른 위치에도 존재하는지 검색한다. 대상은 같은 저장소 전체다.
+Search whether the cause of a confirmed defect also exists in other locations in the same pattern. The target is the whole repository.
 
-1. 결함의 원인(잘못된 패턴, 누락된 검사, 잘못된 가정)을 추출한다.
-2. 그 원인이 나타나는 다른 위치를 검색(grep, LSP 참조, import 추적)으로 찾는다.
-3. 발견된 각 위치에서 같은 결함이 발생하는지 확인한다.
-4. 전파된 결함은 원래 finding의 id를 참조하는 새 finding으로 기록한다.
+1. Extract the cause of the defect (a wrong pattern, a missing check, a wrong assumption).
+2. Find other locations where that cause appears by search (grep, LSP references, import tracing).
+3. At each location found, confirm whether the same defect occurs.
+4. Record a propagated defect as a new finding that references the original finding's id.
 
-같은 잘못된 패턴이 여러 위치나 여러 변경에 걸쳐 반복되면 전파 finding에 그 반복 횟수를 적는다. 반복이 곧 표준은 아니며, 반복 사실을 근거로 기존 동작을 정당화하지 않는다. 반복 3건 이상에 1차 근거가 없으면 개별 수정 지적과 별도로 표준화 후보를 남긴다.
+If the same wrong pattern repeats across several locations or changes, write the repetition count in the propagation finding. Repetition is not a standard, and the fact of repetition does not justify existing behavior. If there are three or more repetitions without primary grounds, leave a standardization candidate separate from the individual fix findings.
 
-## U6 조립·게시
+## U6 Assemble and post
 
-모든 단위의 findings를 finding 스키마에 맞춰 합치고, 결과 형식에 따라 마크다운 문서를 조립한다. sucks 스킬을 적용한다. approval_scope에 따라 게시하거나 대화로 보고한다.
+Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill. Post or report in the conversation according to approval_scope.
 
-마크다운 문서가 1차 출력이다. Claude Code에서 ReportFindings 도구가 있으면 마크다운 문서와 별도로 findings를 보고한다. ReportFindings에는 file(파일 경로, 줄 번호는 line 필드에 정수로 분리), summary(condition), failure_scenario(condition), verdict를 매핑한다. 판정 근거와 구조·품질 판단은 ReportFindings의 스키마에 필드가 없으므로 마크다운에만 포함한다.
+The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The grounds for verdicts and the structure and quality judgment have no fields in the ReportFindings schema, so include them only in the markdown.
 
-## 종료 조건
+## Termination condition
 
-검증(U4)에서 새로 CONFIRMED된 finding이 0이면 종료한다. CONFIRMED finding이 있으면 전파 점검(U5)을 수행하고, 전파된 finding이 있으면 그 finding을 검증(U4)에 다시 전달한다. 이 순환은 최대 2라운드다.
+End when the number of newly CONFIRMED findings in verification (U4) is 0. If there are CONFIRMED findings, perform the propagation check (U5), and if there are propagated findings, pass them to verification (U4) again. This cycle runs at most 2 rounds.
 
-라운드 상한에 도달하면 미검증 전파 finding을 PLAUSIBLE로 표시하고 조립(U6)으로 진행한다. 미확인 범위를 결과 문서에 목록으로 남긴다.
+When the round cap is reached, mark unverified propagated findings as PLAUSIBLE and proceed to assembly (U6). Leave the unconfirmed scope as a list in the result document.
 
-## 결과 형식
+## Result format
 
-프로젝트의 형식, 심각도, 상태 체계를 우선하고, 별도 형식이 없으면 아래 형식을 따른다. 한 줄에는 판단 하나만 적고, 판단을 뒷받침하는 재현 절차, 스크립트, 실행 출력과 집계 목록은 본문에 넣지 않고 별도 자료로 둔다. 별도 자료는 scratchpad 디렉터리나 PR comment thread에 첨부한다.
+Prefer the project's format, severity, and status system; if there is none, follow the format below. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
 
-1. 판정: 첫 문단 두세 문장에 판정, 대상 head와 merge-base, finding 수와 심각도별 건수, 상태와 근거 구분의 뜻을 적는다.
+1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base, the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
 
-2. 인덱스: 지적이 두 영역 이상에 걸치거나 후속 리뷰이면 섹션, 범위, 심각도, 상태, 최신 코멘트·다음 행위자 표를 둔다.
+2. Index: if findings span two or more areas or it is a follow-up review, include a table of section, scope, severity, status, and latest comment / next actor.
 
-3. 판정 근거: 코드베이스 검토 네 항목과 구조·품질 판단의 두 질문에 대한 답을 한 절에 서너 문장으로 적는다. 비교한 대안 구조는 한 문장으로 적고, 결함은 지적 목록에 기록한다.
+3. Grounds for the verdict: write the answers to the four codebase-review items and the two structure and quality questions in one section of three or four sentences. Write the alternative structure compared in one sentence, and record defects in the finding list.
 
-4. 지적: 검토 영역별 `###` 절 아래 finding 하나를 `-` 항목 하나로 적는다.
-  4.1 형식은 `R-001 심각도, 근거 구분: 문제. 위치. 조치.`이며 근거 구분은 프로젝트 분류 또는 재현, 관찰, 추론이다.
-  4.2 문제는 발생 조건과 결과를 한 문장에 적고, 수치는 괄호 안에 짧게 적는다.
-  4.3 위치는 대상 head의 `파일:줄`만 적고, 조치는 한 문장으로 적는다.
-  4.4 항목이 세 문장을 넘으면 finding을 나누거나 근거를 줄인다.
-  4.5 BLOCKER·MAJOR finding에는 verdict를 표시한다.
+4. Findings: under a `###` section per review area, write one finding as one `-` item.
+  4.1 The format is `R-001 severity, evidence kind: problem. location. action.`, where the evidence kind is the project classification or reproduced, observed, inferred.
+  4.2 The problem states the occurrence condition and result in one sentence, with numbers short in parentheses.
+  4.3 The location is only the target head's `file:line`, and the action is one sentence.
+  4.4 If an item exceeds three sentences, split the finding or trim the evidence.
+  4.5 Mark the verdict on BLOCKER and MAJOR findings.
 
-5. 검증 범위: 마지막 `###` 절에 실행한 검증과 통과·실패 수, 실행하지 않은 검증, 미확인 범위를 한두 문장으로 적는다.
+5. Verification scope: in the last `###` section, write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope.
 
-6. 사람 검토 권고: DB 스키마 변경이 있으면 변경 대상과 사람이 확인할 위험을 별도 항목으로 적는다. 결함 수에는 포함하지 않으며 검토자의 승인 여부를 추정하지 않는다.
+6. Human review recommendation: if there is a DB schema change, write the change target and the risks a person should check as a separate item. It is not counted among defects, and do not presume whether the reviewer approves.
 
-기본 심각도는 BLOCKER, MAJOR, MINOR, NIT다. 미해결 BLOCKER·MAJOR와 구조가 대안보다 못하다는 판정은 변경 요청, 핵심 검증 공백으로 판단할 수 없으면 판단 보류다.
+The default severities are BLOCKER, MAJOR, MINOR, NIT. Unresolved BLOCKER or MAJOR findings and a verdict that the structure is worse than an alternative mean request changes; if a core verification gap prevents judgment, the verdict is withheld.
 
-후속 리뷰는 기존 ID와 의견을 보존하고 응답은 `A-001`, 재확인은 `R-001-C`로 기록한다. 상태는 OPEN, ANSWERED, RECHECK, RESOLVED, SKIP이며 수정과 증거를 확인해야 RESOLVED로 바꾼다. SKIP에는 이유를 적는다.
+A follow-up review preserves existing IDs and opinions, records responses as `A-001` and rechecks as `R-001-C`. Statuses are OPEN, ANSWERED, RECHECK, RESOLVED, SKIP, and a status changes to RESOLVED only after the fix and evidence are confirmed. Write the reason on SKIP.
 
-## 게시 규칙
+## Posting rules
 
-결과 문서는 터미널 출력과 외부 게시 모두 작성 전에 sucks 스킬을 적용한다. 종결어미는 프로젝트 규칙이나 참고 형식을 따른다.
+Apply the sucks skill to the result document before writing it, for both terminal output and external posting. Sentence endings follow the project rules or the reference format.
 
-PR 리뷰나 코멘트로 게시하는 절차는 다음과 같다. 게시와 수정은 approval_scope에서 허용한 범위에서만 수행한다.
+The procedure for posting as a PR review or comment is as follows. Post and edit only within the scope allowed by approval_scope.
 
-1. 결과 문서의 첫 문장에 PR 작성자(`gh pr view --json author`의 login)를 `@login`으로 멘션한다. 후속 리뷰도 같다.
+1. Mention the PR author (the login from `gh pr view --json author`) as `@login` in the first sentence of the result document. The same for follow-up reviews.
 
-2. 게시 전에 최신 head와 PR 상태, 적용되는 대상 조건·CI·충돌 조건, 새 리뷰와 코멘트를 다시 확인한다. head가 바뀌면 오래된 결과를 게시하지 않는다. 같은 head에 다른 판정의 리뷰가 있으면 게시하지 않고 상충 근거를 보고한다.
+2. Before posting, recheck the latest head and PR state, the applicable target conditions, CI and conflict conditions, and new reviews and comments. If the head changed, do not post stale results. If there is a review with a different verdict on the same head, do not post; report the conflicting evidence.
 
-3. 코드 스팬 밖의 `~`는 GitHub에서 취소선이 되므로 범위는 `R-001-R-006`처럼 하이픈으로 적는다.
+3. Outside code spans, `~` becomes strikethrough on GitHub, so write ranges with a hyphen, as in `R-001-R-006`.
 
-4. 저장소에 anti-slop 검사가 있으면 최신 규칙과 어휘를 연결된 저장소 도구로 읽고 초안을 대조한다. 어휘와 불필요한 문구를 정리하되 기술적 의미·심각도·근거·검증 한계를 바꾸지 않는다. 실행 파일은 내려받거나 실행하지 않는다.
+4. If the repository has an anti-slop check, read the latest rules and vocabulary through the connected repository tools and compare the draft. Clean up vocabulary and unnecessary phrases without changing technical meaning, severity, evidence, or verification limits. Do not download or run executables.
 
-5. 게시하거나 수정한 뒤 anti-slop 실행이 모두 끝날 때까지 기다리고, bot thread 댓글에서 자기 코멘트 id의 section을 확인한다. section이 없으면 검출 0건이다. 검출이 있으면 같은 코멘트를 수정하고 다시 확인한다.
+5. After posting or editing, wait until all anti-slop runs finish, and check the section for your own comment id in the bot thread comment. If there is no section, there are 0 detections. If there are detections, edit the same comment and check again.
 
-6. 다른 작성자의 코멘트와 변경 파일에서 나온 검출은 수정하지 않고 보고한다.
+6. Do not fix detections from other authors' comments and changed files; report them.
 
-7. GitHub Conversation 댓글과 정식 PR Review의 COMMENT·REQUEST_CHANGES·APPROVE를 구분한다. 허용된 게시 범위와 저장소 판정 기준에 맞는 동작을 선택하고, 확인된 수정 필요 지적과 비차단 설명·질문을 구분한다. 취향이나 근거가 부족한 추정만으로 REQUEST_CHANGES를 제출하지 않는다. APPROVE는 해당 승인 권한과 필요한 사용자 확인이 충족된 경우에만 제출한다. 제출 뒤 실제 review state와 commit을 재조회하고 자기 PR 리뷰 제한이나 남은 검증 조건을 그대로 보고한다. 일반 댓글을 정식 리뷰나 승인 완료로 보고하지 않는다.
+7. Distinguish GitHub Conversation comments from formal PR Review COMMENT, REQUEST_CHANGES, and APPROVE. Choose the action that fits the allowed posting scope and the repository's verdict criteria, and distinguish confirmed findings that need fixes from non-blocking explanations and questions. Do not submit REQUEST_CHANGES on taste or on presumptions without sufficient grounds. Submit APPROVE only when the approval authority and the needed user confirmation are met. After submitting, re-query the actual review state and commit, and report self-PR review limits and remaining verification conditions as they are. Do not report a general comment as a formal review or completed approval.
 
-## 리뷰에 대한 지적
+## Criticism of the review
 
-리뷰 산출물 자체에 대한 지적(판정 오류, 형식, 근거 부족 등)을 받으면 지적이 기대는 코드와 기록을 원 자료로 확인해 수용하거나 근거와 함께 기각하고, 수용하면 그 리뷰를 바로잡아 회신한다. 원인이 rv의 절차나 형식에 있으면 같은 결함이 반복되지 않도록 rv를 고친다. rv 수정은 `harness` 스킬의 my-harness 수정 절차와 my-skills 전파를 따른다.
+When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), confirm the code and records the criticism relies on from primary sources, then accept it or reject it with grounds, and if accepted, correct that review and reply. If the cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
 
-## 에이전트별 실행
+## Per-agent execution
 
-rv의 단위 구조를 각 에이전트가 매핑하는 방식을 제시한다. rv는 실행 방식을 강제하지 않는다. 에이전트의 위임 규칙(AGENTS.md 등)이 이 절보다 우선한다.
+This presents how each agent maps rv's unit structure. rv does not force an execution method. The agent's delegation rules (AGENTS.md etc.) take precedence over this section.
 
-### 리뷰어 배정
+### Reviewer assignment
 
-리뷰는 자기 작업을 자기가 판정하지 않는 것이 전제이므로, 검토자와 검증자는 생산자와 다른 모델 계열에서 고른다. Codex는 다른 모델 계열의 독립 리뷰, Claude는 관점별 전문 검토를 맡고, pi·Hermes는 리뷰 역할이 아니다(pi는 위치와 방법이 정해진 좁은 수정, Hermes는 조사·문서·운영). 한 계열이 한도나 장애로 기동할 수 없으면 그 사실과 남은 검증 공백을 결과 문서에 적고, 같은 조건의 다른 계열 작업자로 대체하거나 호출자에게 묻는다. 역할 밖 에이전트를 대체 투입해 리뷰 수를 채우지 않는다.
+A review presumes that one does not judge one's own work, so choose reviewers and verifiers from a model family different from the producer's. Codex takes independent review from a different model family, Claude takes perspective-specific expert review, and pi and Hermes have no review role (pi takes narrow edits whose location and method are fixed, Hermes takes research, documents, and operations). If one family cannot be launched because of limits or outages, write that fact and the remaining verification gap in the result document, and replace it with a worker of another family under the same conditions or ask the caller. Do not fill the review count by sending in agents outside their role.
 
-판정에 맞춰 APPROVE·REQUEST_CHANGES·COMMENT 를 구분해 제출하되, GitHub 는 PR 작성자가 자기 PR 을 승인하지 못하게 하므로 자기 PR 에서 APPROVE 에 해당하는 판정은 COMMENT 로 게시한다. 이 기록은 승인 요건을 채우지 못하고, 병합 상태는 `REVIEW_REQUIRED` 로 남는다. 승인이 필요하면 다른 사람의 승인이나 저장소 admin 의 ruleset 판단이 필요하다고 보고하고, 다른 계정으로 승인을 만들지 않는다.
+Submit APPROVE, REQUEST_CHANGES, or COMMENT according to the verdict, but GitHub does not let a PR author approve their own PR, so on your own PR post a verdict equivalent to APPROVE as COMMENT. This record does not meet the approval requirement, and the merge state stays `REVIEW_REQUIRED`. If approval is needed, report that another person's approval or the repository admin's ruleset judgment is needed, and do not create an approval with another account.
 
 ### Claude Code
 
-coordinator가 Agent 도구로 서브에이전트를 기동한다. coordinator가 직접 코드를 수정하는지, 작업자에게만 위임하는지는 프로젝트의 위임 규칙을 따른다.
+The coordinator starts subagents with the Agent tool. Whether the coordinator edits code directly or only delegates to workers follows the project's delegation rules.
 
-| 단위 | 실행 방식 |
+| Unit | Execution |
 |---|---|
-| U0 | coordinator가 실행 |
-| U1, U2 | 병렬 Agent fork |
-| U3 | 영역별 Agent, expert type 지정 |
-| U4 | U3와 다른 fresh Agent(fork 아님)가 검증 |
+| U0 | Run by the coordinator |
+| U1, U2 | Parallel Agent forks |
+| U3 | Agent per area, with expert type specified |
+| U4 | Verified by a fresh Agent (not a fork) different from U3 |
 | U5 | Agent |
-| U6 | coordinator가 마크다운 문서 조립 |
+| U6 | The coordinator assembles the markdown document |
 
 ### Codex
 
-Codex는 배정받은 독립 리뷰 단위를 실행한다. 분할 실행이 필요한 경우 오케스트레이터가 공유 분업 기준에 따라 Paseo `create_agent`로 작업자를 기동하며 한 작업자에는 한 단위만 맡긴다. 위임받은 Codex 작업자는 명시적 허용 없이 재위임하지 않는다.
+Codex runs the independent review unit assigned to it. When split execution is needed, the orchestrator starts workers with Paseo `create_agent` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated Codex worker does not re-delegate without explicit permission.
 
-| 단위 | 실행 방식 |
+| Unit | Execution |
 |---|---|
-| U0 | coordinator가 실행 |
-| U1-U2 | 리뷰 작업자 |
-| U3 | 영역별 작업자 |
-| U4 | U3와 다른 검증 작업자 |
-| U5 | 전파 점검 작업자 |
-| U6 | coordinator가 마크다운 문서 조립·게시 |
+| U0 | Run by the coordinator |
+| U1-U2 | Review worker |
+| U3 | Worker per area |
+| U4 | Verification worker different from U3 |
+| U5 | Propagation check worker |
+| U6 | The coordinator assembles and posts the markdown document |
 
-작업자 지시서에는 입력 계약의 모든 값, 과거 반려 유형, 자기 검사 스크립트, 부수 작업 금지, 보고 범위를 포함한다.
+A worker brief includes every value of the input contract, past rejection types, a self-check script, a prohibition on side work, and the report scope.
 
-## 프로젝트 고유 설정
+## Project-specific settings
 
-이 절은 특정 저장소에 적용되는 설정이다. 다른 저장소에서는 해당 저장소의 규칙으로 대체한다.
+This section is settings applied to a specific repository. In other repositories, replace it with that repository's rules.
 
-enterprise-memory 저장소:
+enterprise-memory repository:
 
-1. 리뷰 절차: `docs/REVIEWING.md`를 따른다. evidence_class는 REVIEWING.md의 여섯 분류(Observed, Measured, Derived, Sourced, Inferred, Hypothesized)를 그대로 쓴다.
-2. anti-slop 규칙: `graphai-repository/anti-slop`의 `rules/rules.yaml`, `rules/vocabulary/ko.yaml`을 `gh api`로 읽어 검출 어휘를 대체어로 바꾼다.
-3. 참고 형식: PR #1208 리뷰 `pullrequestreview-5646450494`.
-
+1. Review procedure: follow `docs/REVIEWING.md`. evidence_class uses the six classes of REVIEWING.md as they are (Observed, Measured, Derived, Sourced, Inferred, Hypothesized).
+2. anti-slop rules: read `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and replace detected vocabulary with alternatives.
+3. Reference format: the review of PR #1208, `pullrequestreview-5646450494`.
