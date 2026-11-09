@@ -43,7 +43,7 @@ Compare the observations of 2 with known architecture patterns and identify one.
 1. For each candidate, find the original source and write, with sources, the defining features that distinguish that pattern (e.g. dependency direction, ownership of contracts and ports, whether skipping layers is allowed).
 2. Compare those features one by one with the observations of 2 (`file:line`) and leave a table of matching candidates, rejected candidates, and the reasons for rejection. Exclude from the verdict candidates whose features you could not confirm, and say so.
 3. Bring in the philosophy of the identified pattern from the original source: each component's responsibility, the dependency rules, what the abstraction hides, and the known costs. Write origin and organizing literature separately, and attach a source URL to every claim.
-3. Write separately the points where the repository diverges from the pattern (mixing, intended variation, violation). Do not immediately conclude that a divergence is a defect; first confirm the intent with repository rules or decision records.
+4. Write separately the points where the repository diverges from the pattern (mixing, intended variation, violation). Do not immediately conclude that a divergence is a defect; first confirm the intent with repository rules or decision records.
 
 ## 4. Decompose the work into responsibilities
 
@@ -53,7 +53,13 @@ Decompose the work of 1 into responsibilities per component, following the philo
 2. Place intent (what to do, business rules) separately from method (how to do it, storage, lookup, optimization). Prefer abstractions that hide behavior, and write the contract that results as their cost (the same meaning for the same input) and where to verify it.
 3. Write where to put execution mechanisms (scheduling, retries, concurrency), separate from business rules.
 4. If there is a contract change, list by search the callers and implementations across the whole repository (including other backends and test fakes) and write for each whether to change it and why.
-5. If a choice that conflicts with the pattern's philosophy is needed, leave it, with alternatives, as an item for the user's decision.
+5. Model the domain in data before placing logic. Decide the core types and data shapes first and trace every access pattern the work adds. Check for these signs that the domain is scattered across conditionals, and place a structure that encodes it instead.
+  5.1 Several booleans, phases, or lifecycle checks that must stay in sync: a state machine.
+  5.2 Branching on the same shape spread across files: a typed model, registry, lookup table, or discriminated union.
+  5.3 Modules named after execution steps (load, validate, transform, save) that repeat the same domain rules: execution order is not ownership; organize around one body of domain knowledge.
+  5.4 State shared between concurrent actors: ask what happens if another actor modifies it concurrently, and if the answer is not "nothing", isolate it before sharing.
+  An abstraction must remove branches, duplicated rules, invalid states, or lifecycle risk; if it only adds indirection, keep the plain code.
+6. If a choice that conflicts with the pattern's philosophy is needed, leave it, with alternatives, as an item for the user's decision.
 
 ## Result
 
