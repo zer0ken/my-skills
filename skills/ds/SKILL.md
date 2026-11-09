@@ -1,65 +1,65 @@
 ---
 name: ds
-description: 기여 전 설계 기획. 대상 저장소의 아키텍처를 알려진 패턴 중 하나로 특정하고 그 패턴의 철학을 근거와 함께 가져온 뒤, 사용자가 하려는 작업을 아키텍처의 구성요소별 책임으로 분해해 구체화한다. 코드를 작성하지 않는 read-only 와 웹 조사 절차다. 사용자가 /ds, $ds 를 호출하거나 기능 구현·추가·수정을 시작하기 전에 설계 기획을 요청할 때 사용한다.
+description: Pre-contribution design planning. Identify the target repository's architecture as one known pattern, bring in that pattern's philosophy with sources, then decompose the user's intended work into responsibilities per architectural component. A read-only and web research procedure that writes no code. Use when the user calls /ds or $ds, or asks for design planning before starting to implement, add, or change a feature.
 ---
 # ds
 
-저장소에 기여하기 전에, 작업이 현재 아키텍처의 어느 구성요소에 어떤 책임으로 놓여야 하는지 정한다. 결과는 구현 계획이며 코드가 아니다.
+Before contributing to a repository, decide in which component of the current architecture, with what responsibility, the work should sit. The result is an implementation plan, not code.
 
-## 제약
+## Constraints
 
-파일을 수정하거나 생성하지 않는다. commit, branch, worktree 생성, 테스트와 서버·DB·모델 실행을 하지 않는다. 허용하는 행위는 저장소 읽기(파일, `git log`, `git ls-files`, 검색, LSP·Serena 의 정의·참조 조회), 이슈·PR 조회와 웹 조사뿐이다. 결과는 대화로 보고하고, 사용자가 요청할 때만 파일로 남긴다.
+Do not modify or create files. Do not commit, create branches or worktrees, or run tests, servers, DBs, or models. The only allowed actions are reading the repository (files, `git log`, `git ls-files`, search, definition and reference lookups with LSP or Serena), viewing issues and PRs, and web research. Report the result in the conversation, and leave it as a file only when the user asks.
 
-## 근거 규칙
+## Evidence rules
 
-결과의 모든 주장은 근거와 짝을 이룬다. 근거 없는 주장은 쓰지 않는다.
+Every claim in the result is paired with evidence. Do not write claims without evidence.
 
-1. 저장소 관찰은 위치로 적는다: 기준 SHA, `파일:줄` 또는 실행한 명령과 그 출력 요지. 위치를 밝히지 못한 관찰은 결론에 쓰지 않는다.
-2. 외부 개념(패턴 이름, 계층 이름, 원칙, 인용)은 문장 단위로 출처를 단다. 출처는 원전(처음 정의한 문헌)과 저자 자료를 우선하고, 블로그·요약·위키는 원전을 찾는 단서나 보조로만 쓴다. 보조 출처만 찾았으면 그렇다고 밝힌다.
-3. 기원과 대중화를 구분한다. 패턴을 처음 정의한 사람·문헌, 이름을 붙인 사람·문헌, 특정 분야에 맞게 정리한 사람·문헌을 각각 확인하고, "X 의 패턴"처럼 정리한 사람을 만든 사람으로 쓰지 않는다(예: Layers 패턴은 Dijkstra 의 THE 시스템과 Buschmann 외 POSA 1권이 기원이고, Fowler 의 PoEAA 는 엔터프라이즈 애플리케이션의 세 계층을 정리한 문헌이다).
-4. 명칭은 출처에 실린 철자 그대로 쓴다. 업계 별칭은 정식 명칭과 구분해 별칭으로 표시한다. 출처를 찾지 못한 명칭은 쓰지 않거나 "확인되지 않음"으로 밝힌다.
-5. 기억으로 쓰지 않는다. 외부 개념은 결과에 쓰기 전에 이번 실행에서 검색해 확인하고, 검색 결과의 문장과 내 서술이 일치하는지 대조한다. 출처가 서로 다르면 차이를 그대로 적는다.
-6. 주장을 관찰, 출처 인용, 추론으로 구분해 표시한다. 추론은 어느 관찰과 출처에서 나왔는지 적는다.
-7. 결론을 바꾸는 반례나 반대 문헌을 찾으면 같이 적는다. 정정할 때는 무엇이 틀렸고 어떤 근거로 바뀌었는지 밝힌다.
-8. 설계 문서에는 모든 결정의 근거를 공개 전에 조사해 담는다. 질문을 받은 뒤에 검색해서 답하는 것은 준비가 부족했다는 뜻이므로, 문서를 내기 전에 예상 질문과 답을 스스로 돌려 빈 곳을 메우고 문서가 자기완결적일 때만 낸다.
+1. Write repository observations as locations: the base SHA, `file:line`, or the command run and the gist of its output. Do not use in the conclusion an observation whose location you could not state.
+2. Cite sources per sentence for external concepts (pattern names, layer names, principles, quotations). Prefer the original source (the literature that first defined it) and the author's own material, and use blogs, summaries, and wikis only as leads to the original or as support. If you found only secondary sources, say so.
+3. Separate origin from popularization. Confirm separately the person or literature that first defined the pattern, the one that named it, and the one that organized it for a particular field, and do not write the organizer as the creator, as in "X's pattern" (e.g. the Layers pattern originates in Dijkstra's THE system and Buschmann et al.'s POSA volume 1, and Fowler's PoEAA is the literature that organized three layers for enterprise applications).
+4. Write names with the spelling found in the source. Mark industry aliases as aliases, separate from the formal name. Do not use a name whose source you could not find, or state "unconfirmed".
+5. Do not write from memory. Search and confirm external concepts in this run before using them in the result, and check that the sentences of the search results match your own description. If sources differ, write the difference as is.
+6. Mark claims as observation, source quotation, or inference. For an inference, write which observations and sources it came from.
+7. If you find a counterexample or opposing literature that changes the conclusion, write it too. When correcting, state what was wrong and on what evidence it changed.
+8. Research and include in the design document the grounds for every decision before publishing. Searching to answer only after receiving a question means preparation was insufficient, so run the expected questions and answers yourself before submitting the document, fill the gaps, and submit only when the document is self-contained.
 
-## 1. 작업 의도 확정
+## 1. Fix the work intent
 
-사용자가 하려는 작업을 기능 요구로 다시 서술한다. 관련 이슈·PR·공유 기록·사용자 결정을 읽어 목표 동작, 범위, 완료 조건을 정한다. 의도가 불분명하면 아키텍처 조사 전에 질문한다.
+Restate the work the user wants as functional requirements. Read the related issues, PRs, shared records, and user decisions to decide the target behavior, scope, and completion criteria. If the intent is unclear, ask before the architecture investigation.
 
-## 2. 아키텍처 파악
+## 2. Understand the architecture
 
-구조 정보부터 읽고 본문은 의심 지점만 연다.
+Read structural information first and open bodies only at suspicious points.
 
-1. 최상위 패키지·디렉터리 구성, 진입점, 프로세스·배포 단위(물리 분리)를 확인한다.
-2. import 방향과 의존 규칙을 확인한다. 검사 스크립트, AGENTS.md, 설계 문서의 계층 규칙을 우선한다.
-3. 계층 사이 계약(인터페이스, 프로토콜, 저장소 계약, 질의 파일)이 어디에 정의되고 누가 구현·호출하는지 확인한다. 구현체가 여럿이면(backend, fake) 모두 나열한다.
-4. 상태 소유를 확인한다. 영속 상태, 메모리 상태, 실행 메커니즘(스케줄러, 큐, DAG 실행기)이 어느 구성요소에 있는지 적는다.
+1. Check the top-level package and directory layout, entry points, and process and deployment units (physical separation).
+2. Check the import direction and dependency rules. Prefer the layer rules in check scripts, AGENTS.md, and design documents.
+3. Check where the contracts between layers (interfaces, protocols, storage contracts, query files) are defined and who implements and calls them. If there are several implementations (backend, fake), list them all.
+4. Check state ownership. Write in which component persistent state, in-memory state, and execution mechanisms (scheduler, queue, DAG executor) live.
 
-## 3. 패턴 특정과 철학
+## 3. Identify the pattern and its philosophy
 
-2의 관찰을 알려진 아키텍처 패턴과 대조해 하나로 특정한다. 후보 예: Layers, Hexagonal Architecture(Ports and Adapters), Clean Architecture, Onion Architecture, n-tier, Pipes and Filters, Event-driven, CQRS, Microkernel. 이 목록은 탐색의 출발점이며, 각 후보의 정의는 조사로 확인한다.
+Compare the observations of 2 with known architecture patterns and identify one. Candidate examples: Layers, Hexagonal Architecture (Ports and Adapters), Clean Architecture, Onion Architecture, n-tier, Pipes and Filters, Event-driven, CQRS, Microkernel. This list is a starting point for exploration, and each candidate's definition is confirmed by research.
 
-1. 후보마다 원전을 찾아 그 패턴을 가르는 정의상 특징(예: 의존 방향, 계약·포트의 소유, 계층 건너뛰기 허용 여부)을 출처와 함께 적는다.
-2. 그 특징을 2의 관찰(`파일:줄`)과 하나씩 대조해 맞는 후보와 탈락한 후보, 탈락 이유를 표로 남긴다. 특징을 확인하지 못한 후보는 판정에서 빼고 그렇다고 밝힌다.
-3. 특정한 패턴의 철학을 원전에서 가져온다: 각 구성요소의 책임, 의존 규칙, 추상화가 감추는 것, 알려진 대가. 기원과 정리 문헌을 나눠 적고, 주장마다 출처 URL 을 단다.
-3. 저장소가 패턴과 어긋나는 지점(혼합, 의도된 변형, 위반)을 구분해 적는다. 어긋남을 바로 결함으로 단정하지 않고, 저장소 규칙이나 결정 기록으로 의도를 먼저 확인한다.
+1. For each candidate, find the original source and write, with sources, the defining features that distinguish that pattern (e.g. dependency direction, ownership of contracts and ports, whether skipping layers is allowed).
+2. Compare those features one by one with the observations of 2 (`file:line`) and leave a table of matching candidates, rejected candidates, and the reasons for rejection. Exclude from the verdict candidates whose features you could not confirm, and say so.
+3. Bring in the philosophy of the identified pattern from the original source: each component's responsibility, the dependency rules, what the abstraction hides, and the known costs. Write origin and organizing literature separately, and attach a source URL to every claim.
+3. Write separately the points where the repository diverges from the pattern (mixing, intended variation, violation). Do not immediately conclude that a divergence is a defect; first confirm the intent with repository rules or decision records.
 
-## 4. 작업의 책임 분해
+## 4. Decompose the work into responsibilities
 
-1의 작업을 3의 철학에 맞춰 구성요소별 책임으로 분해한다.
+Decompose the work of 1 into responsibilities per component, following the philosophy of 3.
 
-1. 표로 정리한다: 구성요소 | 이 작업에서의 책임(무엇을 / 어떻게) | 바뀌는 계약 | 영향받는 호출자·구현체.
-2. 의도(무엇을 할지, 업무 규칙)와 수행 방법(어떻게 할지, 저장·조회·최적화)을 구분해 배치한다. 동작을 감추는 추상화를 우선하고, 그 대가로 생기는 계약(같은 입력에 같은 의미)과 그것을 검증할 위치를 적는다.
-3. 실행 메커니즘(스케줄링, 재시도, 동시성)을 업무 규칙과 분리해 어디에 둘지 적는다.
-4. 계약 변경이 있으면 저장소 전체의 호출자와 구현체(다른 backend, 시험용 fake 포함)를 검색으로 나열하고 각각 바꿀지와 이유를 적는다.
-5. 패턴의 철학과 충돌하는 선택이 필요하면 대안과 함께 사용자 결정 항목으로 남긴다.
+1. Organize it in a table: component | responsibility in this work (what / how) | contract that changes | affected callers and implementations.
+2. Place intent (what to do, business rules) separately from method (how to do it, storage, lookup, optimization). Prefer abstractions that hide behavior, and write the contract that results as their cost (the same meaning for the same input) and where to verify it.
+3. Write where to put execution mechanisms (scheduling, retries, concurrency), separate from business rules.
+4. If there is a contract change, list by search the callers and implementations across the whole repository (including other backends and test fakes) and write for each whether to change it and why.
+5. If a choice that conflicts with the pattern's philosophy is needed, leave it, with alternatives, as an item for the user's decision.
 
-## 결과
+## Result
 
-1. 작업 의도와 완료 조건
-2. 아키텍처 판정: 특정한 패턴, 후보 대조 표(정의상 특징 · 출처 · 저장소 관찰 위치 · 판정), 철학 요약
-3. 저장소와 패턴의 어긋남과 각 근거 위치
-4. 책임 분해 표와 계약 변경 목록
-5. 사용자 결정이 필요한 항목, 확인하지 못한 범위와 보조 출처에만 기댄 주장
-6. 출처 목록: 원전과 보조 자료를 구분하고, 각 출처가 뒷받침하는 주장을 함께 적는다. 기준 SHA 를 적는다.
+1. Work intent and completion criteria
+2. Architecture verdict: the identified pattern, the candidate comparison table (defining feature · source · repository observation location · verdict), and a summary of the philosophy
+3. Divergences between the repository and the pattern, with the evidence location of each
+4. The responsibility decomposition table and the list of contract changes
+5. Items needing the user's decision, unconfirmed scope, and claims that rely only on secondary sources
+6. Source list: separate original and secondary material, and write the claims each source supports. Write the base SHA.
