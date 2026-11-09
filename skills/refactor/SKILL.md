@@ -3,7 +3,7 @@ name: refactor
 description: "Refactoring procedure that reduces a codebase to a manageable size while preserving function and performance. Use for planning and executing refactors, destructive refactors, cleaning up excessive splitting of code, files, and layers, and auditing a repository's safeguards against refactoring requirements; also use when writing or fixing repository checkers and safeguards. Do not apply to simple feature additions or to investigating bugs whose cause is not confirmed."
 metadata:
   author: hrlee
-  version: "1.0.1"
+  version: "1.1.0"
   domain: engineering
 ---
 
@@ -51,6 +51,9 @@ Within the approved scope, choose first the unit that removes the most unnecessa
 - One concept is owned in one place, or each implementation owns it deliberately. A caller must be able to explain which of the two it is. If the cost of sharing exceeds the duplication, keep separate implementations.
 - Backends share common contracts and judgments but do not force differences in storage into the same query. Use the expressiveness of SQL and DB operations, and reduce unnecessary relay code and round trips. Check scores, ordering, atomicity, and recovery semantics together.
 - Auxiliary modules managed together with their consumers, such as prompts, keep their name and location correspondence. Clean up private markers and public re-exports by the same standard.
+- Measure maintainability as the work a reader must do, on two independent axes: layers to trace between a question and its answer, and hidden or mutable state the reader must hold. Collapse wrappers with one caller, adapters with no second implementation, and pass-through layers that repeat the same methods and arguments. Prefer interfaces that hide meaningful decisions. Shrink state scope (returns over mutation, locals over fields, fields over module state, module state over globals; derive instead of syncing). Name an invariant once at the boundary instead of in every consumer. The test: a new reader can answer "where does X come from?" and "what can change X?" in under 30 seconds.
+- Subtract before you add. Remove dead code, redundant validators, and stub references first, then build the new structure on the simpler base.
+- When an internal API is replaced, migrate every caller and delete the old API in the same change instead of keeping a compatibility layer. This applies only when no external user depends on the old API; changing a public contract still follows the approval rules.
 
 Start reducing from large units, but do not do only the large ones; stop only when a sweep of the whole finds nothing left to delete. A reviewer's "nothing large remains" is not a signal to stop. Sort the queue not by arrival order but by the amount deleted (including what the item unlocks), and start the target from the lower bound the contract requires so that everything above it must give a reason to exist. Do not accept a worker's or planner's "this is the minimum" as evidence; ask what the next deletion is. Progress reports show every dimension against the base commit: product lines, files, classes, functions, tests, harness, scripts, and documents, with "initially N lines, now M lines, difference D lines" first.
 
@@ -92,7 +95,7 @@ When a product package moves, align the unit test directories too. Directories t
 
 ## Safeguards and check output
 
-Separate the fix of the current implementation from the prevention of recurrence for repeated criticisms. Connect constraints a machine can judge to the execution path of existing linters, static checks, tests, and CI. Leave in AGENTS.md and similar instructions only work judgments that tools cannot make. Do not duplicate lists of files, APIs, or labels that can be looked up, or rules already checked. When moving sentences, confirm that the needed judgment criteria were not lost.
+Separate the fix of the current implementation from the prevention of recurrence for repeated criticisms. Connect constraints a machine can judge to the execution path of existing linters, static checks, tests, and CI. Try the strongest encoding first: change the architecture so the mistake cannot be written, then the types, then a lint whose error message names the fix, then a test, and write documentation last. If a structural fix exists, use only that; the instruction text is the symptom. Leave in AGENTS.md and similar instructions only work judgments that tools cannot make. Do not duplicate lists of files, APIs, or labels that can be looked up, or rules already checked. When moving sentences, confirm that the needed judgment criteria were not lost.
 
 Include in a check's failure output the reason the rule is needed. Instead of repeating the check condition, explain who suffers what defect or cost from the violation. Require the reason on a common reporting path, and prevent missing check registration and reporting paths with a meta-check. Repository checks enumerate files with `git ls-files`, not `Path.rglob`. rglob passes in clean CI and fails in a developer copy that has worktrees and virtual environments. A check that will become a blocking gate shows false positives and false negatives in case files, and distinguishes a tool failure (read failure) from a violation with a different exit code. A baseline file holds only violations that predate the check and is not used as an exception list. A renamed item is also a new key, so make "zero added lines in the baseline" a commit gate. A person reviews whether the reason is meaningful; do not claim the machine judges the meaning too.
 
