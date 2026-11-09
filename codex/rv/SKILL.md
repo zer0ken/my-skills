@@ -3,7 +3,7 @@ name: rv
 description: "코드, 설계, PR의 적대적 리뷰 절차. 결함이 존재한다고 전제하고 입력 계약으로 범위를 받아 분할 단위마다 검토한 뒤 BLOCKER·MAJOR finding을 독립 검증하고 조립한다. 사용자가 리뷰를 요청하거나 /rv, $rv를 호출할 때 사용한다."
 metadata:
   author: hrlee
-  version: "2.1.1"
+  version: "2.2.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -260,6 +260,10 @@ PR 리뷰나 코멘트로 게시하는 절차는 다음과 같다. 게시와 수
 6. 다른 작성자의 코멘트와 변경 파일에서 나온 검출은 수정하지 않고 보고한다.
 
 7. GitHub Conversation 댓글과 정식 PR Review의 COMMENT·REQUEST_CHANGES·APPROVE를 구분한다. 허용된 게시 범위와 저장소 판정 기준에 맞는 동작을 선택하고, 확인된 수정 필요 지적과 비차단 설명·질문을 구분한다. 취향이나 근거가 부족한 추정만으로 REQUEST_CHANGES를 제출하지 않는다. APPROVE는 해당 승인 권한과 필요한 사용자 확인이 충족된 경우에만 제출한다. 제출 뒤 실제 review state와 commit을 재조회하고 자기 PR 리뷰 제한이나 남은 검증 조건을 그대로 보고한다. 일반 댓글을 정식 리뷰나 승인 완료로 보고하지 않는다.
+
+## 리뷰에 대한 지적
+
+리뷰 산출물 자체에 대한 지적(판정 오류, 형식, 근거 부족 등)을 받으면 지적이 기대는 코드와 기록을 원 자료로 확인해 수용하거나 근거와 함께 기각하고, 수용하면 그 리뷰를 바로잡아 회신한다. 원인이 rv의 절차나 형식에 있으면 같은 결함이 반복되지 않도록 rv를 고친다. rv 수정은 `harness` 스킬의 my-harness 수정 절차와 my-skills 전파를 따른다.
 
 ## 에이전트별 실행
 
