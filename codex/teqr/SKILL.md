@@ -1,11 +1,13 @@
 ---
 name: teqr
-description: Write or revise evidence-based technical reports, runbooks, experiment notes, and test or benchmark plans. Use when the user invokes /teqr or requests these engineering documents. For code, design, and pull request review findings or GitHub discussion comments, use osiri.
+description: "사용자가 /teqr 또는 $teqr로 직접 호출할 때만 근거 기반 기술 보고서, runbook, 실험 기록, 시험과 benchmark 계획을 작성하거나 수정한다. 리뷰나 문서 작성 요청, 다른 스킬의 참조만으로 자동 적용하지 않는다."
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # teqr - technical report guide
+
+에이전트는 사용자가 `/teqr`나 `$teqr`로 직접 호출한 경우에만 이 스킬을 적용한다. 리뷰나 문서 작성 요청, 다른 스킬의 참조는 호출을 대신하지 않는다.
 
 Read [Technical Report Guide](TECHNICAL_REPORT_GUIDE.md) before writing or revising the requested document. Apply its evidence, terminology, structure, figure, table, and verification rules at the depth needed for the current task. Keep the user's requested format and destination; the guide's example structures do not require unnecessary sections.
 
