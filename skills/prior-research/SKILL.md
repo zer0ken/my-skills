@@ -1,6 +1,6 @@
 ---
 name: prior-research
-description: "특정 주제나 지금 푸는 문제의 선행 연구(논문, 표준 구현, 저장소의 설계·결정 기록)를 반복 검색으로 조사하고, 검색 기록과 근거표를 남긴다. 사용자가 /prior-research 를 호출하거나, 선행 연구·관련 논문·기존 해법 조사를 요청하거나, 문제 정의나 설계 전에 알려진 해법을 찾아야 할 때 사용한다."
+description: "Investigate prior work on a topic or the problem at hand (papers, standard implementations, the repository's design and decision records) with iterative search, and leave a search log and an evidence table. Use when the user calls /prior-research, asks for prior work, related papers, or existing solutions, or when known solutions must be found before problem definition or design."
 metadata:
   author: hrlee
   version: "1.0.0"
@@ -10,57 +10,57 @@ metadata:
 
 # Prior Research
 
-지금 푸는 문제를 이미 다룬 연구와 기록을 찾는다. 키워드 검색 한두 번으로 끝내지 않고, 맞는 문헌에서 얻은 학술적 이름으로 다시 검색하는 반복으로 이웃 분야와 더 나은 해법까지 넓힌다. 산출물은 검색 기록과 근거표 두 개다.
+Find research and records that already dealt with the problem being solved. Do not stop at one or two keyword searches; widen to neighboring fields and better solutions by repeating the search with the academic names obtained from matching literature. The outputs are two: a search log and an evidence table.
 
-## 선행 조건
+## Preconditions
 
-1. 조사할 문제를 입력, 출력, 제약으로 한 문단 적는다. 정의가 없으면 `problem-modeling` 스킬로 먼저 정의한다.
-2. 프로젝트 규칙과 사용자가 정한 기준을 읽는다. 한국어 산문에는 `sucks` 스킬을 적용한다.
+1. Write the problem to investigate in one paragraph as input, output, and constraints. If there is no definition, define it first with the `problem-modeling` skill.
+2. Read the project rules and the criteria the user set. Apply the `sucks` skill to Korean prose.
 
-## 후보의 출처
+## Source of candidates
 
-후보는 검색 결과에서만 나온다. 언어 모델은 확률적으로 글을 생성할 뿐 문헌을 기억하는 저장소가 아니므로, 모델이 떠올린 제목, 저자, arXiv 번호, URL 은 실재하는지 알 수 없다.
+Candidates come only from search results. A language model only generates text probabilistically and is not a store that remembers literature, so titles, authors, arXiv numbers, and URLs the model came up with may not exist.
 
-1. 생성한 제목, 번호, URL 로 후보를 시작하지 않고 검색어에도 넣지 않는다.
-2. 이미 그렇게 시작한 후보는 그 이름이 들어가지 않은 질의로 다시 찾아졌을 때만 남기고, 다시 찾은 검색 기록을 근거로 단다.
-3. 보고에서 "기억하는 논문", "알고 있는 연구"처럼 모델을 기억의 주체로 쓰지 않는다. 출처는 검색 기록 id 와 URL 로 밝힌다.
+1. Do not start a candidate from a generated title, number, or URL, and do not put them in queries either.
+2. Keep a candidate that already started that way only when it was found again by a query that does not contain that name, and cite the search log row that found it again.
+3. In reports, do not make the model the subject of memory, as in "a paper I remember" or "research I know". State sources by search log id and URL.
 
-## 반복 탐색
+## Iterative search
 
-검색할 때마다 검색 기록에 한 행을 쓴다.
+Write one row to the search log for every search.
 
-1. 문제 정의의 입력, 출력, 제약을 나타내는 그럴듯한 키워드로 논문을 검색한다.
-2. 결과에서 지금 푸는 문제와 맞는 논문을 하나 이상 찾는다. 맞는지는 초록이 아니라 본문의 문제 설정(입력, 출력, 가정)으로 판단한다.
-3. 맞는 논문에서 이 문제의 학술적 명명과, 같은 문제를 다르게 부르는 이웃 분야의 이름을 찾아 기록한다.
-4. 그 이름으로 다시 검색해 같은 문제를 푼 더 최근의 논문, 더 나은 해법, 서베이와 벤치마크를 찾는다. 새 이름이 나오면 3으로 돌아간다.
-5. 새 이름이 더 나오지 않고 같은 후보만 되풀이될 때 멈춘다. 멈춘 이유와 확인하지 못한 방향을 마지막 행에 적는다.
+1. Search for papers with plausible keywords that express the input, output, and constraints of the problem definition.
+2. Find at least one paper in the results that matches the problem being solved. Judge the match by the problem setting in the body (input, output, assumptions), not the abstract.
+3. From the matching paper, find and record the academic name of this problem and the names neighboring fields use for the same problem.
+4. Search again with those names to find more recent papers, better solutions, surveys, and benchmarks that solved the same problem. If a new name appears, go back to 3.
+5. Stop when no new names appear and the same candidates repeat. Write the reason for stopping and the directions not checked in the last row.
 
-논문 외에 다음도 선행 연구로 조사한다.
+Besides papers, also investigate the following as prior work.
 
-1. 저장소의 설계와 결정 기록: 관련 이슈, PR, commit, CHANGELOG, 설계 문서, 기존 측정의 원 기록.
-2. 널리 쓰이는 구현과 그 문서.
+1. The repository's design and decision records: related issues, PRs, commits, CHANGELOG, design documents, and the original records of existing measurements.
+2. Widely used implementations and their documentation.
 
-## 접근과 인용
+## Access and citation
 
-1. 후보마다 1차 출처(논문 원문, 공식 저장소, 표준 문서)를 직접 받는다. 요약 사이트, 다른 에이전트의 요약, 검색 결과 조각은 1차 출처가 아니다.
-2. 접근은 HTTP 상태, 받은 시각, 응답 본문의 sha256 으로 기록한다.
-3. 인용은 받은 본문에서 문자열로 대조해 실재하는 문장만 쓴다. 대조하지 못한 인용은 쓰지 않는다.
-4. 그 후보가 성립하지 않는 조건(`limits`)과 확인하지 못한 것(`unresearched`)을 함께 적는다. 둘 다 비우지 않는다.
+1. For each candidate, fetch the primary source directly (paper text, official repository, standards document). Summary sites, other agents' summaries, and search-result snippets are not primary sources.
+2. Record access with the HTTP status, the time fetched, and the sha256 of the response body.
+3. Use only quotes that exist, matched as strings against the fetched body. Do not use quotes that could not be matched.
+4. Write together the conditions under which the candidate does not hold (`limits`) and what was not confirmed (`unresearched`). Leave neither empty.
 
-## 산출물
+## Outputs
 
-검색 기록은 JSON 배열이고 원소마다 다음 필드를 둔다.
+The search log is a JSON array, and each element has the following fields.
 
-| 필드 | 내용 |
+| Field | Content |
 | --- | --- |
-| `id` | 검색 기록 id(`S01` 등) |
-| `query` | 실제로 넣은 질의 원문 |
-| `tool` | 검색 도구나 서비스 |
-| `generated` | 질의에 모델이 생성한 이름이 들어 있으면 `true` |
-| `found` | 찾은 문헌의 제목과 URL 배열 |
-| `names` | 이 검색에서 얻은 학술적 명명과 이웃 분야 이름 배열 |
-| `next` | 다음 질의와 그 이유, 마지막 행은 멈춘 이유 |
+| `id` | Search log id (`S01` etc.) |
+| `query` | The exact query entered |
+| `tool` | Search tool or service |
+| `generated` | `true` if the query contains a model-generated name |
+| `found` | Array of titles and URLs of literature found |
+| `names` | Array of academic names and neighboring-field names obtained from this search |
+| `next` | The next query and its reason; in the last row, the reason for stopping |
 
-근거표는 JSON 배열이고 원소마다 `candidate`, `search_id`(그 후보를 낸 검색 기록 id, `generated` 가 `true` 인 행이면 안 된다), `url`(1차 출처), `quote`(본문에 실재하는 20자 이상 인용), `limits`, `unresearched`, `accessed_at`, `http_status`, `body_sha256` 을 둔다.
+The evidence table is a JSON array, and each element has `candidate`, `search_id` (the search log id that produced the candidate; it must not be a row whose `generated` is `true`), `url` (primary source), `quote` (a quote of 20 or more characters that exists in the body), `limits`, `unresearched`, `accessed_at`, `http_status`, and `body_sha256`.
 
-조사 서술에는 반복 탐색의 경로(처음 키워드, 찾은 이름, 그 이름으로 넓힌 분야)와 멈춘 이유, 미조사 범위를 근거표 행을 인용해 쓴다. 다른 절차(my-workflow 의 R2 등)가 파일 이름과 필드를 정하면 그 절차를 따른다.
+In the research narrative, write the path of the iterative search (the first keywords, the names found, the fields widened with those names), the reason for stopping, and the unresearched scope, citing evidence table rows. If another procedure (such as R2 of my-workflow) fixes file names and fields, follow that procedure.
