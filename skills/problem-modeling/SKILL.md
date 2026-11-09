@@ -3,7 +3,7 @@ name: problem-modeling
 description: "Define the problem mathematically before choosing a solution. Name it with a known problem type, fix inputs and outputs as symbols, and document the core subproblems with their boundary cases, constraints, evaluation metrics, and out-of-scope items. Use when the user calls /problem-modeling, asks for a problem's definition, input, or output, or when two or more fix attempts on the same defect have failed and the problem must be redefined."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.2.0"
   domain: workflow
   triggers: 문제 정의, 입력 출력, problem modeling, 수학적 정의, 문제를 정의해
 ---
@@ -17,6 +17,12 @@ Define the problem before deciding on a solution. Without a definition, fixes th
 1. Reread the project rules (AGENTS.md, CLAUDE.md, design documents) and the criteria the user set. Copy user decisions in their original wording and do not mix them with your own judgment.
 2. Confirm observed defects with raw output, logs, and real data cases, not summaries or labels. Pick one real case and use it as the example that runs through the whole document.
 3. Apply the `sucks` skill to Korean prose.
+4. When this skill is invoked because two or more fixes for the same defect failed, attack their premise before defining anything else.
+  4.1 Write down the premise: the one sentence every failed fix assumed.
+  4.2 Test it directly. Find an observation that would come out differently if the premise were false, and make it. Look at how the failures are distributed across cases, not only at how large they are, and keep the check rerunnable.
+  4.3 If the evidence contradicts the premise, the cause is elsewhere; look for what the failures share that the premise did not predict. If it confirms the premise, ask the next "why", because the earlier fixes may have treated a consequence.
+  4.4 Remove the condition that produces the failure instead of adding a mechanism that compensates for it after the fact.
+  4.5 Do not start the next fix until the premise is written down and tested. Record the premise and the test result in the definition document.
 
 ## Procedure
 
@@ -58,6 +64,7 @@ Define metrics computable from the output and the answer key alone. Include accu
 2. Split development cases from evaluation cases and report them separately. Do not put evaluation-case sentences or answers into prompts or product code.
 3. If the answer criterion is close to the solution's rules, write that limitation.
 4. Set the number of repetitions for elements that make measurement fluctuate (model judgments).
+5. Name what, other than the producer of the solution and its own report, shows that the result is right: an answer key made independently, a downstream consumer's check, a reviewer from another model family, or a measurement on real data.
 
 ### 8. Out of scope
 
