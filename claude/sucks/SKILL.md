@@ -3,7 +3,7 @@ name: sucks
 description: "한국어 기술 문서의 문체 규칙. README, 설계 문서, 이슈, PR 본문, 슬라이드, 주석 등 한국어 산문을 쓰거나 고칠 때 사용한다. 번역투 AI 문서체와 짧게 끊어 치는 블로그체를 모두 배제하고 중립 기술 문어체로 쓴다."
 metadata:
   author: hrlee
-  version: "2.6.0"
+  version: "2.6.1"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian

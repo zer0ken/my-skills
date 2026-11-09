@@ -3,7 +3,7 @@
 set -euo pipefail
 
 dest="$HOME/.codex/skills/rv"
-src="https://raw.githubusercontent.com/zer0ken/skills/main/codex/rv"
+src="https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/rv"
 
 if [ -L "$dest" ]; then
   echo "Refusing to overwrite $dest - it is a symlink (developer setup). Edit the source repo directly." >&2

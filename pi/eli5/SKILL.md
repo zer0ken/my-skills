@@ -14,13 +14,13 @@ Topic: $ARGUMENTS
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/pi/eli5/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/pi/eli5/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/pi/eli5/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/pi/eli5/install.sh | bash
 ```
 
 Re-running the command fetches the latest version; install and update are the same command.

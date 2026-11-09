@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $dest = Join-Path $env:USERPROFILE '.claude\skills\openai-cookbook'
-$src  = 'https://raw.githubusercontent.com/zer0ken/skills/main/claude/openai-cookbook/SKILL.md'
+$src  = 'https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/openai-cookbook/SKILL.md'
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 Invoke-WebRequest -Uri $src -OutFile (Join-Path $dest 'SKILL.md')

@@ -2,7 +2,7 @@
 name: teqr
 description: "사용자가 /teqr 또는 $teqr로 직접 호출할 때만 근거 기반 기술 보고서, runbook, 실험 기록, 시험과 benchmark 계획을 작성하거나 수정한다. 리뷰나 문서 작성 요청, 다른 스킬의 참조만으로 자동 적용하지 않는다."
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # teqr - technical report guide
@@ -28,13 +28,13 @@ Apply product-specific naming rules only when reporting on the named product. Wh
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/teqr/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/teqr/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/teqr/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/teqr/install.sh | bash
 ```
 
 Re-running the command installs the latest version. Start a new agent session to load it.

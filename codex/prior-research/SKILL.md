@@ -3,7 +3,7 @@ name: prior-research
 description: "특정 주제나 지금 푸는 문제의 선행 연구(논문, 표준 구현, 저장소의 설계·결정 기록)를 반복 검색으로 조사하고, 검색 기록과 근거표를 남긴다. 사용자가 $prior-research 를 호출하거나, 선행 연구·관련 논문·기존 해법 조사를 요청하거나, 문제 정의나 설계 전에 알려진 해법을 찾아야 할 때 사용한다."
 metadata:
   author: hrlee
-  version: "1.0.0"
+  version: "1.0.1"
   domain: research
   triggers: 선행 연구, 관련 연구, 논문 조사, 기존 해법 조사, prior work, related work, literature
 ---
@@ -76,13 +76,13 @@ metadata:
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/prior-research/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/prior-research/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/prior-research/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/prior-research/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전으로 갱신한다.

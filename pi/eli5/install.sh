@@ -4,7 +4,7 @@
 set -euo pipefail
 
 dest="$HOME/.agents/skills/eli5"
-src="https://raw.githubusercontent.com/zer0ken/skills/main/pi/eli5/SKILL.md"
+src="https://raw.githubusercontent.com/zer0ken/my-skills/main/pi/eli5/SKILL.md"
 
 # Protect a developer's symlinked working copy from being clobbered.
 if [ -L "$dest" ]; then

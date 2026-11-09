@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $dest = Join-Path $env:USERPROFILE '.agents\skills\tdd-is-dead'
-$src  = 'https://raw.githubusercontent.com/zer0ken/skills/main/pi/tdd-is-dead/SKILL.md'
+$src  = 'https://raw.githubusercontent.com/zer0ken/my-skills/main/pi/tdd-is-dead/SKILL.md'
 
 # Protect a developer's symlinked/junctioned working copy from being clobbered.
 if ((Test-Path $dest) -and ((Get-Item $dest -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {

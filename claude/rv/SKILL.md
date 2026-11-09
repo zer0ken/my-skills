@@ -3,7 +3,7 @@ name: rv
 description: "사용자가 리뷰를 요청하거나 /rv, $rv를 호출할 때 적용한다. 프로젝트의 모든 규칙과 리뷰 절차를 먼저 읽고 osiri와 refactor를 함께 참조한다. 프로젝트 결과 형식을 우선하고 별도 형식이 없으면 이 스킬의 형식을 따른다."
 metadata:
   author: hrlee
-  version: "2.2.1"
+  version: "2.2.2"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:

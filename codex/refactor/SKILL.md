@@ -3,7 +3,7 @@ name: refactor
 description: "기능과 성능을 보존하면서 코드베이스를 다룰 수 있는 규모로 정리하는 리팩토링 절차. 리팩토링 계획·실행, 파괴적 리팩토링, 코드·파일·계층의 과도한 분할 정리, 리팩토링 요구에 대한 저장소 예방책 감사에 사용하고, 저장소 검사기와 예방책을 작성하거나 고칠 때도 사용한다. 단순 기능 추가나 원인이 확인되지 않은 버그 조사에는 적용하지 않는다."
 metadata:
   author: hrlee
-  version: "1.0.1"
+  version: "1.0.2"
   domain: engineering
 ---
 
@@ -129,13 +129,13 @@ metadata:
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/refactor/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/refactor/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/refactor/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/refactor/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전으로 갱신한다.

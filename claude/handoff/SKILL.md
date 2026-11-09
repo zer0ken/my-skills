@@ -18,13 +18,13 @@ If the user passed arguments, treat them as a description of what the next sessi
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/handoff/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/handoff/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/handoff/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/handoff/install.sh | bash
 ```
 
 Re-running the command fetches the latest version; install and update are the same command.

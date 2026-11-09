@@ -3,7 +3,7 @@ name: sucks
 description: "한국어 기술 문서의 문체 규칙. README, 설계 문서, 이슈, PR 본문, 슬라이드, 주석 등 한국어 산문을 쓰거나 고칠 때 사용한다. 번역투 AI 문서체와 짧게 끊어 치는 블로그체를 모두 배제하고 중립 기술 문어체로 쓴다."
 metadata:
   author: hrlee
-  version: "2.6.0"
+  version: "2.6.1"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -378,13 +378,13 @@ docstring은 예외다. 주어가 그 docstring이 붙은 모듈, 클래스, 함
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/sucks/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/sucks/install.ps1 | iex
 ```
 
 Bash (macOS/Linux/WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/sucks/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/sucks/install.sh | bash
 ```
 
 같은 명령이 설치와 업데이트를 모두 한다. 다시 실행하면 최신 판을 받는다.

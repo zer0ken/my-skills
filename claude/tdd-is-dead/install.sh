@@ -4,7 +4,7 @@
 set -euo pipefail
 
 dest="$HOME/.claude/skills/tdd-is-dead"
-src="https://raw.githubusercontent.com/zer0ken/skills/main/claude/tdd-is-dead/SKILL.md"
+src="https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/tdd-is-dead/SKILL.md"
 
 # Protect a developer's symlinked working copy from being clobbered.
 if [ -L "$dest" ]; then

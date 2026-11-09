@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $dest = Join-Path $env:USERPROFILE '.codex\skills\sucks'
-$src  = 'https://raw.githubusercontent.com/zer0ken/skills/main/codex/sucks/SKILL.md'
+$src  = 'https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/sucks/SKILL.md'
 
 # Protect a developer's symlinked/junctioned working copy from being clobbered.
 if ((Test-Path $dest) -and ((Get-Item $dest -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 dest="$HOME/.codex/skills/claude-cookbook"
-src="https://raw.githubusercontent.com/zer0ken/skills/main/codex/claude-cookbook/SKILL.md"
+src="https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/claude-cookbook/SKILL.md"
 
 mkdir -p "$dest"
 curl -fsSL "$src" -o "$dest/SKILL.md"

@@ -75,13 +75,13 @@ description: 기여 전 설계 기획. 대상 저장소의 아키텍처를 알�
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/ds/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/ds/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/ds/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/ds/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전으로 갱신한다.

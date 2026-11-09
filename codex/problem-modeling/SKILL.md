@@ -3,7 +3,7 @@ name: problem-modeling
 description: "해법을 고르기 전에 문제를 수학적으로 정의한다. 알려진 문제 유형으로 이름을 붙이고, 입력과 출력을 기호로 정하고, 핵심 하위 문제와 그 경계 사례, 제약, 평가 지표, 범위 밖을 문서로 남긴다. 사용자가 $problem-modeling 을 호출하거나, 문제의 정의·입력·출력을 묻거나, 같은 결함에 대한 수정 시도가 두 번 이상 실패해 문제를 다시 정의해야 할 때 사용한다."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.1.1"
   domain: workflow
   triggers: 문제 정의, 입력 출력, problem modeling, 수학적 정의, 문제를 정의해
 ---
@@ -91,13 +91,13 @@ metadata:
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/problem-modeling/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/problem-modeling/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/problem-modeling/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/problem-modeling/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전으로 갱신한다.

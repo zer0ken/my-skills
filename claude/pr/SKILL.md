@@ -3,7 +3,7 @@ name: pr
 description: "PR 을 올린다. 본문은 맨 위의 이슈 참조 줄과 세 개 내외의 짧은 - 불릿 요약(하위 불릿 포함 10줄 이하)을 담고, 상세 설명은 본문 하단에 배치한다. 한국어 산문에는 sucks 스킬을 반드시 적용한다. 사용자가 /pr 을 호출하거나 PR 을 올리라고 지시할 때 사용한다."
 metadata:
   author: hrlee
-  version: "1.6.1"
+  version: "1.6.2"
   domain: workflow
   triggers: PR, pull request, PR 올려, PR 생성, gh pr create
   role: guardian
@@ -182,13 +182,13 @@ gh pr create --title "<제목>" --body-file body.md
 Windows에서는 PowerShell 명령을 사용한다.
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/pr/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/pr/install.ps1 | iex
 ```
 
 macOS, Linux, WSL에서는 Bash 명령을 사용한다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/pr/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/pr/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전을 설치하므로 갱신에도 같은 명령을 사용한다.

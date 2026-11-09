@@ -62,13 +62,13 @@ POV는 현재 제품의 실제 제약과 분야별 근거를 바탕으로 의사
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/codex/pov/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/pov/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/codex/pov/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/pov/install.sh | bash
 ```
 
 설치 명령을 다시 실행하면 최신 버전으로 갱신한다. 새 에이전트 세션에서 스킬을 불러온다.

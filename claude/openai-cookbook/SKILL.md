@@ -88,18 +88,18 @@ End by noting the user can ask for a deeper read of any listed example.
 
 This skill is distributed from a git repository, not bundled with any project:
 
-- Repository: https://github.com/zer0ken/skills (file `claude/openai-cookbook/SKILL.md`)
+- Repository: https://github.com/zer0ken/my-skills (file `claude/openai-cookbook/SKILL.md`)
 - Installed copy: `~/.claude/skills/openai-cookbook/SKILL.md`
 
 **Install or update (single file, no git or clone needed):**
 
 PowerShell (Windows):
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/openai-cookbook/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/openai-cookbook/install.ps1 | iex
 ```
 Bash (macOS/Linux/WSL):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/openai-cookbook/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/openai-cookbook/install.sh | bash
 ```
 Re-running the command always fetches the latest version.
 
@@ -107,7 +107,7 @@ Re-running the command always fetches the latest version.
 Diff the canonical file against the installed copy and report the result.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/openai-cookbook/SKILL.md -o /tmp/openai-cookbook-remote.md
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/openai-cookbook/SKILL.md -o /tmp/openai-cookbook-remote.md
 diff /tmp/openai-cookbook-remote.md ~/.claude/skills/openai-cookbook/SKILL.md
 ```
 - No diff -> tell the user the skill is already up to date.

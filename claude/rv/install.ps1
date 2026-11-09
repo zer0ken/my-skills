@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 
 $dest = Join-Path $env:USERPROFILE '.claude\skills\rv'
-$src = 'https://raw.githubusercontent.com/zer0ken/skills/main/claude/rv'
+$src = 'https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/rv'
 
 if ((Test-Path $dest) -and ((Get-Item $dest -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
     Write-Error "Refusing to overwrite $dest - it is a symlink/junction (developer setup). Edit the source repo directly."

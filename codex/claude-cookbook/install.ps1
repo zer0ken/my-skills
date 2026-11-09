@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $dest = Join-Path $env:USERPROFILE '.codex\skills\claude-cookbook'
-$src  = 'https://raw.githubusercontent.com/zer0ken/skills/main/codex/claude-cookbook/SKILL.md'
+$src  = 'https://raw.githubusercontent.com/zer0ken/my-skills/main/codex/claude-cookbook/SKILL.md'
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 Invoke-WebRequest -Uri $src -OutFile (Join-Path $dest 'SKILL.md')

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 dest="$HOME/.claude/skills/handoff"
-src="https://raw.githubusercontent.com/zer0ken/skills/main/claude/handoff/SKILL.md"
+src="https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/handoff/SKILL.md"
 
 # Protect a developer's symlinked working copy from being clobbered.
 if [ -L "$dest" ]; then

@@ -3,7 +3,7 @@ name: issue
 description: "이슈를 올린다. 본문은 `- **문제:**` 처럼 항목 이름을 붙인 불릿 한 줄씩으로 문제와 원인 또는 추정과 목표와 계획 중 필요한 것만 담고, 상세 설명은 본문 하단에 배치한다. 한국어 산문에는 sucks 스킬을 반드시 적용한다. 사용자가 /issue 를 호출하거나 이슈를 올리라고 지시할 때 사용한다."
 metadata:
   author: hrlee
-  version: "1.6.0"
+  version: "1.6.1"
   domain: workflow
   triggers: 이슈, issue, 이슈 올려, 이슈 생성, gh issue create
   role: guardian
@@ -116,13 +116,13 @@ gh issue create --title "<제목>" --body-file body.md
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/issue/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/issue/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/issue/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/issue/install.sh | bash
 ```
 
 Re-running the command fetches the latest version; install and update are the same command.

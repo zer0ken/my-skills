@@ -84,13 +84,13 @@ TDD를 하지 않는다. 테스트는 작성하되, 코드의 맥락을 이해�
 PowerShell (Windows):
 
 ```powershell
-irm https://raw.githubusercontent.com/zer0ken/skills/main/claude/tdd-is-dead/install.ps1 | iex
+irm https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/tdd-is-dead/install.ps1 | iex
 ```
 
 Bash (macOS / Linux / WSL):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zer0ken/skills/main/claude/tdd-is-dead/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zer0ken/my-skills/main/claude/tdd-is-dead/install.sh | bash
 ```
 
 Re-running the command fetches the latest version; install and update are the same command.

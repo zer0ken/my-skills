@@ -1,4 +1,4 @@
-# zer0ken/skills
+# zer0ken/my-skills
 
 Personal skills organized by agent runtime.
 
