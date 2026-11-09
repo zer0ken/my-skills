@@ -3,7 +3,7 @@ name: refactor
 description: "Refactoring procedure that reduces a codebase to a manageable size while preserving function and performance. Use for planning and executing refactors, destructive refactors, cleaning up excessive splitting of code, files, and layers, and auditing a repository's safeguards against refactoring requirements; also use when writing or fixing repository checkers and safeguards. Do not apply to simple feature additions or to investigating bugs whose cause is not confirmed."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.1.1"
   domain: engineering
 ---
 
@@ -55,7 +55,7 @@ Within the approved scope, choose first the unit that removes the most unnecessa
 - Subtract before you add. Remove dead code, redundant validators, and stub references first, then build the new structure on the simpler base.
 - When an internal API is replaced, migrate every caller and delete the old API in the same change instead of keeping a compatibility layer. This applies only when no external user depends on the old API; changing a public contract still follows the approval rules.
 
-Start reducing from large units, but do not do only the large ones; stop only when a sweep of the whole finds nothing left to delete. A reviewer's "nothing large remains" is not a signal to stop. Sort the queue not by arrival order but by the amount deleted (including what the item unlocks), and start the target from the lower bound the contract requires so that everything above it must give a reason to exist. Do not accept a worker's or planner's "this is the minimum" as evidence; ask what the next deletion is. Progress reports show every dimension against the base commit: product lines, files, classes, functions, tests, harness, scripts, and documents, with "initially N lines, now M lines, difference D lines" first.
+Start reducing from large units, but do not do only the large ones; stop only when a sweep of the whole finds nothing left to delete. A reviewer's "큰 것은 남지 않았다" is not a signal to stop. Sort the queue not by arrival order but by the amount deleted (including what the item unlocks), and start the target from the lower bound the contract requires so that everything above it must give a reason to exist. Do not accept a worker's or planner's "이것이 최소" as evidence; ask what the next deletion is. Progress reports show every dimension against the base commit: product lines, files, classes, functions, tests, harness, scripts, and documents, with "최초 N줄, 지금 M줄, 차이 D줄" first.
 
 Before removing the outer layer of a duplicated defense, distinguish "the outer layer filters every result" from "the inner layer already blocks every path". Make a list of input paths (channels, branches), confirm one by one that the inner layer blocks each path, and check whether another test covers the guarantee when the tests that checked the outer layer disappear.
 

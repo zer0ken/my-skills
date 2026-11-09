@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. Prefer the project's result format; if there is none, follow this skill's format."
 metadata:
   author: hrlee
-  version: "2.4.0"
+  version: "2.4.1"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -53,14 +53,14 @@ One row is one finding.
 |---|---|---|
 | id | R-nnn | Sequence number within the section |
 | severity | BLOCKER, MAJOR, MINOR, NIT | Severity |
-| evidence_class | Project classification, or reproduced, observed, inferred | Kind of evidence |
+| evidence_class | Project classification, or 재현, 관찰, 추론 | Kind of evidence |
 | condition | Sentence | Occurrence condition and result |
 | file | file:line | Location in head |
 | action | Sentence | Action |
-| propagation | List of file paths or "checked" | Locations where the same cause propagates |
+| propagation | List of file paths or "확인 완료" | Locations where the same cause propagates |
 | verdict | CONFIRMED, PLAUSIBLE, REJECTED | U4 verification result (BLOCKER and MAJOR only) |
 
-Use the project's classification for evidence_class if it has one. Otherwise use three classes by default: reproduced (confirmed by running or measuring), observed (confirmed directly in code or documents), inferred (inferred from evidence, or an unverified hypothesis).
+Use the project's classification for evidence_class if it has one. Otherwise use three classes by default, written in Korean in the result: 재현 (confirmed by running or measuring), 관찰 (confirmed directly in code or documents), 추론 (inferred from evidence, or an unverified hypothesis).
 
 For MINOR and NIT findings, the agent that produced them sets the verdict to CONFIRMED or PLAUSIBLE by self-verification.
 
@@ -135,7 +135,7 @@ Separately from code content, review the shape of the codebase the change leaves
   4.3 Directory AGENTS.md, README, and design documents differ from the actual placement, names, and contracts.
 
 5. Citing precedent
-  5.1 Status of the grounds: if the grounds for a change are "matches existing code", "by convention", "it was always done this way", or "other modules do the same", collect the commits and PRs that created that precedent with `git log -S`, `git blame`, and `rg`, and if there are zero candidates, flag the claim itself. That the code is a certain way is not grounds that it should be.
+  5.1 Status of the grounds: if the grounds for a change are "기존 코드와 일치", "관례상", "원래 이렇게 한다", or "다른 모듈도 같다", collect the commits and PRs that created that precedent with `git log -S`, `git blame`, and `rg`, and if there are zero candidates, flag the claim itself. That the code is a certain way is not grounds that it should be.
   5.2 Primary grounds: for each precedent, confirm one of the issue body, design document, test that pins the intent, or user decision record that answered for that decision. Commit messages and review approvals are not grounds. Flag citing an ungrounded precedent as normative grounds, and have the norm newly backed by a document or issue.
   5.3 Repetition: if the same pattern repeats across several changes without grounds, do not read it as a repository standard. Write the repetition count and the commit list and report it as a defect candidate; a person decides whether to promote it to a standard.
 
@@ -193,7 +193,7 @@ A DB inefficiency finding states the call path, the occurrence condition and sca
 
 Changed documents, PR descriptions, and comments are also review targets. Do not reduce sucks to substituting banned words or checking example markers; read by section and paragraph. Judge whether the content is needed for the purpose, whether the reader's order of understanding and the topic and level of description are kept, whether terms are used before being introduced, and whether the causality between sentences holds.
 
-For examples, first judge whether they are needed. A needed example connects naturally to the preceding explanation and makes clear what it explains. Check against the source whether an ID, address, path, or setting value is an example or an actual default, constant, or convention, and if it is an example, confirm what it must be replaced with in real use. Also check the role of values, such as a value that selects the current target versus a target value to change, against the call contract. Do not arbitrarily turn actual defaults into examples, and do not force the same order of explanation and "for example" on every document.
+For examples, first judge whether they are needed. A needed example connects naturally to the preceding explanation and makes clear what it explains. Check against the source whether an ID, address, path, or setting value is an example or an actual default, constant, or convention, and if it is an example, confirm what it must be replaced with in real use. Also check the role of values, such as a value that selects the current target versus a target value to change, against the call contract. Do not arbitrarily turn actual defaults into examples, and do not force the same order of explanation and '예를 들어' on every document.
 
 A document finding states the concrete original text and the misunderstanding the reader will have. Do not treat passing anti-slop as meeting document quality, and do not extend review authority into authority to edit the original.
 
@@ -217,7 +217,7 @@ The verifier reproduces or refutes the finding's condition in the actual code.
 
 A REJECTED finding is excluded from the result document in a first review. In a follow-up review, if a previous R-ID is REJECTED, change its status to SKIP and write the reason.
 
-For a finding to claim the reproduced evidence_class, it must be confirmed by running or measuring. A judgment made by reading code is observed, and one inferred from evidence is inferred.
+For a finding to claim the 재현 evidence_class, it must be confirmed by running or measuring. A judgment made by reading code is 관찰, and one inferred from evidence is 추론.
 
 ## U5 Propagation check
 
@@ -253,7 +253,7 @@ Prefer the project's format, severity, and status system; if there is none, foll
 3. Grounds for the verdict: write the answers to the four codebase-review items and the two structure and quality questions in one section of three or four sentences. Write the alternative structure compared in one sentence, and record defects in the finding list.
 
 4. Findings: under a `###` section per review area, write one finding as one `-` item.
-  4.1 The format is `R-001 severity, evidence kind: problem. location. action.`, where the evidence kind is the project classification or reproduced, observed, inferred.
+  4.1 The format is `R-001 심각도, 근거 구분: 문제. 위치. 조치.`, where 근거 구분 is the project classification or 재현, 관찰, 추론.
   4.2 The problem states the occurrence condition and result in one sentence, with numbers short in parentheses.
   4.3 The location is only the target head's `file:line`, and the action is one sentence.
   4.4 If an item exceeds three sentences, split the finding or trim the evidence.

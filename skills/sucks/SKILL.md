@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.7.0"
+  version: "2.7.1"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -218,7 +218,7 @@ Lumping things under an abstract noun is the same. If what a function returns is
 
 **Do not use catch-all nouns.** A noun that can point to anything makes the reader judge again what it is on every reading. If the same word points to a different thing in every sentence, it points to nothing. Use the name of what it points to.
 
-`자리` is the typical one. In one document this word pointed to placement, point, paragraph, item, position, part of speech, and phrase.
+`자리` is the typical one. In one document this word pointed to 배치, 지점, 문단, 항목, 위치, 품사, and 구절.
 
 | 뭉뚱그린 말 | 가리키는 것의 이름 |
 | --- | --- |
@@ -245,7 +245,7 @@ Introduction comes with three conditions.
 - If the document is split into levels of description such as concept, implementation, and theory, introduce terms in the highest-level section, and lower-level sections only state which identifier the term corresponds to. Do not include code names in the introducing sentence.
 - Do not let one everyday word point to different concepts together. If `작업` points to both Job and Task, the reader must judge which one in every sentence. Introduce a concept that exists in code by its code name. If the document newly defines a concept not in code, state when introducing it which code concepts it is the parent of.
 
-**Do not use redundant words.** If words with overlapping meanings are joined, one of the two can be deleted. A template already is a skeleton.
+**Do not use redundant words.** If words with overlapping meanings are joined, one of the two can be deleted. 템플릿이 곧 골격이다.
 
 - 나쁜 예: `YAML 골격 템플릿`
 - 좋은 예: `YAML 템플릿`

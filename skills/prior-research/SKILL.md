@@ -3,7 +3,7 @@ name: prior-research
 description: "Investigate prior work on a topic or the problem at hand (papers, standard implementations, the repository's design and decision records) with iterative search, and leave a search log and an evidence table. Use when the user calls /prior-research, asks for prior work, related papers, or existing solutions, or when known solutions must be found before problem definition or design."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.1.1"
   domain: research
   triggers: 선행 연구, 관련 연구, 논문 조사, 기존 해법 조사, prior work, related work, literature
 ---
@@ -23,7 +23,7 @@ Candidates come only from search results. A language model only generates text p
 
 1. Do not start a candidate from a generated title, number, or URL, and do not put them in queries either.
 2. Keep a candidate that already started that way only when it was found again by a query that does not contain that name, and cite the search log row that found it again.
-3. In reports, do not make the model the subject of memory, as in "a paper I remember" or "research I know". State sources by search log id and URL.
+3. In reports, do not make the model the subject of memory, as in "기억하는 논문" or "알고 있는 연구". State sources by search log id and URL.
 
 ## Iterative search
 
