@@ -1,6 +1,6 @@
 ---
 name: problem-modeling
-description: "해법을 고르기 전에 문제를 수학적으로 정의한다. 알려진 문제 유형으로 이름을 붙이고, 입력과 출력을 기호로 정하고, 핵심 하위 문제와 그 경계 사례, 제약, 평가 지표, 범위 밖을 문서로 남긴다. 사용자가 /problem-modeling 을 호출하거나, 문제의 정의·입력·출력을 묻거나, 같은 결함에 대한 수정 시도가 두 번 이상 실패해 문제를 다시 정의해야 할 때 사용한다."
+description: "Define the problem mathematically before choosing a solution. Name it with a known problem type, fix inputs and outputs as symbols, and document the core subproblems with their boundary cases, constraints, evaluation metrics, and out-of-scope items. Use when the user calls /problem-modeling, asks for a problem's definition, input, or output, or when two or more fix attempts on the same defect have failed and the problem must be redefined."
 metadata:
   author: hrlee
   version: "1.1.0"
@@ -10,70 +10,70 @@ metadata:
 
 # Problem Modeling
 
-해법을 정하기 전에 문제를 정의한다. 정의가 없으면 증상 하나를 막는 수정(표면 규칙, 문구 덧칠)이 반복되고, 수정이 맞았는지 판정할 기준도 없다. 이 스킬의 산출물은 `PROBLEM-<식별자>.md` 문서 하나다.
+Define the problem before deciding on a solution. Without a definition, fixes that block one symptom (surface rules, wording patches) repeat, and there is no criterion to judge whether a fix was right. This skill produces one document, `PROBLEM-<identifier>.md`.
 
-## 선행 조건
+## Preconditions
 
-1. 프로젝트 규칙(AGENTS.md, CLAUDE.md, 설계 문서)과 사용자가 정한 기준을 다시 읽는다. 사용자 결정은 원문으로 옮기고 내 판단과 섞지 않는다.
-2. 관측된 결함은 요약이나 라벨이 아니라 원문 출력, 로그, 실제 데이터 사례로 확인한다. 실제 사례 하나를 골라 문서 전체를 관통하는 예시로 쓴다.
-3. 한국어 산문에는 `sucks` 스킬을 적용한다.
+1. Reread the project rules (AGENTS.md, CLAUDE.md, design documents) and the criteria the user set. Copy user decisions in their original wording and do not mix them with your own judgment.
+2. Confirm observed defects with raw output, logs, and real data cases, not summaries or labels. Pick one real case and use it as the example that runs through the whole document.
+3. Apply the `sucks` skill to Korean prose.
 
-## 절차
+## Procedure
 
-### 1. 한 줄 정의와 문제 유형
+### 1. One-line definition and problem type
 
-문제를 한 문장으로 정의하고, 알려진 문제 유형(예: 상호참조 해소, 집합 분할, 최단 경로, 분류, 순위화, 스케줄링)으로 이름을 붙인다. 유형을 축소하거나 변형했으면 무엇을 줄였는지 적는다(예: "전체 상호참조 군집이 아니라 대용 표현마다 선행어 문장 번호 하나만 필요하다").
+Define the problem in one sentence and name it with a known problem type (e.g. coreference resolution, set partitioning, shortest path, classification, ranking, scheduling). If you narrowed or varied the type, write what you reduced (e.g. "not full coreference clusters; each anaphor needs only one antecedent sentence number").
 
-문제 유형과 기존 해법은 로컬 코드가 아니라 웹에서 `prior-research` 스킬의 반복 탐색으로 조사한다. 논문, 벤치마크, 널리 쓰이는 구현을 찾아 출처 링크를 남긴다. 기존 연구가 가정하는 조건(원문 재작성 허용, 언어, 의존성)과 이 프로젝트의 제약이 다르면 그 차이를 적는다.
+Research the problem type and existing solutions on the web with the iterative search of the `prior-research` skill, not from local code. Find papers, benchmarks, and widely used implementations and keep source links. If the conditions existing research assumes (allowing source rewriting, language, dependencies) differ from this project's constraints, write the difference.
 
-### 2. 입력
+### 2. Input
 
-입력을 기호로 정한다. 각 기호는 실제 코드의 자료형이나 함수 출력과 대응시킨다(예: "문서 D: `split_sentences` 를 거친 원문 문장열 s1 … sn"). 입력에 이미 들어 있는 부가 정보(구조, 문맥, 제외 대상)도 빠짐없이 나열한다.
+Fix the input as symbols. Map each symbol to an actual data type or function output in the code (e.g. "document D: the source sentence sequence s1 … sn after `split_sentences`"). List every piece of side information already in the input (structure, context, exclusions).
 
-### 3. 출력
+### 3. Output
 
-출력의 수학적 구조를 정한다(분할, 그래프, 함수, 순위, 집합). 출력을 무엇으로부터 어떻게 결정하는지 적는다(예: "분할은 간선 집합 E 의 연결 성분이다"). 출력이 이후 단계의 입력이면 그 단계가 출력의 어떤 성질에 기대는지 적는다.
+Fix the mathematical structure of the output (partition, graph, function, ranking, set). Write from what and how the output is determined (e.g. "the partition is the connected components of edge set E"). If the output is the input of a later stage, write which properties of the output that stage relies on.
 
-### 4. 핵심 하위 문제
+### 4. Core subproblems
 
-출력을 정하는 데 필요한, 아직 풀리지 않은 함수나 판정을 따로 정의한다(예: a(m): 대용 표현 m 의 선행어 문장 번호). 다음을 반드시 포함한다.
+Define separately the functions or judgments, not yet solved, that are needed to determine the output (e.g. a(m): the antecedent sentence number of anaphor m). Always include the following.
 
-1. 정의역의 원소가 무엇인지 예시와 함께 정의한다.
-2. 값이 무엇인지 정의한다.
-3. 값이 "없음"이 되는 경계 사례를 모두 나열한다. 경계 사례가 빠지면 해법과 정답 세트가 서로 다른 문제를 푼다.
+1. Define what the elements of the domain are, with examples.
+2. Define what the values are.
+3. List every boundary case where the value becomes "none". If boundary cases are missing, the solution and the answer set solve different problems.
 
-### 5. 조건
+### 5. Conditions
 
-해가 만족해야 할 조건을 번호로 적는다. 기능 조건(자기완결, 최소성 등)과 프로젝트 제약(원문 보존, 계층 경계, 지원 언어, 호출 수, 속도)을 구분한다. 조건마다 근거(이슈, 사용자 결정, 규칙 문서)를 붙인다. 서로 충돌하는 조건이 있으면 우선순위를 적는다.
+Number the conditions a solution must satisfy. Separate functional conditions (self-containedness, minimality, etc.) from project constraints (source preservation, layer boundaries, supported languages, call count, speed). Attach grounds (issue, user decision, rule document) to each condition. If conditions conflict, write their priority.
 
-### 6. 다른 결함과의 관계
+### 6. Relation to other defects
 
-같은 증상 묶음의 다른 결함이 이 출력에 기대면, 이 정의를 만족할 때 그 결함이 어떻게 되는지 적는다. 이 관계가 범위와 작업 순서를 정한다.
+If other defects in the same symptom cluster depend on this output, write what happens to them when this definition is satisfied. This relation decides scope and work order.
 
-### 7. 평가
+### 7. Evaluation
 
-출력과 정답만으로 계산할 수 있는 지표를 정의한다. 정확도(재현율, 정밀도, F1 등)와 비용(시간, 토큰, 호출 수, 이후 단계 작업량)을 함께 둔다. 다음을 지킨다.
+Define metrics computable from the output and the answer key alone. Include accuracy (recall, precision, F1, etc.) and cost (time, tokens, call count, downstream workload) together. Keep the following.
 
-1. 정답 세트를 누가 어떤 기준으로 만들었는지 적고, 생성 스크립트와 파일 경로를 남긴다.
-2. 개발 사례와 평가 사례를 나누고 따로 보고한다. 평가 사례의 문장이나 정답을 프롬프트와 제품 코드에 넣지 않는다.
-3. 정답 기준이 해법의 규칙과 가까우면 그 한계를 적는다.
-4. 측정이 흔들리는 요소(모델 판정)는 반복 횟수를 정한다.
+1. Write who made the answer set by what criteria, and keep the generation script and file path.
+2. Split development cases from evaluation cases and report them separately. Do not put evaluation-case sentences or answers into prompts or product code.
+3. If the answer criterion is close to the solution's rules, write that limitation.
+4. Set the number of repetitions for elements that make measurement fluctuate (model judgments).
 
-### 8. 범위 밖
+### 8. Out of scope
 
-이 문제에 들어가지 않는 인접 문제를 적고, 각각 어느 단계나 이슈가 책임지는지 적는다.
+Write the adjacent problems that are not part of this problem, and for each, which stage or issue is responsible.
 
-### 9. 해법 구조(정의가 끝난 뒤)
+### 9. Solution structure (after the definition)
 
-해법은 정의를 마친 뒤에만 적는다. 해법의 각 부분이 정의의 어느 하위 문제를 맡는지 대응시키고, 그 배치를 1 의 조사 근거로 정당화한다. 규칙으로 판정할 수 있는 부분, 결정적 분석(파서, 품사 분석 등)이 맡을 부분, 모델이 맡을 부분을 나누고, 모델에는 출력 공간이 작고 코드가 검증할 수 있는 질문만 남긴다.
+Write the solution only after finishing the definition. Map each part of the solution to the subproblem of the definition it handles, and justify that placement with the research grounds of 1. Separate the parts that rules can judge, the parts deterministic analysis (parsers, part-of-speech analysis, etc.) handles, and the parts a model handles, and leave the model only questions whose output space is small and that code can verify.
 
-## 문서 형식
+## Document format
 
-`PROBLEM-<식별자>.md` 를 작업 산출물 디렉터리에 둔다. 절 순서는 정의, 입력, 출력, 핵심 하위 문제, 조건, 다른 결함과의 관계, 평가, 범위 밖, 해법 구조다. 계획 문서가 있으면 계획 문서 머리에서 이 문서를 가리킨다.
+Put `PROBLEM-<identifier>.md` in the work artifact directory. The section order is definition, input, output, core subproblems, conditions, relation to other defects, evaluation, out of scope, solution structure. If there is a plan document, point to this document from the head of the plan document.
 
-## 금지
+## Prohibitions
 
-1. 정의 절에 해법 용어(특정 모델, 라이브러리, 정규식)를 쓰지 않는다.
-2. 증상 사례 하나에 맞춘 정의를 쓰지 않는다. 정의는 사례 전체의 분포를 덮어야 한다.
-3. 지어낸 예시를 쓰지 않는다. 예시는 실제 데이터나 그 데이터와 같은 형태의 문장이다.
-4. 측정하지 않은 성질을 조건이 충족된 것처럼 쓰지 않는다.
+1. Do not use solution terms (a specific model, library, regular expression) in the definition section.
+2. Do not write a definition fitted to one symptom case. The definition must cover the distribution of all cases.
+3. Do not use invented examples. Examples are real data or sentences of the same shape as that data.
+4. Do not write unmeasured properties as if the condition were met.
