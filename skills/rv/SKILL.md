@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. Prefer the project's result format; if there is none, follow this skill's format."
 metadata:
   author: hrlee
-  version: "2.3.0"
+  version: "2.4.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -165,7 +165,12 @@ The most expensive step, reading bodies along the file paths the previous steps 
 
 Read all related files with their callers, backends, and fakes, and trace input → state ownership → write → failure → recovery. Aggressively verify that contracts and resource cleanup hold under partial completion, failure during recovery, retries, and concurrent execution and cancellation. Find counterexamples that the defensive logic and tests miss.
 
-Check that the fix solves the cause directly and simplifies the structure. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact and the direction of simplification.
+Find what the change breaks beyond the diff.
+
+1. Find the one fact the change is safe because of. Most changes that look risky are safe because of a single fact, such as "this call only drops cache entries that are already dead". State it, and if it holds, most risky cases clear at once. Spend the effort here rather than on a long list of maybes.
+2. Look where symbol search stops: the source of the library the code calls at its pinned version and any local patch, when things run (callbacks, teardown, transaction commit), and consumers a reference search misses, such as serialized JSON, a DB column, a wire format, another language reading the same bytes, a feature flag, and code several hops downstream.
+3. Prove the one fact by running real code when it is cheap: a small script or test that calls the exact function and fails loudly if the fact is wrong. Record how far each safety fact got: asserted, pointed at a `file:line`, walked step by step to show the bad case cannot be reached, run, or reproduced in the running app. If it was not proven, say it is unproven.
+4. Keep confirmed risks as findings, and list separately what you checked and cleared, with the reason it is fine, so the reader can see the scope covered.
 
 Check that the fix solves the cause directly and simplifies the structure. First check whether an existing implementation can be reused, and judge whether it is the minimal sufficient change that preserves every caller contract and the error, retry, and regression paths. Even with few lines, hiding an exception or bypassing only a specific case is not a sufficient fix. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact on maintenance, change, and verification and the direction of simplification.
 
