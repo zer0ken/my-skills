@@ -3,7 +3,7 @@ name: prior-research
 description: "Investigate prior work on a topic or the problem at hand (papers, standard implementations, the repository's design and decision records) with iterative search, and leave a search log and an evidence table. Use when the user calls /prior-research, asks for prior work, related papers, or existing solutions, or when known solutions must be found before problem definition or design."
 metadata:
   author: hrlee
-  version: "1.0.0"
+  version: "1.1.0"
   domain: research
   triggers: 선행 연구, 관련 연구, 논문 조사, 기존 해법 조사, prior work, related work, literature
 ---
@@ -37,8 +37,11 @@ Write one row to the search log for every search.
 
 Besides papers, also investigate the following as prior work.
 
-1. The repository's design and decision records: related issues, PRs, commits, CHANGELOG, design documents, and the original records of existing measurements.
-2. Widely used implementations and their documentation.
+1. The repository's design and decision records: related issues, PRs, commits, CHANGELOG, design documents, and the original records of existing measurements. Anchor them to the code first: `git blame -L <start>,<end> <file>` for the last commits that touched the target lines, `git log --follow -p -- <file>` for the full history, PR numbers in merge commit subjects (`(#1234)`), and ticket ids linked from those PRs. Then read the linked issue bodies and review threads, not only the commit messages.
+2. Team discussion records the user can reach, such as chat channels and long-form documents, when a decision was made there. Treat them like any other source: quote only text you fetched.
+3. Widely used implementations and their documentation.
+
+Record a search that found nothing as its own row with an empty `found`. A documented null result tells the reader that direction was checked; a missing row does not.
 
 ## Access and citation
 
