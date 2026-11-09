@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: "기능과 성능을 보존하면서 코드베이스를 다룰 수 있는 규모로 정리하는 리팩토링 절차. 리팩토링 계획·실행, 파괴적 리팩토링, 코드·파일·계층의 과도한 분할 정리, 리팩토링 요구에 대한 저장소 예방책 감사에 사용하고, 저장소 검사기와 예방책을 작성하거나 고칠 때도 사용한다. 단순 기능 추가나 원인이 확인되지 않은 버그 조사에는 적용하지 않는다."
+description: "Refactoring procedure that reduces a codebase to a manageable size while preserving function and performance. Use for planning and executing refactors, destructive refactors, cleaning up excessive splitting of code, files, and layers, and auditing a repository's safeguards against refactoring requirements; also use when writing or fixing repository checkers and safeguards. Do not apply to simple feature additions or to investigating bugs whose cause is not confirmed."
 metadata:
   author: hrlee
   version: "1.0.1"
@@ -9,117 +9,117 @@ metadata:
 
 # Refactor
 
-제품의 계약을 보존하면서 구현의 규모와 이해 비용을 줄이는 작업 지침이다. 목표는 기능에 비해 불필요한 코드와 구조를 줄여 유지보수자가 변경의 영향을 예측할 수 있게 하는 것이다.
+These are working instructions for reducing the size and comprehension cost of the implementation while preserving the product's contracts. The goal is to remove code and structure unnecessary for the functionality so maintainers can predict the impact of changes.
 
-## 작업 범위
+## Work scope
 
-요청에서 작업 모드를 구분한다.
+Distinguish the work mode from the request.
 
-| 모드 | 허용 범위 | 결과 |
+| Mode | Allowed scope | Result |
 | --- | --- | --- |
-| 계획 | 코드와 계약 조사 | 우선순위, 예상 구조, 영향, 검증 기준 |
-| 실행 | 승인된 범위의 구현 변경 | 정리된 구현과 동작·성능 보존 근거 |
-| 예방책 감사 | 요구와 현재 검사·시험·CI의 대조 | 충족 여부, 근거, 누락된 예방책 |
+| Plan | Investigating code and contracts | Priorities, expected structure, impact, verification criteria |
+| Execute | Implementation changes within the approved scope | Cleaned-up implementation and evidence that behavior and performance are preserved |
+| Safeguard audit | Comparing requirements with current checks, tests, and CI | Whether each is met, the evidence, and missing safeguards |
 
-감사 요청만으로 제품이나 CI를 수정하지 않는다. 일반 리팩토링 요청을 코드베이스 전체의 재작성으로 확대하지 않는다. 파괴적 리팩토링이 승인되면 내부 구조를 유지 조건으로 삼지 않고 필요한 범위에서 다시 설계한다. 승인된 목표 안의 하위 구현 결정은 스스로 수행하며, 계약 변경이나 데이터 손실처럼 권한이 필요한 경계에서만 확인한다.
+Do not modify the product or CI on an audit request alone. Do not expand a general refactoring request into a rewrite of the whole codebase. When a destructive refactor is approved, do not treat the internal structure as a condition to keep; redesign within the needed scope. Make lower-level implementation decisions within the approved goal yourself, and confirm only at boundaries that need authority, such as contract changes or data loss.
 
-## 기준과 보존 계약
+## Baseline and preserved contracts
 
-현재 작업 디렉터리가 실제 대상 브랜치인지 확인한다. 검토할 커밋과 작업 트리의 수정 상태를 기록하고, 비교 대상은 사용자가 지정한 릴리즈나 리팩토링 시작 커밋으로 고정한다. 다른 작업자의 변경은 별도 checkout 등으로 분리한다.
+Confirm that the current working directory is the actual target branch. Record the commit under review and the modification state of the working tree, and fix the comparison target to the release or refactoring start commit the user specified. Separate other workers' changes with a separate checkout or similar.
 
-보존할 계약과 바꿀 내부 구현을 구분한다. 제품에 해당하는 항목만 조사한다.
+Separate the contracts to preserve from the internal implementation to change. Investigate only the items that apply to the product.
 
-| 보존 대상 | 확인할 근거 |
+| Preserved | Evidence to check |
 | --- | --- |
-| 공개 동작 | API·CLI·MCP의 입력, 응답, 오류, 설정과 배포 인터페이스 |
-| 저장된 데이터 | schema, migration, 식별자, 정합성, transaction 의미 |
-| 계산 결과 | 검색 점수와 순서, 필터, 시간 조건, 백엔드 간 동등성 |
-| 운영 동작 | 적재, 취소·재개, 복구, 동시 실행과 자원 정리 |
-| 성능 | 같은 작업의 지연 시간, 처리량, DB 왕복과 자원 사용 |
+| Public behavior | Inputs, responses, errors, settings, and deployment interfaces of APIs, CLIs, and MCP |
+| Stored data | Schema, migrations, identifiers, integrity, transaction semantics |
+| Computed results | Search scores and order, filters, time conditions, equivalence across backends |
+| Operational behavior | Loading, cancel and resume, recovery, concurrent execution, and resource cleanup |
+| Performance | Latency, throughput, DB round trips, and resource use for the same work |
 
-현재 지시의 변경 허용 범위를 우선한다. 이전 작업의 스키마 동결이나 인덱스 변경 허용을 다른 프로젝트의 영구 규칙으로 옮기지 않는다. 기존 백엔드의 차이도 의도된 계약인지 결함인지 확인하며, 발견한 결함은 리팩토링의 결과와 구분한다.
+The change scope allowed by the current instruction takes precedence. Do not carry a schema freeze or an allowance for index changes from earlier work into another project as a permanent rule. Also check whether differences between existing backends are intended contracts or defects, and keep defects found separate from the results of the refactor.
 
-기준 트리와 제품 코드의 규모를 기록한다. 제품·시험·평가 도구는 구분해 집계하고, 생성 코드나 이동한 코드로 감소량을 부풀리지 않는다.
+Record the size of the baseline tree and the product code. Count product, test, and evaluation tooling separately, and do not inflate the reduction with generated or moved code.
 
-## 우선순위와 설계
+## Priorities and design
 
-승인된 범위에서 불필요한 복잡성과 코드 분량을 가장 많이 없앨 단위를 먼저 선택한다. 작은 wrapper 정리로 큰 저장 계층이나 기능 구현의 재설계를 미루지 않는다. 보존 계약을 검증할 수 있는 단위로 나누어 진행한다.
+Within the approved scope, choose first the unit that removes the most unnecessary complexity and code volume. Do not postpone a redesign of a large storage layer or feature implementation with small wrapper cleanups. Proceed in units whose preserved contracts can be verified.
 
-- 줄 수뿐 아니라 파일 수, 클래스 수, 추상화, 디렉터리의 폭과 깊이를 함께 검토한다. 총량 감소를 이유로 한 파일에 책임을 몰아넣지 않는다.
-- 이름과 컨벤션을 축약하거나 여러 문장을 한 줄에 넣어 코드가 줄었다고 판정하지 않는다. SOLID는 변경의 영향을 줄이는 데 적용하며, 원칙을 이유로 불필요한 인터페이스와 파일을 만들지 않는다.
-- 디렉터리는 제품의 기능과 책임을 드러내야 한다. 특정 프로젝트의 기능 이름을 다른 제품에 강요하지 않는다. 공용 디렉터리는 여러 기능이 실제로 공유하는 책임에 사용한다.
-- 하나의 개념은 한 곳에서 소유하거나 각 구현이 의도적으로 소유하도록 한다. 호출자는 두 경우 중 어느 쪽인지 설명할 수 있어야 한다. 공통화 비용이 중복보다 크면 각자의 구현을 유지한다.
-- 백엔드는 공통 계약과 판단을 공유하되 저장 방식의 차이를 억지로 같은 쿼리로 만들지 않는다. SQL이나 DB 연산의 표현력을 사용하고 불필요한 중계 코드와 왕복을 줄인다. 점수·정렬·원자성과 복구 의미를 함께 확인한다.
-- 소비자와 함께 관리하는 prompt 등 보조 모듈은 이름과 위치의 대응을 유지한다. private 표기와 공개 재노출도 같은 기준으로 정리한다.
+- Review not only line counts but file count, class count, abstraction, and the breadth and depth of directories together. Do not pile responsibilities into one file for the sake of a smaller total.
+- Do not judge that code shrank by abbreviating names and conventions or putting several statements on one line. Apply SOLID to reduce the impact of change, and do not create unnecessary interfaces and files in the name of principles.
+- Directories must reveal the product's features and responsibilities. Do not force one project's feature names on another product. Use shared directories for responsibilities several features actually share.
+- One concept is owned in one place, or each implementation owns it deliberately. A caller must be able to explain which of the two it is. If the cost of sharing exceeds the duplication, keep separate implementations.
+- Backends share common contracts and judgments but do not force differences in storage into the same query. Use the expressiveness of SQL and DB operations, and reduce unnecessary relay code and round trips. Check scores, ordering, atomicity, and recovery semantics together.
+- Auxiliary modules managed together with their consumers, such as prompts, keep their name and location correspondence. Clean up private markers and public re-exports by the same standard.
 
-줄이는 작업은 큰 단위부터 시작하되 큰 것만 하지 않고, 전체를 훑어 지울 것이 없을 때만 멈춘다. 리뷰어의 "큰 것은 남지 않았다"는 멈출 신호가 아니다. 대기열은 도착 순서가 아니라 지우는 양(그 항목이 풀어 주는 것 포함) 순서로 정렬하고, 목표치는 계약이 요구하는 하한에서 출발해 그 위의 모든 것이 존재 근거를 대게 한다. 작업자나 계획자의 "이것이 최소"를 증거로 받지 않고 다음 삭제가 무엇인지 묻는다. 진행 보고는 기준 commit 대비 제품 줄 수, 파일, 클래스, 함수, 시험, 하네스, 스크립트, 문서의 모든 차원을 보이고, "최초 N줄, 지금 M줄, 차이 D줄"을 앞에 둔다.
+Start reducing from large units, but do not do only the large ones; stop only when a sweep of the whole finds nothing left to delete. A reviewer's "nothing large remains" is not a signal to stop. Sort the queue not by arrival order but by the amount deleted (including what the item unlocks), and start the target from the lower bound the contract requires so that everything above it must give a reason to exist. Do not accept a worker's or planner's "this is the minimum" as evidence; ask what the next deletion is. Progress reports show every dimension against the base commit: product lines, files, classes, functions, tests, harness, scripts, and documents, with "initially N lines, now M lines, difference D lines" first.
 
-중복 방어의 바깥 겹을 걷기 전에 "바깥 겹이 모든 결과를 거른다"와 "안쪽 겹이 모든 경로를 이미 막는다"를 구분한다. 입력 경로(채널, 분기) 목록을 만들어 안쪽 겹이 경로마다 막는지 하나씩 확인하고, 바깥 겹을 검사하던 시험이 사라질 때 그 보장을 다른 시험이 덮는지 본다.
+Before removing the outer layer of a duplicated defense, distinguish "the outer layer filters every result" from "the inner layer already blocks every path". Make a list of input paths (channels, branches), confirm one by one that the inner layer blocks each path, and check whether another test covers the guarantee when the tests that checked the outer layer disappear.
 
-결함 수정은 이슈가 정한 차이 하나만 바꾸고 가중치, 행 수, 순서, 점수, 계획 모양은 기준과 같게 둔다. 이식이나 복원은 같은 입력에서 속도와 검색·답변 점수와 그래프 품질이 모두 기준 이상일 때 끝나며, 나빠진 지표는 trade-off가 아니라 결함이다. 회귀 확인은 코드만 다른 두 조건(기준과 대상 HEAD, 같은 컨테이너의 새 빈 DB, 같은 입력과 모델)으로 하고, 오래 쓴 인스턴스의 DB를 증거로 쓰지 않는다.
+A defect fix changes only the one difference the issue defines and keeps weights, row counts, order, scores, and plan shape the same as the baseline. A port or restoration ends when speed, search and answer scores, and graph quality on the same input are all at or above the baseline, and a worsened metric is not a trade-off but a defect. Check regressions with two conditions that differ only in code (baseline and target HEAD, a new empty DB in the same container, the same input and model), and do not use the DB of a long-used instance as evidence.
 
-파괴적 리팩토링에서는 Protocol, 메서드 목록, 파일 구조, 내부 구현만 고정하는 시험을 재설계할 수 있다. 대체된 옛 구현과 사용하지 않는 제품 코드는 호출자를 확인한 뒤 제거한다. 개발용 평가 도구와 유효한 평가 데이터는 필요에 따라 제품 경로에서 분리하며, 사용 빈도만으로 삭제하지 않는다. 공유 계약을 바꾸면 호출자와 구현체를 함께 수정한다.
+In a destructive refactor, tests that pin only Protocols, method lists, file structure, or internal implementation may be redesigned. Remove replaced old implementations and unused product code after checking callers. Separate development evaluation tools and valid evaluation data from the product path as needed, and do not delete them for low usage alone. When a shared contract changes, fix callers and implementations together.
 
-## 대량 이동과 이름 변경
+## Bulk moves and renames
 
-녹색 CI는 import가 해결된다는 것만 보여 준다. 모듈과 심볼의 이동 표는 따로 작성해 고정하고, 쓰기 전에 표의 목적지가 모두 존재하는지 확인한다. 순수한 접두 이동은 요청한 commit의 원본 트리를 기준으로 하고, 이미 공유 모듈에 속한 정의의 중간 소유자 표를 뒤집지 않는다. 치환은 점 경로 뒤에 토큰 경계(`[A-Za-z0-9_]`가 오지 않음)를 두거나 원본에서 한 번에 치환해야 새 이름이 옛 이름을 접두로 포함할 때 `feedback_routes_routes`처럼 겹치지 않는다. 파일 목록과 해시 목록은 `git ls-files -z`로 만든다. 기본 출력은 비ASCII 이름을 따옴표로 감싸 존재하는 파일을 삭제된 것으로 오인하게 한다.
+Green CI shows only that imports resolve. Write and fix a separate move table of modules and symbols, and before writing, confirm that every destination in the table exists. A pure prefix move is based on the original tree of the requested commit, and does not invert the table of intermediate owners for definitions that already belong to a shared module. Put a token boundary after the dotted path (no `[A-Za-z0-9_]` following) or substitute from the original in one pass so that, when a new name contains the old name as a prefix, they do not overlap as in `feedback_routes_routes`. Build file lists and hash lists with `git ls-files -z`. The default output quotes non-ASCII names and makes existing files look deleted.
 
-이동과 이름 변경은 다음까지 확인해야 끝난다.
+A move or rename is finished only after confirming the following.
 
-1. 옛 이름을 점 경로, `stem.py`, `stem/`, 백틱, 시험 이름 안의 snake 형태, 정규식 `\b` 뒤까지 모든 표기로 검색한다. 경로가 아니라 패턴으로 범위를 정한다.
-2. `patch("...")`와 monkeypatch 문자열은 정의의 새 위치가 아니라 호출자가 그 이름을 찾는 모듈을 가리키게 하고, 가짜가 실제로 호출됐는지 단언한다.
-3. 지우거나 모양을 바꾼 클래스, 속성, 함수마다 통합 시험과 하네스를 검색하고, 해당 파일만 `-k`로 실행해 목록과 결과를 보고한다.
-4. 응답 pydantic 모델의 클래스 이름은 LLM 요청(`json_schema` name, `$defs` 키)에 들어간다. LLM 코드를 건드렸으면 두 트리의 `model_json_schema()`를 비교한다.
-5. 질의 파일 헤더처럼 주석에 호출자 경로를 적는 규약이 있으면 함께 고친다. factory를 인라인했으면 지운 factory의 키워드 인자를 모두 검색한다.
-6. `dataclasses.asdict`와 `model_dump`는 property를 빼므로 수동 직렬화를 지우면 값이 사라질 수 있다.
-7. 일괄 이름 변경 중 파일 하나를 되돌리면 그 파일에 적용한 다른 이름 변경도 사라진다. 되돌린 뒤 치환을 다시 돌리고 옛 이름을 한 번에 검색한다.
+1. Search the old name in every notation: dotted path, `stem.py`, `stem/`, backticks, snake form inside test names, and after regex `\b`. Define the scope by pattern, not by path.
+2. Point `patch("...")` and monkeypatch strings at the module where the caller looks up the name, not the new location of the definition, and assert that the fake was actually called.
+3. For each class, attribute, or function deleted or reshaped, search the integration tests and harness, run only those files with `-k`, and report the list and results.
+4. The class names of response pydantic models go into LLM requests (`json_schema` name, `$defs` keys). If you touched LLM code, compare `model_json_schema()` of the two trees.
+5. If there is a convention of writing caller paths in comments, such as query file headers, fix those too. If you inlined a factory, search all keyword arguments of the deleted factory.
+6. `dataclasses.asdict` and `model_dump` omit properties, so deleting manual serialization can make values disappear.
+7. Reverting one file during a bulk rename also reverts the other renames applied to that file. After reverting, run the substitution again and search the old names in one pass.
 
-## 동작과 성능의 검증
+## Verifying behavior and performance
 
-공개 동작을 관찰하는 시험을 우선한다. 내부 함수 이름이나 private 상태만 고정하는 시험은 보존 근거로 삼지 않는다. 시험을 삭제하거나 다시 작성할 때는 기존의 유효한 동작 단언이 어디에서 검증되는지 확인한다.
+Prefer tests that observe public behavior. Do not use tests that pin only internal function names or private state as evidence of preservation. When deleting or rewriting tests, confirm where the existing valid behavioral assertions are verified.
 
-시험은 빠른 unit을 기반으로 실제 의존성을 사용하는 통합 시험과 소수의 E2E를 구성한다. 지원하는 백엔드에는 공통 계약을 같은 기대값으로 검증한다. 제품 시험이 개발용 harness의 판정을 import하지 않도록 한다.
+Compose tests from fast units as the base, integration tests that use real dependencies, and a few E2E tests. Verify common contracts across supported backends with the same expected values. Keep product tests from importing the judgments of the development harness.
 
-핵심 기능마다 실제로 통과하는 요청 경로를 확인한다. 시험 파일이 있다는 사실이나 API의 일부를 fake로 대체한 시험만으로 전체 흐름을 검증했다고 보고하지 않는다. 실제 모델이나 외부 서비스가 기능의 성립에 관여한다면 허용된 환경과 비용 범위에서 소수의 E2E로 결합 동작을 확인한다.
+For each core feature, confirm a request path that actually passes. Do not report that the whole flow was verified merely because a test file exists or because a test replaced part of the API with a fake. If a real model or external service is part of how the feature works, confirm the combined behavior with a few E2E tests within the allowed environment and cost.
 
-전후 비교에서는 같은 데이터와 설정을 사용한다. 모델 응답의 무작위성이 제품 비교를 가리면 응답·임베딩의 고정이나 기록 재생 등으로 변수를 통제한다. 검색과 적재의 보존을 모델 답변 품질로 대신 판정하지 않는다. 백엔드끼리 같은 결과를 내는 시험과 이전 버전의 제품 계약을 보존하는 시험은 구분한다. 두 백엔드가 함께 잘못 바뀌어도 서로의 비교는 통과할 수 있다.
+In before/after comparisons, use the same data and settings. If the randomness of model responses obscures the product comparison, control the variable by fixing responses and embeddings, record and replay, or similar. Do not judge preservation of search and loading by model answer quality. Separate tests where backends produce the same result from tests that preserve the previous version's product contract. Even if both backends change wrongly together, the comparison between them can pass.
 
-성능은 결과의 동등성과 별도로 확인한다. 기준과 대상의 입력·실행 환경을 맞추고 측정값, 반복 횟수, 변동과 허용 폭을 남긴다. 지연 시간을 로그에 적는 것과 성능 저하를 판정하는 검사는 다르다. query 왕복 단언은 해당 경로의 구조적 비용을 검증하지만 전체 적재 성능을 대신하지 않는다.
+Check performance separately from result equivalence. Match the inputs and execution environment of baseline and target, and keep the measurements, repetition count, variance, and tolerance. Writing latency to a log is different from a check that judges performance regression. A query round-trip assertion verifies the structural cost of that path but does not replace overall loading performance.
 
-시험은 변경 범위에 맞춰 묶어 실행한다. 작은 수정마다 전체 시험을 반복하지 않는다. 저장소의 표준 runner와 격리 방식을 사용하고, DB와 모델 자원을 공유하는 실행은 하나의 실행 주체와 잠금으로 직렬화한다. 준비된 환경은 안전하게 재사용하며 작업자가 소유한 자원만 정리한다.
+Run tests grouped by the scope of the change. Do not repeat the full test suite for every small fix. Use the repository's standard runner and isolation, and serialize runs that share DB and model resources under one runner and a lock. Reuse prepared environments safely and clean up only resources the worker owns.
 
-제품 패키지가 이동하면 unit 시험의 디렉터리도 대응시킨다. 공통 fixture, 통합 시험과 E2E처럼 다른 분류가 필요한 디렉터리는 예외의 목적을 명시한다. 구조 대칭이 요구된 저장소에서는 새 디렉터리의 이탈을 자동 검사한다.
+When a product package moves, align the unit test directories too. Directories that need a different classification, such as shared fixtures, integration tests, and E2E, state the purpose of the exception. In repositories where structural symmetry is required, check new directories' deviations automatically.
 
-## 예방책과 검사 출력
+## Safeguards and check output
 
-반복된 지적은 현재 구현의 수정과 재발 방지를 구분한다. 기계가 판정할 수 있는 제약은 기존 linter·정적 검사·시험·CI의 실행 경로에 연결한다. AGENTS.md와 유사한 지침에는 도구가 판정하지 못하는 작업 판단만 남긴다. 조회 가능한 파일·API·라벨 목록이나 이미 검사하는 규칙을 복제하지 않는다. 문장을 옮길 때는 필요한 판단 기준을 잃지 않았는지 확인한다.
+Separate the fix of the current implementation from the prevention of recurrence for repeated criticisms. Connect constraints a machine can judge to the execution path of existing linters, static checks, tests, and CI. Leave in AGENTS.md and similar instructions only work judgments that tools cannot make. Do not duplicate lists of files, APIs, or labels that can be looked up, or rules already checked. When moving sentences, confirm that the needed judgment criteria were not lost.
 
-검사 실패 출력에는 규칙이 필요한 이유를 포함한다. 검사 조건을 반복하는 대신 위반으로 누가 어떤 결함이나 비용을 겪는지 설명한다. 공통 보고 경로에서 이유를 필수로 받고, 검사 등록과 보고 경로의 누락은 메타 검사로 방지한다. 저장소 검사는 `Path.rglob`이 아니라 `git ls-files`로 파일을 열거한다. rglob는 깨끗한 CI에서는 통과하고 worktree와 가상환경이 있는 개발자 사본에서는 실패한다. 차단 게이트가 될 검사는 거짓 양성과 거짓 음성을 사례 파일로 보이고, 도구 고장(읽기 실패)을 위반과 다른 종료 코드로 구분한다. baseline 파일은 검사가 생기기 전의 위반만 담으며 예외 목록으로 쓰지 않는다. 이름이 바뀐 항목도 새 키이므로 baseline의 추가 줄이 0인지를 commit 게이트로 둔다. 이유가 의미 있는지는 사람이 검토하며 기계가 의미까지 판정한다고 주장하지 않는다.
+Include in a check's failure output the reason the rule is needed. Instead of repeating the check condition, explain who suffers what defect or cost from the violation. Require the reason on a common reporting path, and prevent missing check registration and reporting paths with a meta-check. Repository checks enumerate files with `git ls-files`, not `Path.rglob`. rglob passes in clean CI and fails in a developer copy that has worktrees and virtual environments. A check that will become a blocking gate shows false positives and false negatives in case files, and distinguishes a tool failure (read failure) from a violation with a different exit code. A baseline file holds only violations that predate the check and is not used as an exception list. A renamed item is also a new key, so make "zero added lines in the baseline" a commit gate. A person reviews whether the reason is meaningful; do not claim the machine judges the meaning too.
 
-기존 문체 규칙과 경고 수준을 따른다. 검출 항목은 수정하거나 수정하지 않아도 된다는 명시적 수용 근거를 남긴다. warning의 성공 종료를 수용으로 간주하지 않는다. 허용 목록이나 시험 baseline을 갱신해 새 위반을 감출 수 있으므로 그 증가의 정당성도 검토한다.
+Follow the existing style rules and warning levels. Leave an explicit acceptance rationale for each detected item, either fixing it or stating it need not be fixed. Do not treat a warning's successful exit as acceptance. Updating an allowlist or test baseline can hide new violations, so review the justification for that increase too.
 
-## 예방책 감사
+## Safeguard audit
 
-요구별로 실제 검사·시험·CI와 실패 조건을 추적한다. 문서에 규칙이 있거나 검사 파일이 존재한다는 사실만으로 자동 차단으로 분류하지 않는다.
+Trace, per requirement, the actual checks, tests, CI, and failure conditions. Do not classify something as automatic blocking merely because a rule exists in the docs or a check file exists.
 
-| 요구 | 구현 근거 | 현재 검증 | 판정 | 필요한 조치 |
+| Requirement | Implementation evidence | Current verification | Verdict | Needed action |
 | --- | --- | --- | --- | --- |
-| 보존 또는 구조 요구 | 파일과 위치 | 실제 실행 결과 또는 미실행 | 자동 차단·부분 검증·사람 검토·없음 | 누락된 검사나 판단 |
+| Preservation or structural requirement | File and location | Actual execution result or not run | Automatic blocking · partial verification · human review · none | Missing check or judgment |
 
-자동 차단은 검사 등록, 실제 실행 조건, 위반 시 실패, 완료 판정과의 연결까지 확인한다. 필요한 경우 작은 반례로 검사가 위반을 잡는지 확인한다. 수동 E2E는 존재 여부와 해당 커밋의 성공 증거를 따로 확인한다. CI 파일만 보고 원격의 필수 상태 검사나 branch protection을 확인했다고 주장하지 않는다.
+For automatic blocking, confirm check registration, actual execution conditions, failure on violation, and the connection to the completion verdict. If needed, confirm with a small counterexample that the check catches the violation. For manual E2E, confirm separately whether it exists and the evidence of success for that commit. Do not claim to have confirmed remote required status checks or branch protection by looking only at CI files.
 
-감사 결과는 영향 순으로 정리한다. 요구와 증거를 연결하고, 검증하지 못한 범위는 별도로 표시한다. 예방책이 없다는 사실과 제품 결함이 재현되었다는 사실을 구분한다.
+Organize audit results by impact. Connect requirements and evidence, and mark separately the scope you could not verify. Distinguish the fact that a safeguard is missing from the fact that a product defect was reproduced.
 
-## 완료 판정과 보고
+## Completion verdict and report
 
-시험 통과와 설계 완료를 구분한다. 승인된 검토 체계에 따라 구현과 별도의 검토로 남은 복잡성과 보존 계약의 근거를 확인한다. 별도 검토자가 없으면 그 한계를 밝히며 독립 검토를 받았다고 표현하지 않는다. 확인한 범위를 이유 없이 반복 검토하지 않는다.
+Distinguish passing tests from completing the design. Following the approved review system, confirm the remaining complexity and the evidence for preserved contracts with a review separate from the implementation. If there is no separate reviewer, state that limitation and do not describe it as having received independent review. Do not re-review confirmed scope without reason.
 
-완료 판정에는 해당 커밋의 필요한 시험과 성능 비교 결과를 연결한다. 비싼 E2E를 모든 작은 수정마다 실행할 필요는 없지만, 수동 실행이라는 이유로 최종 검증에서 빠뜨리지 않는다. 미실행·진행 중·불명확한 결과를 통과로 계산하지 않는다.
+Connect the completion verdict to the needed tests and performance comparison results of that commit. Expensive E2E need not run for every small fix, but do not leave them out of final verification because they are manual. Do not count unrun, in-progress, or unclear results as passed.
 
-사용자 보고는 작업 규모에 맞춰 다음 근거를 포함한다. 보고용 이력과 전후 비교는 대화나 명시적인 검토 기록에 남기고, 제품 코드와 문서는 현재 상태를 설명한다.
+The user report includes the following evidence, scaled to the work. Keep the reporting history and before/after comparisons in the conversation or an explicit review record, and have product code and documents describe the current state.
 
-- 검토·구현한 커밋과 범위, 완료·진행 중·미착수 구분
-- 초기·현재 트리와 파일별 줄 수, 생성·이동·이름 변경·삭제 여부
-- 코드·파일·클래스와 계층 수의 변화 및 남은 복잡성
-- 동작·성능 검증 결과와 수행하지 못한 확인
-- 미해결 결함, 수용된 경고, 사람의 판단에 남은 예방책
+- Commits and scope reviewed and implemented, with done, in-progress, and not-started separated
+- Initial and current trees, per-file line counts, and whether files were created, moved, renamed, or deleted
+- Changes in code, file, and class counts and layer counts, and the remaining complexity
+- Behavior and performance verification results and the checks that could not be done
+- Unresolved defects, accepted warnings, and safeguards left to human judgment
