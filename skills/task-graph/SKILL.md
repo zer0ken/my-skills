@@ -3,7 +3,7 @@ name: task-graph
 description: "Plan work that will take several turns as a directed acyclic graph (tasks as nodes, dependencies as directed edges) and schedule from it: start every ready task, overlap long waits with other work, and replan when results change the graph. Use when the user calls /task-graph, asks to plan or schedule a long task, or when starting work of medium difficulty that takes several turns but is smaller than a whole issue. Work at the scale of a whole issue uses my-workflow, and task-graph may be nested inside it. Do not use for work that finishes in one turn or for a single short chain of steps."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.2.0"
   domain: planning
   triggers: 작업 그래프, 태스크 그래프, 의존성 그래프, 작업 계획, 스케줄링, 긴 작업, 여러 턴, task graph, dependency graph, scheduling
 ---
@@ -36,7 +36,7 @@ The method connects two known techniques. The ready set comes from Kahn's algori
 
 ## Keep the record
 
-Keep the graph where a later turn or a resumed session can read it without rereading the conversation: a task list with dependency fields where the runtime has one, and otherwise the plan document. One row per node is enough.
+Keep the graph in a file that a later turn, a resumed session, or the session after compaction can read without rereading the conversation: the plan document, mirrored in a task list with dependency fields where the runtime has one. Above the table, write the goal in the user's wording, the user's decisions in their wording, and the completion criteria; do not change the criteria to match what was done. One row per node is enough.
 
 | id | task | needs | runs on | waits on | status |
 | --- | --- | --- | --- | --- | --- |
@@ -44,7 +44,9 @@ Keep the graph where a later turn or a resumed session can read it without rerea
 | T2 | Read the existing design records | - | this session | - | done |
 | T3 | Choose the approach | T1, T2 | this session | - | blocked |
 
-Status is one of done, running, ready, and blocked. Update the row when the node starts and when it ends, and write the result or its path next to a finished node.
+Status is one of done, running, ready, and blocked. Update the row when the node starts and when it ends, and write the result or its path next to a finished node. When a finished node changed a repository, commit it with a message that says what was done, so that the record and the history agree.
+
+After compaction or a resume, read the record first, together with the recent commit log when a repository is involved, and continue from it; the summary of the conversation does not replace the record. When compacting the session yourself, name the path of the record in the summary instruction. This is the note-taking practice for long-running agents: a progress record and the commit history let a fresh context window see the state of the work (Anthropic, "Effective harnesses for long-running agents").
 
 ## Report
 
