@@ -20,6 +20,7 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 | [refactor](skills/refactor/SKILL.md) | 기능과 성능을 보존하는 리팩토링 계획·실행과 저장소 예방책 감사. |
 | [rv](skills/rv/SKILL.md) | Adversarial code, design, and PR review with evidence and follow-up findings. |
 | [sucks](skills/sucks/SKILL.md) | Korean technical prose style rules for docs, issues, PR bodies, and comments. |
+| [task-graph](skills/task-graph/SKILL.md) | 여러 턴이 걸리는 작업을 태스크와 의존성의 유향 그래프로 계획하고 그 그래프에서 스케줄링한다. |
 | [tdd-is-dead](skills/tdd-is-dead/SKILL.md) | 범위와 의도를 먼저 파악하고 최소 테스트로 검증하는 코드 작업 순서와, 외부 PoC를 ds 이식 설계로 제품에 반영하는 경로. TDD식 작성-실행-수정 반복을 금지한다. |
 | [teqr](skills/teqr/SKILL.md) | Write and revise technical reports, runbooks, experiment notes, and test or benchmark plans. |
 
