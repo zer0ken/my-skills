@@ -1,9 +1,9 @@
 ---
 name: task-graph
-description: "Plan work that will take several turns as a directed acyclic graph (tasks as nodes, dependencies as directed edges) and schedule from it: start every ready task, overlap long waits with other work, and replan when results change the graph. Use when the user calls /task-graph, asks to plan or schedule a long task, or when starting long multi-turn work, whether or not my-workflow is in use. Do not use for work that finishes in one turn or for a single short chain of steps."
+description: "Plan work that will take several turns as a directed acyclic graph (tasks as nodes, dependencies as directed edges) and schedule from it: start every ready task, overlap long waits with other work, and replan when results change the graph. Use when the user calls /task-graph, asks to plan or schedule a long task, or when starting work of medium difficulty that takes several turns but is smaller than a whole issue. Work at the scale of a whole issue uses my-workflow, and task-graph may be nested inside it. Do not use for work that finishes in one turn or for a single short chain of steps."
 metadata:
   author: hrlee
-  version: "1.0.0"
+  version: "1.1.0"
   domain: planning
   triggers: 작업 그래프, 태스크 그래프, 의존성 그래프, 작업 계획, 스케줄링, 긴 작업, 여러 턴, task graph, dependency graph, scheduling
 ---
