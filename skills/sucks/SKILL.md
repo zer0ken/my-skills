@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.7.1"
+  version: "2.8.0"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -20,6 +20,8 @@ The rules below govern Korean prose. Every example is Korean and is kept verbati
 Check the style of Korean prose by rules instead of judging it by feel.
 
 A text contains only the minimum content needed to achieve its purpose.
+
+The rules remove the marks by which a reader recognizes prose a model generated without checking it. A reader who finds one such mark stops trusting the remaining sentences, so one violation costs the whole text.
 
 ## Scope
 
@@ -46,12 +48,18 @@ The goal is not something between the two but neither: a neutral technical writt
 
 **A title is a name, not a sentence.** A title is a noun phrase that points to what the section covers. Putting a claim or explanation in the title inverts the relationship in which the section explains the title, so the title summarizes the section. A reader who read the summary loses the reason to read the section.
 
-Do not use sentence endings (`~다`, `~요`, `~습니다`) or predicates, and do not add punctuation (`.`, `!`, `?`).
+The last word of a title is a noun. Do not use sentence endings (`~다`, `~요`, `~습니다`), the nominalizing endings `~함`, `~음`, `~하기` that only disguise a sentence, or punctuation (`.`, `!`, `?`).
 
-- 나쁜 예: `캐시를 도입해 응답 속도를 개선했다`, `왜 인덱스가 필요한가?`
-- 좋은 예: `캐시 도입과 응답 속도`, `인덱스 필요성`
+To turn a sentence into a title, keep its object and replace the predicate with the noun of that action. Particles inside the phrase stay.
 
-Apply to document titles, section titles, table of contents entries, and slide titles.
+| 문장 | 명사구 |
+| --- | --- |
+| `캐시를 도입해 응답 속도를 개선했다` | `캐시 도입과 응답 속도` |
+| `왜 인덱스가 필요한가?` | `인덱스 필요성` |
+| `질의 경로에 키워드 검색을 붙인다` | `질의 경로의 키워드 검색 추가` |
+| `빈 응답에서 파서가 실패하는 문제를 수정함` | `빈 응답의 파서 실패 수정` |
+
+Apply to every line that names a text: document titles, section titles, table of contents entries, slide titles, PR titles, and issue titles. A commit subject follows the repository's commit convention, which may be a sentence, so a commit subject copied into a PR title is rewritten as a noun phrase. A prefix the repository requires, such as `fix(#12):`, stays, and the noun phrase follows it.
 
 ## Sections
 
@@ -101,6 +109,11 @@ If the level must drop, split the section, and its title announces the new level
 
 If there is only one attribute, use a list. Use a table only when there are two or more columns.
 
+**The number of items is the number of facts.** Do not add an item to reach three or drop one to stay at three. Three adjectives or three parallel phrases in a row are the same: if one of them carries the information, keep that one.
+
+- 나쁜 예: `빠르고, 안정적이며, 확장 가능한 저장 계층`
+- 좋은 예: `쓰기 지연 p99가 12ms인 저장 계층`
+
 ## Sentences
 
 **Do not omit the subject.** The actor of an action is a program and is called by name. A subjectless sentence reads as if the writer performs it directly.
@@ -129,6 +142,16 @@ When an adnominal clause grows long, split the sentence. Do not nest it before t
 
 - 나쁜 예: `개선이 아닌 회귀이다!`, `왜 이 값이 필요한가?`
 - 좋은 예: `개선이 아니라 회귀다`, `이 값은 재시도 간격을 정한다`
+
+**Do not emphasize with markup.** Do not bold a phrase inside a sentence, and do not use emoji. Bold in running prose marks what the writer considers important instead of stating why it is important. Bold is allowed only where a template fixed by the repository or by a skill puts it, such as an item label.
+
+- 나쁜 예: `이 값은 **반드시** 재시작 전에 설정한다`
+- 좋은 예: `이 값은 재시작 전에 설정한다. 재시작 뒤에 설정한 값은 읽히지 않는다`
+
+**Do not use em dashes or en dashes.** A dash inside a sentence inserts an aside without stating its relation to the sentence. Replace it with a comma or a colon, or split the sentence. Write a range with `에서`, `까지`, or a hyphen.
+
+- 나쁜 예: `캐시는 — 요청마다 — 갱신된다`
+- 좋은 예: `캐시는 요청마다 갱신된다`
 
 **Do not split one fact into two sentences.** If the next sentence restates what follows from the previous one, the reader reads it expecting new information and finds none. If two sentences point to the same fact, merge them.
 
@@ -274,6 +297,26 @@ Introduction comes with three conditions.
 - 나쁜 예: `확장 가능하고 유지보수가 쉬운 구조입니다`
 - 좋은 예: `저장 backend를 바꿀 때 교체하는 파일은 질의 파일 하나다`
 
+**Do not deny what nobody claimed.** `A가 아니라 B다` and `단순히 A가 아니라 B다` are used only when the reader has a reason to assume A: an earlier claim, a common misreading, or the previous behavior. Without that reason the sentence invents A to make B look like a finding. State B.
+
+- 나쁜 예: `이 모듈은 단순한 캐시가 아니라 요청 수명 주기를 관리하는 계층이다`
+- 좋은 예: `이 모듈은 요청마다 캐시 항목의 만료 시각을 갱신한다`
+
+**Name the source of a claim.** `일반적으로`, `알려져 있다`, `권장된다`, `많은 경우` attribute a claim to nobody. Write who states it or where it was measured, and delete the claim if there is no source.
+
+- 나쁜 예: `일반적으로 배치 크기는 32가 권장된다`
+- 좋은 예: `배치 크기 32는 2026-10 측정에서 처리량이 가장 높았던 값이다`
+
+**Do not close with a sentence that restates or evaluates.** A paragraph or section ends at its last fact. A final sentence that summarizes what was just written, states its importance, or promises a future benefit (`결론적으로`, `이를 통해 ~할 수 있다`, `~하는 것이 중요하다`) adds no fact.
+
+- 나쁜 예: `이를 통해 안정적인 운영이 가능해진다`
+- 좋은 예: 그 문장을 삭제한다
+
+**Documents and comments describe only the current behavior.** Change history belongs in commit messages, PRs, and issues, which exist to describe a change. In a document or code comment, a phrase about the previous behavior or the change itself becomes false at the next change.
+
+- 나쁜 예: `더 이상 지원하지 않는다`, `기존에는 전체를 렌더했지만 이제 변경분만 렌더한다`
+- 좋은 예: `지원하지 않는다`, `변경된 슬라이드만 렌더한다`
+
 **Do not use intensifying adverbs.** Words like `완전히`, `전혀`, `매우`, `아주`, `훨씬`, `크게` claim a large degree without measuring it. If the degree matters, write the measurement; if not, delete the adverb. Deleting it does not change whether the sentence is true.
 
 - 나쁜 예: `기존 주장을 완전히 뒤집었다`, `응답이 훨씬 빨라졌다`
@@ -332,56 +375,14 @@ If the revised text has the same number of sentences as the original, it is like
 
 ## Self-check
 
-After writing prose, check each section and paragraph.
+After writing, reread the text once per line below and fix each violation in place. Each line names the section above whose rules it applies. A checker in the repository, when present, runs after this pass and does not replace it, because it detects vocabulary and not organization.
 
-### Organization
-
-1. Is a title a sentence? Replace it with a noun phrase without sentence endings or predicates.
-2. Does one section cover only one topic? Gather a scattered topic into one section.
-3. Is there a section that needs another section to be understood? Do not add references; reorder or merge.
-4. Is the level of description the same in every paragraph? Check whether function names or code are mixed into an introductory paragraph.
-5. Does the revised text have the same number of sentences as the original? Check that only words were not replaced.
-
-### Lists
-
-6. Is there a place that enumerates cases? Check whether it can be reduced to one property.
-7. Is a remaining enumeration inside a sentence with commas? Split it into a list.
-8. Is there an enumeration that repeats `와` or `과`? Join with commas or split into a list.
-9. Does one list line contain several attributes? Replace it with a table.
-
-### Sentences
-
-10. Is there a subject? If not, put in the name of who performs the action.
-11. Is subject, object, predicate order kept? Are adnominal clauses nested before the subject?
-12. Is there an exclamation mark or question mark in the body?
-13. Do two sentences point to the same fact? Merge them.
-14. Is there an arrow, symbol, or abbreviation standing in for a sentence outside diagrams and code? Write the whole sentence.
-
-### Verbs
-
-15. Did you check for each verb whether a corresponding technical predicate exists?
-16. Does the chosen word fit the meaning in that sentence?
-
-### Words
-
-17. Is there a place where a domain term was replaced with another word?
-18. Is there an English technical term replaced with Korean or translated literally? Did you add a Korean name in parentheses after an English term?
-19. Is each noun used a word that exists in code or settings? If not, it is made up.
-20. Is there a noun used without introduction? Does the introducing sentence come before the context? Does one everyday word point to different concepts in the code together?
-21. Does one noun point to different things two or more times in the document? `자리`, `부분`, `것`, `내용`, `방식` especially.
-22. Did you join words with overlapping meanings?
-23. Is there a coinage made with `재-`, `-화`, or `-성`? Check that it is an existing word.
-24. Is there a place that uses `~` in a numeric range?
-
-### Information
-
-25. Does each stated fact connect by causality to the claims right before and after it?
-26. Is there an intensifying adverb? Replace it with a measurement or delete it.
-27. Is there a sentence that became a broader claim because a qualifier was dropped?
-28. If a limitation was written, does it answer all four questions?
-29. Can the content of a deleted sentence be obtained from code or other documents?
-30. Could a sentence appear unchanged in another project's documents? Replace it with a mechanism, number, or instruction, or delete it.
-
-### Head sentences
-
-31. Is the head sentence a list of components or a list of callers?
+1. Titles: every title, including a PR or issue title, ends in a noun.
+2. Sections and Level of description: one topic per section, no section that needs a later one, no code names in an introductory paragraph.
+3. Lists: no enumerated cases that one property covers, no comma list or `와` chain inside a sentence, no item added to reach three, a table where items have several attributes.
+4. Sentences: a named subject, subject before object before predicate, no `!`, `?`, bold, emoji, dash, or arrow in prose, no two sentences for one fact.
+5. Verbs: each verb checked for a technical predicate that fits its meaning in that sentence.
+6. Words: domain and English terms kept as they are without a Korean gloss, every noun found in code or introduced in context, no catch-all noun (`자리`, `부분`, `것`, `내용`, `방식`), no coinage with `재-`, `-화`, `-성`, `~` escaped.
+7. Information: each fact tied to the claim by causality, no sentence that fits another project unchanged, no denial of an unclaimed A, no unsourced `일반적으로`, no closing restatement, no change history in documents and comments, no intensifier, no dropped qualifier, four answers per limitation.
+8. Head sentences: no list of components or callers, no sentence form shared with other files.
+9. Revising: sentences merged, split, and reordered, not only words replaced; every deleted sentence obtainable from code or another document.
