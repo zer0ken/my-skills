@@ -3,7 +3,7 @@ name: pr
 description: "PR 을 올린다. 제목은 명사구로 쓰고, 본문은 맨 위의 이슈 참조 줄과 세 개 내외의 짧은 - 불릿 요약(하위 불릿 포함 10줄 이하)을 담고, 상세 설명은 본문 하단에 배치한다. 한국어 산문에는 sucks 스킬을 반드시 적용한다. 사용자가 /pr 을 호출하거나 PR 을 올리라고 지시할 때 사용한다."
 metadata:
   author: hrlee
-  version: "1.8.0"
+  version: "1.9.0"
   domain: workflow
   triggers: PR, pull request, PR 올려, PR 생성, gh pr create
   role: guardian
@@ -31,7 +31,7 @@ Skill 도구로 `sucks` 를 먼저 호출한다. 본문의 한국어 산문 전�
 
 ## PR 상태와 검증
 
-PR은 draft, ready, 리뷰 검증·수정, 병합 순서로 진행한다. draft는 작업 중 상태이고 ready는 확정한 변경을 리뷰받는 상태다. 리뷰 단계에서는 리뷰 결함 해소에 집중하고 새로운 설계는 지적이 요구할 때 재검토한다. 검증과 수정은 현재 head를 기준으로 수행한다.
+PR은 draft, ready, 리뷰 검증·수정, 병합 순서로 진행한다. draft는 작업 중 상태이고 ready는 확정한 변경을 리뷰받는 상태다. 사람에게 리뷰를 요청하면 PR 을 리뷰받는 상태로 내놓는 것이므로 draft 이면 먼저 ready 로 바꾼 뒤 리뷰어를 지정하고, draft 로 둔 채 리뷰어만 지정하거나 `--draft` 와 `--reviewer` 를 함께 넘기지 않는다. 사용자가 사람 리뷰 요청을 지시하면 작업 단계와 상관없이 그 지시가 ready 전환의 지시이며, 병합 시점은 바뀌지 않는다. 리뷰 단계에서는 리뷰 결함 해소에 집중하고 새로운 설계는 지적이 요구할 때 재검토한다. 검증과 수정은 현재 head를 기준으로 수행한다.
 
 작성자는 PR 상태나 본문 수치를 보고하기 전에 그 PR 이 가리키는 head 에서 검증한다. 작업 worktree 의 HEAD 는 다른 세션이 같은 브랜치에 남긴 미푸시 commit 때문에 PR head 보다 앞서 있을 수 있으므로, `git log origin/<브랜치>..HEAD` 로 차이를 확인하고 차이가 있으면 PR head 를 detached 임시 worktree 로 꺼내 검증한 뒤 제거한다. 시험 통과 수치도 작업자 보고를 그대로 옮기지 않고 같은 head 의 CI 로그에서 확인한다. `gh pr checks <번호>` 가 주는 job URL 의 마지막 숫자가 job ID 이므로 `gh run view --job <ID> --log | grep -E '[0-9]+ (passed|failed)' | tail -2` 로 샤드마다 건수를 읽고, 본문에는 판정 근거인 격리 환경 수치를 쓰고 호스트 pytest 값은 참고값으로 표시한다. 저장소 실행기에 경로·`-k` 인자 전달이 없어 경로 단위 격리 수치를 로컬에서 재현할 수 없으면, 재현 불가한 수치를 본문에 남기지 말고 CI 샤드 합계로 대체한다.
 
