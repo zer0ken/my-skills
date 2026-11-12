@@ -1,6 +1,6 @@
 ---
 name: pov
-description: "Investigate the current product and the related technologies, and collect and synthesize opinions from seven expert perspectives: programming language, DBMS and SQL, parallel processing, architecture, problem solving, marketing, and sales and business. Use when the user calls /pov or $pov, or asks for several expert perspectives or a cross-review from technical and business viewpoints."
+description: "Investigate the current product and the related technologies, and collect and synthesize opinions from seven expert perspectives: programming language, DBMS and SQL, parallel processing, architecture, problem solving, marketing, and sales and business. Use when the user calls /pov or $pov, or asks for several expert perspectives or a cross-review from technical and business viewpoints (여러 전문가의 관점이나 기술·사업 관점의 교차 검토를 요청할 때)."
 ---
 
 # POV

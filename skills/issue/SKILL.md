@@ -1,6 +1,6 @@
 ---
 name: issue
-description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고)."
+description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
 metadata:
   author: hrlee
   version: "1.9.0"
@@ -23,7 +23,7 @@ Call `sucks` first with the Skill tool. Apply its rules to all Korean prose in t
 
 Before creating, look up the repository rules and the actual choices on GitHub. Check `.github/ISSUE_TEMPLATE/`, `CONTRIBUTING`, the repository's `AGENTS.md`, and recent issues of the same kind, and confirm valid values with `gh label list`, `gh api`, `gh project list`, `gh project field-list`, and so on.
 
-Make all of the items below into an internal checklist and judge each as `a value`, `not applicable`, or `user confirmation needed`.
+Make all of the items below into an internal checklist and judge each as `값` (a value), `해당 없음` (not applicable), or `사용자 확인 필요` (user confirmation needed).
 
 - Labels
 - Issue type
