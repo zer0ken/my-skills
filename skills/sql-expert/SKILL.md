@@ -1,6 +1,6 @@
 ---
 name: sql-expert
-description: "Apply database expertise to relational, dimensional, and property-graph modeling, schema and storage contracts, SQL/Cypher correctness, indexes, execution plans, query optimization, transactions, locking, and backend equivalence. [D01, D11, D29]"
+description: "Apply database expertise to relational, dimensional, and property-graph modeling, schema and storage contracts, SQL/Cypher correctness, indexes, execution plans, query optimization, transactions, locking, and backend equivalence."
 metadata:
   version: "1.0.0"
 ---
