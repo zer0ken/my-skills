@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.6.0"
+  version: "2.7.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -188,6 +188,8 @@ Find what the change breaks beyond the diff.
 4. Keep confirmed risks as findings, and list separately what you checked and cleared, with the reason it is fine, so the reader can see the scope covered.
 
 Check that the fix solves the cause directly and simplifies the structure. For every new unit, first search the repository for an existing implementation that can be reused and record the search in the new unit table (U1 4.2); a passing CI or an agent author does not exempt a change from this search. Judge whether it is the minimal sufficient change that preserves every caller contract and the error, retry, and regression paths. Even with few lines, hiding an exception or bypassing only a specific case is not a sufficient fix. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact on maintenance, change, and verification and the direction of simplification.
+
+Judge the implementation's cost at the input sizes the product handles, even when the result is correct and no DB is involved. Look for work that grows faster than the input, such as membership tests on a list or nested scans inside a loop where a dict, set, or one sort would do; whole data sets built in memory where a streaming pass would do; and the same lookup, parse, or call repeated where one batch call or a reuse of the earlier result would do. When data comes from a DB, filtering, aggregation, sorting, or joining it in application code follows item 2 of the DB section below, and conditions that cannot use an index follow item 3. An inefficiency finding states the call path, the input scale, the unnecessary work, and the cheaper alternative, and its severity follows the scale the product reaches; do not write a latency guess as a measurement.
 
 Judge the tests as code. Each changed behavior needs a test that fails on the defective code; tests observe public behavior rather than internal names or private state; boundary and error paths are covered; fakes return the same shape as the real implementation. Tests that only pin internals, and test volume that grows without covering a new behavior, count as growth in U1 item 4.
 
