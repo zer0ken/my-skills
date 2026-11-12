@@ -1,6 +1,6 @@
 ---
 name: python-expert
-description: "Use for Python software design and implementation: language semantics and idioms, typed data models, module boundaries and public APIs, standard-library choices, exceptions, profiling, tests, and refactoring."
+description: "Apply Python software design and implementation expertise when writing, reviewing, or refactoring Python code: language semantics and idioms, typed data models, module boundaries and public APIs, standard-library choices, exceptions, profiling, tests, and refactoring."
 metadata:
   version: "1.0.0"
 ---
