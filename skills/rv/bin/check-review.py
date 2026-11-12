@@ -27,6 +27,10 @@ REQUIRED_SECTIONS = (
     "검증 범위",
 )
 SIZE_SECTION = "크기와 증가"
+CONCEPT_SECTION = "개념과 정의"
+VERDICT_COLUMN = "판정"
+DEFINED = "정의됨"
+FINDING_ID_RE = re.compile(r"\bR-?\d+\b")
 NOT_APPLICABLE = "해당 없음"
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 HEADING_RE = re.compile(r"^## (.+?)\s*#*\s*$")
@@ -61,6 +65,41 @@ def has_table(lines: list[str]) -> bool:
         line.lstrip().startswith("|") and TABLE_SEPARATOR_RE.match(lines[index + 1])
         for index, line in enumerate(lines[:-1])
     )
+
+
+def table_rows(lines: list[str]) -> list[list[str]]:
+    """Return the cells of each row of the first table in lines, header first."""
+    rows: list[list[str]] = []
+    for line in lines:
+        if not line.lstrip().startswith("|"):
+            if rows:
+                break
+            continue
+        if TABLE_SEPARATOR_RE.match(line):
+            continue
+        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+    return rows
+
+
+def check_concepts(lines: list[str]) -> list[str]:
+    """An undefined unit must become a finding: every row not judged defined names its R-ID."""
+    body = content_lines(lines)
+    if body and body[0].strip().startswith(NOT_APPLICABLE):
+        return []
+    rows = table_rows(lines)
+    if not rows or VERDICT_COLUMN not in rows[0]:
+        return [
+            f"`## {CONCEPT_SECTION}` 절에 `{VERDICT_COLUMN}` 열이 있는 단위 표가 없다: 단위마다 정의와 판정이 없으면 정의 없는 구조를 찾았는지 확인할 수 없다."
+        ]
+    verdict_index = rows[0].index(VERDICT_COLUMN)
+    violations = []
+    for row in rows[1:]:
+        verdict = row[verdict_index] if verdict_index < len(row) else ""
+        if verdict != DEFINED and not FINDING_ID_RE.search(" ".join(row)):
+            violations.append(
+                f"`## {CONCEPT_SECTION}` 의 `{row[0].strip('`')}` 행이 `{DEFINED}` 이 아닌데 R-ID 가 없다: 정의 없는 단위는 서술이 아니라 finding 이다."
+            )
+    return violations
 
 
 def check_document(text: str) -> list[str]:
@@ -105,6 +144,8 @@ def check_document(text: str) -> list[str]:
             violations.append(
                 f"`## {title}` 절이 비어 있다: 판단이 없으면 `{NOT_APPLICABLE}: <이유>` 를 쓴다."
             )
+        elif title == CONCEPT_SECTION:
+            violations.extend(check_concepts(lines))
         elif (
             title == SIZE_SECTION
             and not body[0].strip().startswith(NOT_APPLICABLE)

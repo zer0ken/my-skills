@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.13.0"
+  version: "2.14.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -263,7 +263,7 @@ If the same wrong pattern repeats across several locations or changes, write the
 
 Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
 
-Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md>` and fix the document until it prints `rv review format: 1 document(s) passed`. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, or has no table in `크기와 증가`. Exit code 1 is a format violation and 2 is a read failure.
+Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md>` and fix the document until it prints `rv review format: 1 document(s) passed`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. Exit code 1 is a format violation and 2 is a read failure.
 
 The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
 

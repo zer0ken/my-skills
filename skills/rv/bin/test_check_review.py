@@ -100,6 +100,22 @@ class CheckReviewTest(unittest.TestCase):
             ],
         )
 
+    def test_undefined_concept_without_finding_fails(self):
+        row = "| `merge_edges` | 같은 두 노드 사이 엣지를 하나로 합친다 | `relation.py:10` docstring | 정의됨 |"
+        text = COMPLETE.replace(row, row + "\n| `metadata` | 단계마다 키를 덧붙이는 JSON | 없음 | 정의 없음 |")
+        self.assertEqual(
+            check_review.check_document(text),
+            ["`## 개념과 정의` 의 `metadata` 행이 `정의됨` 이 아닌데 R-ID 가 없다: 정의 없는 단위는 서술이 아니라 finding 이다."],
+        )
+        self.assertEqual(check_review.check_document(text.replace("| 정의 없음 |", "| 정의 없음, R-001 |")), [])
+
+    def test_concept_table_without_verdict_column_fails(self):
+        text = COMPLETE.replace("| 단위 | 정의 | 정의한 곳 | 판정 |", "| 단위 | 정의 | 정의한 곳 | 결과 |")
+        self.assertEqual(
+            check_review.check_document(text),
+            ["`## 개념과 정의` 절에 `판정` 열이 있는 단위 표가 없다: 단위마다 정의와 판정이 없으면 정의 없는 구조를 찾았는지 확인할 수 없다."],
+        )
+
     def test_old_grounds_paragraph_format_fails(self):
         text = "@a 판정은 승인이다.\n\n## 판정 근거와 구조·품질 판단\n순증가 1,937줄.\n\n## 검증 범위\n없음.\n"
         violations = check_review.check_document(text)
