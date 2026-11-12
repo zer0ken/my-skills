@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reject an rv review document that leaves out a mandatory judgment section.
 
-rv requires each review to answer the design, functionality, size, quality, test,
+rv requires each review to answer the concept-definition, design, functionality, size, quality, test,
 naming, and cleared-scope questions in its own section. A review that folds them
 into a short "grounds" paragraph lets size growth and duplication pass without a
 written judgment, so this check fails such a document before it is posted.
@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 REQUIRED_SECTIONS = (
+    "개념과 정의",
     "설계와 원인",
     "기능과 완료 기준",
     "크기와 증가",

@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.12.0"
+  version: "2.13.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -160,12 +160,13 @@ Judge by reading only the change's entry points, public interfaces, data models,
 
 Design decisions and defects are different axes. If a result violates the quality criteria it is a defect, and if its cause is a design decision it counts as a defect arising from the design. Do not exclude something from defects because it is the behavior the design intended.
 
-Separately from the defect search, the review answers the following three questions with evidence. This judgment is not skipped: questions 0 and 1 fill the `설계와 원인` section of the result and question 2 the `품질` section.
+Separately from the defect search, the review answers the following three questions with evidence. This judgment is not skipped: question 0 fills the `개념과 정의` section of the result, question 1 the `설계와 원인` section, and question 2 the `품질` section.
 
 0. Is every concept the change handles defined? The user's words (2026-11-12): "명백한 결함보다, 다소 나이브하고 비 효율적으로 짜여진 무언가, 그리고 명확한 아키텍처 없이 애매하게(초점없이 흐릿하게) 구현만 된 구조 (의미적으로 무엇이라고 뚜렷히 정의되지 않은 구현)을 지양해야돼." Answer it before looking for correctness defects, because a review that starts from bugs stops at bugs.
   0.1 List every unit the change introduces or touches: module, class, function, table, column, JSON field, status value, prompt, and pipeline stage. For each, write one sentence saying what it is and what it is not, from the code, schema, and documents.
   0.2 A unit for which that sentence cannot be written is a structural defect even when it works: a catch-all column or field that collects whatever each stage adds, a list packed into a string, a status with no defined set of values, a function doing several jobs its name does not state.
   0.3 Name each such defect with the field's own term and criterion from the area's `-expert` skill (for example its catalog of design antipatterns or its code-smell criterion), and give the defined shape that replaces it. A unit the skill has no term for is still a defect under 0.2.
+  0.4 A unit is cleared only by a definition found in the code, a schema constraint or type, or a document. The absence of a requirement that says the unit must be defined is not a reason to clear it; that absence is the defect. Each undefined unit is a MAJOR finding, not a remark in `이름과 문서`.
 
 1. Is this structure the most suitable structure that actually solves the problem logically?
   1.1 Restate the problem being solved at the level of its cause, and judge whether the change removes that cause or only bypasses the symptom.
@@ -281,6 +282,7 @@ The project decides the form: finding IDs, statuses, severity labels, sentence s
 2. Index: if findings span two or more areas or it is a follow-up review, include a table of section, scope, severity, status, and latest comment / next actor.
 
 3. Judgment sections: one `##` section per judgment, in the order below. Each holds short sentences or tables, one judgment per line, and a judgment that does not apply is written as `해당 없음: <이유>`. Record defects in the finding list and point to them by R-ID. A follow-up review keeps every section for the current head; a section whose judgment did not change says so in one line with the earlier review link, but `크기와 증가` is always remeasured.
+  3.0 `## 개념과 정의`: U2 question 0. A table of every unit with columns 단위, 정의(무엇이고 무엇이 아닌가), 정의한 곳, 판정; an undefined unit's row points to its R-ID.
   3.1 `## 설계와 원인`: U2 question 1. Whether the change removes the cause or bypasses the symptom, the alternative structure compared in one sentence, and which is better.
   3.2 `## 기능과 완료 기준`: whether the change does what the issue's completion criteria and the PR's claims say for the code's users, whether it adds functionality nobody asked for, and the failure path and security judgments of U3.
   3.3 `## 크기와 증가`: U1 item 4. The dimension table, the new unit table, deletion candidates, and the split judgment.
@@ -297,7 +299,7 @@ The project decides the form: finding IDs, statuses, severity labels, sentence s
 
 5. Human review recommendation: if there is a DB schema change, write the change target and the risks a person should check in a `## 사람 리뷰 권고` section after the findings. It is not counted among defects, and do not presume whether the reviewer approves.
 
-6. `## 확인하고 배제한 항목`: the risks checked and cleared in U3 step 4, each with the reason it is fine and how far its safety fact was proven.
+6. `## 확인하고 배제한 항목`: the risks checked and cleared in U3 step 4, each with the reason it is fine and how far its safety fact was proven. An undefined unit from U2 question 0 cannot be cleared here.
 
 7. `## 검증 범위`: the last section. Write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope. Only HTML comment lines, such as a machine-read verdict marker, may follow it.
 

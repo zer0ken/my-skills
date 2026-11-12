@@ -14,6 +14,11 @@ SPEC.loader.exec_module(check_review)
 COMPLETE = """\
 @author 판정은 변경 요청이며 head `abc`, finding 1건(MAJOR 1)이다.
 
+## 개념과 정의
+| 단위 | 정의 | 정의한 곳 | 판정 |
+|---|---|---|---|
+| `merge_edges` | 같은 두 노드 사이 엣지를 하나로 합친다 | `relation.py:10` docstring | 정의됨 |
+
 ## 설계와 원인
 원인을 제거한다. 대안: 단일 요청 판정.
 
@@ -90,7 +95,7 @@ class CheckReviewTest(unittest.TestCase):
         self.assertEqual(
             check_review.check_document(text),
             [
-                "필수 절의 순서가 다르다: 설계와 원인 → 기능과 완료 기준 → 크기와 증가 → 시험 → 품질 → 이름과 문서 → 확인하고 배제한 항목 → 검증 범위. 순서가 고정되어야 독자와 자동화가 같은 위치에서 판단을 찾는다.",
+                "필수 절의 순서가 다르다: 개념과 정의 → 설계와 원인 → 기능과 완료 기준 → 크기와 증가 → 시험 → 품질 → 이름과 문서 → 확인하고 배제한 항목 → 검증 범위. 순서가 고정되어야 독자와 자동화가 같은 위치에서 판단을 찾는다.",
                 "마지막 절이 `## 부록` 이다: `## 검증 범위` 가 마지막이어야 실행하지 않은 검증이 끝에서 드러난다.",
             ],
         )
@@ -98,7 +103,8 @@ class CheckReviewTest(unittest.TestCase):
     def test_old_grounds_paragraph_format_fails(self):
         text = "@a 판정은 승인이다.\n\n## 판정 근거와 구조·품질 판단\n순증가 1,937줄.\n\n## 검증 범위\n없음.\n"
         violations = check_review.check_document(text)
-        self.assertEqual(len(violations), 7)
+        self.assertEqual(len(violations), 8)
+        self.assertTrue(any("`## 개념과 정의`" in v for v in violations))
 
 
 if __name__ == "__main__":
