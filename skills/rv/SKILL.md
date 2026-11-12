@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.10.2"
+  version: "2.11.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -35,7 +35,7 @@ Values the caller provides. If a required value is missing, stop and report. Do 
 | prior_ids | List of R-IDs from previous reviews (empty for a first review) | yes |
 | approval_scope | Whether posting, editing, DB runs, model runs, and benchmark runs are each allowed | no |
 | rule_paths | List of project rule file paths | no |
-| expert_hints | Mapping hints of expert types per area | no |
+| expert_hints | Mapping hints of `-expert` skills per area | no |
 
 head and merge_base are required when the target produces a git diff, such as a PR, branch, or file paths. They are unnecessary for targets without a diff, such as skill comparisons or document reviews.
 
@@ -65,7 +65,7 @@ One row is one finding.
 Severities have these meanings, after the severity mapping of osiri `TECHNICAL_REVIEW_GUIDE.md`. BLOCKER and MAJOR block approval; MINOR and NIT do not.
 
 1. BLOCKER: a supported path returns a wrong result, loses or corrupts data, fails to terminate or recover, or breaks a public contract; or a reachable security defect (U3).
-2. MAJOR: a reachable correctness defect; a structure worse than a feasible alternative (U2); or a code-health defect the change introduces or grows: growth the problem does not require, a duplicate of an existing implementation in the repository, a hand-written version of what a known implementation already provides (U3), an unnecessary layer, wrapper, branch, or abstraction, code without callers, an old path left unretired, error handling that hides a failure or leaves its cause untraceable, or changed behavior with no test that fails on the defect.
+2. MAJOR: a reachable correctness defect; a structure worse than a feasible alternative (U2); or a code-health defect the change introduces or grows: growth the problem does not require, a duplicate of an existing implementation in the repository, a hand-written version of what a known implementation already provides (U3), an unnecessary layer, wrapper, branch, or abstraction, a unit whose meaning cannot be stated in one sentence (a catch-all module, a field or status with no defined values, a function doing several undefined jobs), a naive implementation where a known method does better, code without callers, an old path left unretired, error handling that hides a failure or leaves its cause untraceable, or changed behavior with no test that fails on the defect.
 3. MINOR: a bounded defect without a demonstrated wrong result or lasting code-health cost, such as an unenforced contract, a missing check, or a local naming fault.
 4. NIT: a concrete low-cost correction with no behavior change.
 
@@ -111,7 +111,7 @@ Review from the ds perspective: confirm that responsibilities, state ownership, 
 
 If only a review was requested, do not make a new problem definition or design document, code edits, or test runs preconditions. Do not conclude a bug from a difference with a pattern or a lack of measurement alone.
 
-Identify the change's entry points, public interfaces, and data models. Check the list of changed files with `git diff --stat`, and split areas by the nature of the change (DB, prompts, concurrency, Python structure, etc.). Propose an expert type mapping.
+Identify the change's entry points, public interfaces, and data models. Check the list of changed files with `git diff --stat`, and split areas by the nature of the change (DB, prompts, concurrency, Python structure, etc.). Propose a mapping of areas to `-expert` skills.
 
 ## U1 Codebase review
 
@@ -176,7 +176,7 @@ A quality gap the user explicitly agreed to as follow-up scope is classified as 
 
 ## U3 Detailed review
 
-The most expensive step, reading bodies along the file paths the previous steps narrowed down. If U2's structure verdict concluded it is worse than an alternative, focus on the parts that will not change. It can be split per changed area and run in parallel. When splitting, map an expert type suited to the area (sql-expert, llm-expert, parallel-expert, python-expert).
+The most expensive step, reading bodies along the file paths the previous steps narrowed down. If U2's structure verdict concluded it is worse than an alternative, focus on the parts that will not change. It can be split per changed area and run in parallel. When splitting, have each split load the `-expert` skill of its area (`sql-expert`, `llm-expert`, `parallel-expert`, `python-expert`) and judge by that field's criteria; an area with no such skill is reviewed without one, and the report proposes a new `-expert` skill for it.
 
 Read all related files with their callers, backends, and fakes, and trace input → state ownership → write → failure → recovery. Aggressively verify that contracts and resource cleanup hold under partial completion, failure during recovery, retries, and concurrent execution and cancellation. Find counterexamples that the defensive logic and tests miss.
 

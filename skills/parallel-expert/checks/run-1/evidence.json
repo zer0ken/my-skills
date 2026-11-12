@@ -1,0 +1,407 @@
+[
+  {
+    "id": "P01",
+    "candidate": "ACM/IEEE-CS/AAAI Computer Science Curricula 2023",
+    "search_id": "S01",
+    "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm",
+    "format": "html",
+    "section": "PDC preamble; PDC-Programs, Communication, Coordination, Evaluation, Algorithms",
+    "quote": "Parallel and distributed programming arranges, coordinates, and controls multiple computations occurring at the same time across different places.",
+    "limits": "A curriculum identifies competencies; it does not specify a scheduler or runtime contract.",
+    "unresearched": "Detailed GPU, numerical and Byzantine-consensus algorithms; repository-specific decisions.",
+    "accessed_at": "2026-11-12T07:04:15.263840+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "8fc7212255af71eb4458122ccb8a93052601e6a2fff59d7c2f4e2db18081b72e",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P01.html"
+  },
+  {
+    "id": "P02",
+    "candidate": "Ian Foster, Designing and Building Parallel Programs",
+    "search_id": "S30",
+    "url": "https://www.mcs.anl.gov/~itf/dbpp/text/node15.html",
+    "format": "html",
+    "section": "2.1 Methodical Design (PCAM)",
+    "quote": "This methodology structures the design process as four distinct stages: partitioning, communication, agglomeration, and mapping.",
+    "limits": "Algorithm-design methodology; not a requirement that every stage become a runtime task or durable record.",
+    "unresearched": "Other textbook chapters and product-specific implementations.",
+    "accessed_at": "2026-11-12T07:04:03.104624+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "7ecde78665dcf464c33071bff438997511412f76d045be296ed759a82a65badc",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P02.html"
+  },
+  {
+    "id": "P03",
+    "candidate": "Umut A. Acar, Parallel Computing: Theory and Practice",
+    "search_id": "S02",
+    "url": "https://www.cs.cmu.edu/afs/cs/academic/class/15210-f17/www/concurrency.html",
+    "format": "html",
+    "section": "1.1-1.6 DAG representation, work/span, lower bounds, offline/online scheduling; scheduling friction",
+    "quote": "Every execution schedule has length at least $S$.",
+    "limits": "Idealized instruction DAG and homogeneous processors; excludes actual distributed communication and scheduling costs.",
+    "unresearched": "A proof of the fully strict randomized work-stealing theorem and heterogeneous scheduling bounds.",
+    "accessed_at": "2026-11-12T07:04:21.209095+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "fa364ce506353701a476d0d9508f6c2b08b6aa1133c804118a3fda0371540552",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P03.html"
+  },
+  {
+    "id": "P04",
+    "candidate": "OpenCilk Cilkscale reference",
+    "search_id": "S19",
+    "url": "https://www.opencilk.org/doc/reference/cilkscale/",
+    "format": "html",
+    "section": "Work/span analysis measurements; compiler options",
+    "quote": "The scheduling burden is based on a heuristic estimate of the costs associated with migrating and synchronizing parallel tasks among processors.",
+    "limits": "Cilk-specific instrumentation; burdened span is a heuristic and omits other slowdown factors.",
+    "unresearched": "Installed target toolchain and empirical accuracy on a particular program.",
+    "accessed_at": "2026-11-12T07:04:03.779839+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "ea2dc6455363eaff23faa5cad9c2cb4caa09b095e82c2fb90c0f9fa7c1f68af2",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P04.html"
+  },
+  {
+    "id": "P05",
+    "candidate": "Mor Harchol-Balter, Introduction to Probability for Computing, Chapter 27",
+    "search_id": "S18",
+    "url": "https://www.cs.cmu.edu/~harchol/Probability/chapters/chpt27.pdf",
+    "format": "pdf",
+    "section": "27.2-27.6 queue models and utilization; 27.7-27.11 Little's Law and corollaries",
+    "quote": "The device utilization, denoted by 𝜌, is the long-run fraction of time the device is busy.",
+    "limits": "Little's Law needs consistent system boundaries, matching rates and existing long-run averages; means do not determine tail latency.",
+    "unresearched": "Product-specific arrival/service distributions and optimal scheduling policies.",
+    "accessed_at": "2026-11-12T07:04:20.170460+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "82e0a04fc24810163a5f1ae82f34844739227f81abbc16e53e1dc555aec74171",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P05.pdf"
+  },
+  {
+    "id": "P06",
+    "candidate": "Ray official documentation: Resources",
+    "search_id": "S12",
+    "url": "https://docs.ray.io/en/latest/ray-core/scheduling/resources.html",
+    "format": "html",
+    "section": "Physical Resources and Logical Resources; resource requirements",
+    "quote": "They are mainly used for admission control during scheduling.",
+    "limits": "Ray-specific logical resources; resource requests do not enforce physical CPU or memory limits.",
+    "unresearched": "Installed Ray version, configuration, placement groups and physical isolation.",
+    "accessed_at": "2026-11-12T07:04:03.980248+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "c6cba46793e41361b977ec44383caee8ab4a40afa98bdca0303911a4b1619c2e",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P06.html"
+  },
+  {
+    "id": "P07",
+    "candidate": "Google Site Reliability Engineering, Handling Overload",
+    "search_id": "S04",
+    "url": "https://sre.google/sre-book/handling-overload/",
+    "format": "html",
+    "section": "Pitfalls of Queries per Second; client throttling; criticality; retry budgets; connections",
+    "quote": "Different queries can have vastly different resource requirements.",
+    "limits": "Serving-system operational practice; examples and thresholds are not universal capacity limits.",
+    "unresearched": "Capacity and overload behavior of any concrete workload.",
+    "accessed_at": "2026-11-12T07:04:04.674942+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "945d15db67ad15a7f5e75833f8c0d014c8dc61d57909f7a3abd48459ad12cc9e",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P07.html"
+  },
+  {
+    "id": "P08",
+    "candidate": "Python official documentation: Coroutines and tasks",
+    "search_id": "S25",
+    "url": "https://docs.python.org/3/library/asyncio-task.html?highlight=to_thread",
+    "format": "html",
+    "section": "Task cancellation; Task groups",
+    "quote": "All tasks are awaited when the context manager exits.",
+    "limits": "Python asyncio example only; API availability and cancellation semantics must be checked for the actual runtime version.",
+    "unresearched": "Other languages' cancellation contracts and the target Python build.",
+    "accessed_at": "2026-11-12T07:04:04.806291+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "d573a29e4c69b382a2ddae7e844cc27cf8d06adad03717c8e491f536bc7324f7",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P08.html"
+  },
+  {
+    "id": "P09",
+    "candidate": "Microsoft Azure Architecture Center: Bulkhead pattern",
+    "search_id": "S15",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead",
+    "format": "html",
+    "section": "Context and problem; Solution; Problems and considerations",
+    "quote": "Isolate the elements of an application into pools so that if one element fails, the others continue to function.",
+    "limits": "Resource/failure partitioning has utilization and management costs; boundaries depend on business requirements.",
+    "unresearched": "Concrete pool sizes, fault domains and tenant service objectives.",
+    "accessed_at": "2026-11-12T07:04:06.008142+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "c4aeb487ad0ee3ef195c8ddd8fb295dd040c06d7c117a5e92db303c9e911e012",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P09.html"
+  },
+  {
+    "id": "P10",
+    "candidate": "Marc Brooker, Amazon Builders' Library: Timeouts, retries, and backoff with jitter",
+    "search_id": "S08",
+    "url": "https://d1.awsstatic.com/builderslibrary/pdfs/timeouts-retries-and-backoff-with-jitter.pdf",
+    "format": "pdf",
+    "section": "Timeouts; Retries and backoff; Jitter",
+    "quote": "It's not always safe to retry.",
+    "limits": "Amazon operational experience; concrete percentiles, retry counts and timeout values require workload evidence.",
+    "unresearched": "Target SDK's built-in retries, timeout coverage and error classification.",
+    "accessed_at": "2026-11-12T07:04:06.246993+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "4d01d9878e0521a8a839d1043df9f4a2b28ef383e1978d2915507cbd9c0d8e32",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P10.pdf"
+  },
+  {
+    "id": "P11",
+    "candidate": "Malcolm Featonby, Amazon Builders' Library: Making retries safe with idempotent APIs",
+    "search_id": "S14",
+    "url": "https://d1.awsstatic.com/builderslibrary/pdfs/making-retries-safe-with-idempotent-apis-malcolm-featonby.pdf",
+    "format": "pdf",
+    "section": "Reducing client complexity; Retries and semantic equivalence; Late arriving requests; changed parameters",
+    "quote": "An ACID server-side operation needs to be an “all or nothing” or atomic process.",
+    "limits": "An API pattern, not a guarantee of exactly-once arbitrary external side effects; retention and atomicity scope are essential.",
+    "unresearched": "Target datastore's transaction implementation and external sink guarantees.",
+    "accessed_at": "2026-11-12T07:04:06.390217+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "0b2536b025e64e68f8bd23e05fafb51c79eed435ccee2556aab45517caeaf86b",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P11.pdf"
+  },
+  {
+    "id": "P12",
+    "candidate": "RabbitMQ official documentation source: Consumer Acknowledgements and Publisher Confirms",
+    "search_id": "S27",
+    "url": "https://github.com/rabbitmq/rabbitmq-website/raw/refs/heads/main/docs/confirms.md",
+    "format": "markdown",
+    "section": "Relation between confirms and acknowledgements; requeue loops; prefetch; automatic requeueing; publisher data safety",
+    "quote": "The two features, however, are entirely orthogonal and unaware of each other.",
+    "limits": "RabbitMQ AMQP 0-9-1 contract; fetch uses the official repository's Raw link because the published website returned 403.",
+    "unresearched": "Installed broker/client versions, queue type, replication and durability configuration.",
+    "accessed_at": "2026-11-12T07:04:07.153137+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "861abccf819fddcdaddd661255914d867d6ed511a9ff19311bfef73d0907b127",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P12.md"
+  },
+  {
+    "id": "P13",
+    "candidate": "Elnozahy, Alvisi, Wang and Johnson: A Survey of Rollback-Recovery Protocols in Message-Passing Systems",
+    "search_id": "S23",
+    "url": "https://www.cs.utexas.edu/~lorenzo/papers/SurveyFinal.pdf",
+    "format": "pdf",
+    "section": "2 Background (system model, consistent states, outside world); 3.1-3.2 checkpointing; overview of log-based protocols",
+    "quote": "Coordinated checkpointing requires processes to orchestrate their checkpoints in order to form a consistent global state.",
+    "limits": "Fail-stop message-passing rollback recovery; logging needs the stated determinism/event-capture assumptions and outside-world output treatment.",
+    "unresearched": "Byzantine recovery, target storage atomicity and application-specific checkpoint protocol proofs.",
+    "accessed_at": "2026-11-12T07:04:39.515126+00:00",
+    "http_status": "206",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 28,
+        "stderr": "curl: (28) Operation timed out after 20000 milliseconds with 350748 out of 541103 bytes received"
+      },
+      {
+        "status": "206",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "d79b15a00c200e487b40d787d6749c65f2c2f3735d93b508e1f94e9e82be60bd",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P13.pdf"
+  },
+  {
+    "id": "P14",
+    "candidate": "Musuvathi et al., OSDI 2008: Finding and Reproducing Heisenbugs in Concurrent Programs",
+    "search_id": "S21",
+    "url": "https://static.usenix.org/events/osdi08/tech/full_papers/musuvathi/musuvathi_html/index.html",
+    "format": "html",
+    "section": "1 Introduction; 3 scheduler and happens-before graph; 4 search strategy",
+    "quote": "The main contribution of this paper is a new tool called Chess for systematic and deterministic testing of concurrent programs.",
+    "limits": "Exploration covers modeled synchronization and bounded schedules; a passing run is not an unbounded correctness proof.",
+    "unresearched": "Availability of a compatible scheduler/model checker for the actual runtime.",
+    "accessed_at": "2026-11-12T07:04:17.076839+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "3daa24692e04b2e87644ca2cd00fd2e1b031612b840b03faa4d844cb9bdf0e96",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P14.html"
+  },
+  {
+    "id": "P15",
+    "candidate": "Unmesh Joshi, Patterns of Distributed Systems: Generation Clock",
+    "search_id": "S24",
+    "url": "https://martinfowler.com/articles/patterns-of-distributed-systems/generation-clock.html",
+    "format": "html",
+    "section": "Problem; Solution",
+    "quote": "The follower then replies with a failure response.",
+    "limits": "Leader/follower generation pattern; a local token counter alone does not protect an external sink unless the receiver validates it.",
+    "unresearched": "Leader election/consensus algorithm proofs, clock/lease guarantees and target storage enforcement.",
+    "accessed_at": "2026-11-12T07:04:17.702253+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "5d039ead166f2f363786f33727e09889160f1a52444b57dce727db097c68effd",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P15.html"
+  },
+  {
+    "id": "P16",
+    "candidate": "Cornell Center for Advanced Computing, Virtual Workshop: Scaling",
+    "search_id": "S29",
+    "url": "https://cvw.cac.cornell.edu/parallel/efficiency/scaling",
+    "format": "html",
+    "section": "Scaling; Strong Scaling; Weak Scaling",
+    "quote": "Strong scaling is concerned with a slice of the scaling surface at a particular problem size.",
+    "limits": "Scaling concepts and diagnostic guidance; ideal scaling is not a guarantee for any concrete application.",
+    "unresearched": "Benchmarks for a particular system, workload, hardware and network.",
+    "accessed_at": "2026-11-12T07:04:19.263947+00:00",
+    "http_status": "200",
+    "transfers": [
+      {
+        "status": "200",
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "body_sha256": "bb8f719a15749fc9a08c74b2cdf9e6e3e76f0dcd174c55edefad4541ab18f1aa",
+    "quote_found": true,
+    "http_ok": true,
+    "extraction_error": "",
+    "body_path": "checks/run-1/P16.html"
+  }
+]

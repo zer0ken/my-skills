@@ -18,7 +18,7 @@ The coordinator starts subagents with the Agent tool. Whether the coordinator ed
 |---|---|
 | U0 | Run by the coordinator |
 | U1, U2 | Parallel Agent forks |
-| U3 | Agent per area, with expert type specified |
+| U3 | Agent per area, loading that area's `-expert` skill |
 | U4 | Verified by a fresh Agent (not a fork) different from U3 |
 | U5 | Agent |
 | U6 | The coordinator assembles the markdown document |

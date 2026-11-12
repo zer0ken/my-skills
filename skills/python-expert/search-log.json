@@ -1,0 +1,605 @@
+[
+  {
+    "id": "S01",
+    "query": "site.docs.python.org tutorial table of contents data structures modules errors exceptions classes standard library performance measurement",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "The Python Tutorial",
+        "url": "https://docs.python.org/3/tutorial/"
+      }
+    ],
+    "names": [
+      "Python language reference",
+      "Python Tutorial"
+    ],
+    "next": "Use the published Tutorial organization and search for supporting semantic references."
+  },
+  {
+    "id": "S02",
+    "query": "site.peps.python.org pep 8 public internal interfaces readability counts",
+    "tool": "web.run search_query",
+    "generated": true,
+    "found": [],
+    "names": [],
+    "next": "PEP number entered from recall; do not ground a candidate here. Recover the style source with a topic-only query at S35."
+  },
+  {
+    "id": "S03",
+    "query": "site:docs.python.org/3 reference datamodel objects identity type value implementation detail",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Data model",
+        "url": "https://docs.python.org/3.13/reference/datamodel.html"
+      }
+    ],
+    "names": [
+      "object model",
+      "identity",
+      "mutability"
+    ],
+    "next": "Read the language reference to distinguish language semantics from CPython implementation details."
+  },
+  {
+    "id": "S04",
+    "query": "site:typing.python.org specification runtime type annotations Any TypedDict Protocol",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Type system concepts",
+        "url": "https://typing.python.org/en/latest/spec/concepts.html"
+      },
+      {
+        "title": "Protocols",
+        "url": "https://typing.python.org/en/latest/spec/protocol.html"
+      }
+    ],
+    "names": [
+      "gradual typing",
+      "structural subtyping",
+      "assignability"
+    ],
+    "next": "Follow gradual/static typing terms into the runtime library reference and data-model facilities."
+  },
+  {
+    "id": "S05",
+    "query": "site:docs.python.org/3 library profile timeit tracemalloc profiling",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "deterministic profiling",
+      "statistical profiling"
+    ],
+    "next": "Merged results include the new profiling namespace; find the documented deterministic interface without assuming availability."
+  },
+  {
+    "id": "S06",
+    "query": "site:martinfowler.com refactoring definition code smell divergent change speculative generality",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Refactoring - Improving the Design of Existing Code",
+        "url": "https://www.martinfowler.com/books/refactoring.html"
+      },
+      {
+        "title": "Code Smell",
+        "url": "https://martinfowler.com/bliki/CodeSmell.html"
+      }
+    ],
+    "names": [
+      "refactoring",
+      "code smell"
+    ],
+    "next": "Read the author's definition and the distinction between a smell and a proven defect."
+  },
+  {
+    "id": "S07",
+    "query": "site:docs.python.org/3/tutorial/ data structures modules control flow exceptions",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Modules",
+        "url": "https://docs.python.org/3/tutorial/modules.html"
+      },
+      {
+        "title": "Errors and Exceptions",
+        "url": "https://docs.python.org/3/tutorial/errors.html"
+      },
+      {
+        "title": "Brief tour of the standard library",
+        "url": "https://docs.python.org/3/tutorial/stdlib.html"
+      }
+    ],
+    "names": [
+      "module namespace",
+      "exception chaining"
+    ],
+    "next": "Inspect the Tutorial sections and trace data-model and testing claims to the references."
+  },
+  {
+    "id": "S08",
+    "query": "site:docs.python.org/3/library/ typing dataclasses NamedTuple runtime type annotations",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "typing - Support for type hints",
+        "url": "https://docs.python.org/3.13/library/typing.html"
+      },
+      {
+        "title": "dataclasses - Data Classes",
+        "url": "https://docs.python.org/3/library/dataclasses.html"
+      }
+    ],
+    "names": [
+      "data classes",
+      "TypedDict",
+      "NamedTuple"
+    ],
+    "next": "Compare record representations, generated behavior and runtime annotation limitations."
+  },
+  {
+    "id": "S09",
+    "query": "site:docs.python.org/3/library/timeit.html garbage collection minimum",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "timeit - Measure execution time of small code snippets",
+        "url": "https://docs.python.org/3/library/timeit.html"
+      }
+    ],
+    "names": [
+      "microbenchmark timing",
+      "garbage collection"
+    ],
+    "next": "Read timing setup exclusions and the interpretation of repeated minima."
+  },
+  {
+    "id": "S10",
+    "query": "site:docs.python.org/3/library/tracemalloc.html snapshot memory allocated",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "tracemalloc - Trace memory allocations",
+        "url": "https://docs.python.org/3.11/library/tracemalloc.html"
+      }
+    ],
+    "names": [
+      "allocation tracing",
+      "snapshot difference"
+    ],
+    "next": "Read allocation scope and tracing-start limitations rather than equating them with all process memory."
+  },
+  {
+    "id": "S11",
+    "query": "software modularity information hiding modules design decisions likely to change paper",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "information hiding",
+      "module decomposition"
+    ],
+    "next": "The merged result identifies Parnas's paper and later modularity papers. Locate the original paper via S27; do not rely on a secondary transcription."
+  },
+  {
+    "id": "S12",
+    "query": "site:docs.python.org/3/tutorial/datastructures.html queues inefficient",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Data Structures",
+        "url": "https://docs.python.org/3/tutorial/datastructures.html"
+      }
+    ],
+    "names": [
+      "FIFO queue",
+      "deque"
+    ],
+    "next": "Read the documented counterexample to choosing a list for frequent front removals."
+  },
+  {
+    "id": "S13",
+    "query": "site:docs.python.org/3/tutorial/controlflow.html default evaluated only once",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "mutable defaults"
+    ],
+    "next": "No distinct retained candidate in merged output; follow the same concept with S15."
+  },
+  {
+    "id": "S14",
+    "query": "site:docs.python.org/3/library/unittest.html test case fixture mock where to patch",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "unittest.mock - mock object library",
+        "url": "https://docs.python.org/3/library/unittest.mock.html?highlight=mock"
+      }
+    ],
+    "names": [
+      "test fixture",
+      "namespace patching"
+    ],
+    "next": "Follow the returned mock documentation and find test independence in unittest directly."
+  },
+  {
+    "id": "S15",
+    "query": "site:docs.python.org/3/tutorial/controlflow.html \"default\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "More Control Flow Tools",
+        "url": "https://docs.python.org/3/tutorial/controlflow.html?highlight=lambda"
+      }
+    ],
+    "names": [
+      "default argument evaluation"
+    ],
+    "next": "Read defaults, special parameters and documentation strings."
+  },
+  {
+    "id": "S16",
+    "query": "site:docs.python.org/3/library/unittest.html \"isolated\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [],
+    "next": "No suitable unittest candidate retained; results included interpreter-internal test support. Search the documented phrase self-contained at S19."
+  },
+  {
+    "id": "S17",
+    "query": "site:docs.python.org/3/library/sys.html \"implementation\" \"version_info\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "sys - System-specific parameters and functions",
+        "url": "https://docs.python.org/3.12/library/sys.html"
+      }
+    ],
+    "names": [
+      "implementation version",
+      "language version"
+    ],
+    "next": "Read the distinction and keep actual runtime discovery separate from declared supported versions."
+  },
+  {
+    "id": "S18",
+    "query": "site:martinfowler.com \"Refactoring\" \"Bad Smells\" \"Shotgun\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [],
+    "next": "No primary named-smell catalogue retained from this merged result; keep catalogue mechanics unsurveyed."
+  },
+  {
+    "id": "S19",
+    "query": "site:docs.python.org/3/library/unittest.html \"self-contained\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "unittest - Unit testing framework",
+        "url": "https://docs.python.org/3.11/library/unittest.html"
+      }
+    ],
+    "names": [
+      "test independence"
+    ],
+    "next": "Read organizing tests and cleanup-on-setup-failure semantics."
+  },
+  {
+    "id": "S20",
+    "query": "site:docs.python.org/3/tutorial/classes.html \"bundle\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [],
+    "next": "Combined output was truncated and no candidate is grounded in this row; retain the class reference from S29 instead."
+  },
+  {
+    "id": "S21",
+    "query": "site:docs.python.org/3/tutorial/inputoutput.html \"with\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Input and Output",
+        "url": "https://docs.python.org/3/tutorial/inputoutput.html?highlight=stdout+write"
+      }
+    ],
+    "names": [
+      "context manager",
+      "binary/text I/O"
+    ],
+    "next": "Read file modes and resource closure on exception."
+  },
+  {
+    "id": "S22",
+    "query": "site:docs.python.org/3/tutorial/venv.html \"different versions\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Virtual Environments and Packages",
+        "url": "https://docs.python.org/3.12/tutorial/venv.html"
+      }
+    ],
+    "names": [
+      "virtual environment",
+      "dependency conflict"
+    ],
+    "next": "Read installation isolation and supplement with project metadata semantics."
+  },
+  {
+    "id": "S23",
+    "query": "\"On the Criteria To Be Used\" \"Parnas\" \"pdf\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "module decomposition"
+    ],
+    "next": "Title was discovered in S11's results, not generated as a source. Combined output was truncated; retain the original paper only from S27."
+  },
+  {
+    "id": "S24",
+    "query": "site:martinfowler.com refactoring \"Shotgun Surgery\" \"Divergent Change\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [],
+    "next": "No candidate retained from truncated combined output. Transformation-specific catalogue remains unsurveyed."
+  },
+  {
+    "id": "S25",
+    "query": "site:docs.python.org/3/library/profile.html \"not for benchmarking\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "profiling versus benchmarking"
+    ],
+    "next": "No candidate grounded in the truncated combined output; read a retained profiler source from S28."
+  },
+  {
+    "id": "S26",
+    "query": "site:docs.python.org/3/howto/free-threading-python.html \"GIL\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "free-threaded build",
+      "runtime GIL state"
+    ],
+    "next": "No candidate grounded in the truncated combined output; use the focused source discovery at S31."
+  },
+  {
+    "id": "S27",
+    "query": "software module decomposition Parnas 1972 original paper pdf",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "On the Criteria To Be Used in Decomposing Systems into Modules",
+        "url": "https://cw.fel.cvut.cz/old/_media/courses/a4m33sep/materialy/architecture_and_design/01-article_original_de_parnas.pdf"
+      }
+    ],
+    "names": [
+      "information hiding",
+      "responsibility assignment"
+    ],
+    "next": "Read the original paper's KWIC problem, competing decompositions and stated goals; distinguish its design module from a Python file."
+  },
+  {
+    "id": "S28",
+    "query": "site:docs.python.org/3.13/library/profile.html deterministic profiling benchmarking",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "The Python Profilers",
+        "url": "https://docs.python.org/3.12/library/profile.html"
+      }
+    ],
+    "names": [
+      "deterministic profiling",
+      "internal versus cumulative time"
+    ],
+    "next": "The merged results return a documented 3.12 profiler reference. Its release is an inspected source snapshot, not a pinned target version."
+  },
+  {
+    "id": "S29",
+    "query": "site:docs.python.org/3/tutorial/classes.html namespaces mutable generator",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Classes",
+        "url": "https://docs.python.org/3/tutorial/classes.html?highlight=namespaces"
+      }
+    ],
+    "names": [
+      "aliasing",
+      "iterator",
+      "generator"
+    ],
+    "next": "Read class and instance state, shared references and generator consumption semantics."
+  },
+  {
+    "id": "S30",
+    "query": "site:docs.python.org/3/tutorial/floatingpoint.html binary decimal",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Floating-Point Arithmetic: Issues and Limitations",
+        "url": "https://docs.python.org/3/tutorial/floatingpoint.html?highlight=float+notation+format"
+      }
+    ],
+    "names": [
+      "representation error",
+      "approximate comparison"
+    ],
+    "next": "Read precision and arithmetic-model limitations without prescribing a universal tolerance."
+  },
+  {
+    "id": "S31",
+    "query": "site:docs.python.org/3/howto/free-threading-python.html \"Identifying\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Python support for free threading",
+        "url": "https://docs.python.org/3/howto/free-threading-python.html"
+      }
+    ],
+    "names": [
+      "build configuration",
+      "runtime GIL state"
+    ],
+    "next": "Read the official runtime-state and extension-compatibility caveats."
+  },
+  {
+    "id": "S32",
+    "query": "site:docs.python.org/3/tutorial/stdlib2.html \"Tools for Working with Lists\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Brief Tour of the Standard Library - Part II",
+        "url": "https://docs.python.org/3.12/tutorial/stdlib2.html"
+      }
+    ],
+    "names": [
+      "deque",
+      "heap",
+      "sorted-list insertion"
+    ],
+    "next": "Read workload-specific standard container alternatives."
+  },
+  {
+    "id": "S33",
+    "query": "site:packaging.python.org pyproject requires-python specification",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Writing your pyproject.toml",
+        "url": "https://packaging.python.org/en/latest/guides/writing-pyproject-toml/?highlight=2023"
+      }
+    ],
+    "names": [
+      "requires-python",
+      "dependency requirements"
+    ],
+    "next": "Read declared language support and dependency metadata; distinguish declaration from the executing environment."
+  },
+  {
+    "id": "S34",
+    "query": "site:docs.python.org/3/tutorial/inputoutput.html \"encoding\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "text versus binary"
+    ],
+    "next": "A different-version I/O result was returned; retain only the previously fetched I/O source for this scope."
+  },
+  {
+    "id": "S35",
+    "query": "site:peps.python.org public internal interfaces coding conventions",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "PEP 8 - Style Guide for Python Code",
+        "url": "https://peps.python.org/pep-0008/"
+      }
+    ],
+    "names": [
+      "public and internal interfaces",
+      "project style precedence"
+    ],
+    "next": "Topic-only recovery finds PEP 8; use this source discovery instead of S02."
+  },
+  {
+    "id": "S36",
+    "query": "site:docs.python.org deterministic profiler cProfile benchmarking",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [],
+    "names": [
+      "profiling versus benchmarking"
+    ],
+    "next": "Results repeat the profiling references; no additional source is needed for the retained claims."
+  },
+  {
+    "id": "S37",
+    "query": "site:martinfowler.com refactoring definition observable behavior",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Definition Of Refactoring",
+        "url": "https://martinfowler.com/bliki/DefinitionOfRefactoring.html?trk=article-ssr-frontend-pulse_little-text-block"
+      }
+    ],
+    "names": [
+      "observable behavior",
+      "behavior-preserving transformation"
+    ],
+    "next": "Initial survey stopped here; the parent subsequently rejected the Tutorial-derived structure and requested the professional knowledge map researched in S38-S39."
+  },
+  {
+    "id": "S38",
+    "query": "IEEE Computer Society SWEBOK software design software construction knowledge area topics version 4",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Guide to the Software Engineering Body of Knowledge, V4.0a",
+        "url": "https://ieeecs-media.computer.org/media/education/swebok/swebok-v4.pdf"
+      }
+    ],
+    "names": [
+      "Software Design",
+      "Software Construction",
+      "Software Testing",
+      "knowledge area"
+    ],
+    "next": "Read the official guide contents and selected chapter text; map existing Python evidence to the published topic hierarchy."
+  },
+  {
+    "id": "S39",
+    "query": "ACM IEEE CS2023 software development fundamentals software engineering knowledge area curriculum",
+    "tool": "web.run search_query",
+    "generated": false,
+    "found": [
+      {
+        "title": "Knowledge Areas - CS2023",
+        "url": "https://csed.acm.org/knowledge-areas/"
+      }
+    ],
+    "names": [
+      "Software Development Fundamentals",
+      "Software Engineering"
+    ],
+    "next": "Stop: the official SWEBOK guide provides the required professional decomposition. CS2023 area index was inspected as an alternative; its full curriculum was not compared."
+  }
+]

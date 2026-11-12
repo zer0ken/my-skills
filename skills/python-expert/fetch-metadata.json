@@ -1,0 +1,212 @@
+[
+  {
+    "id": "PY01",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY02",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.12/library/sys.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY03",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/controlflow.html?highlight=lambda",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY04",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/datastructures.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY05",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/modules.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY06",
+    "http_status": 200,
+    "effective_url": "https://peps.python.org/pep-0008/",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY07",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.13/reference/datamodel.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY08",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.13/library/typing.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY09",
+    "http_status": 200,
+    "effective_url": "https://typing.python.org/en/latest/spec/concepts.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY10",
+    "http_status": 200,
+    "effective_url": "https://typing.python.org/en/latest/spec/protocol.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY11",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/library/dataclasses.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY12",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/inputoutput.html?highlight=stdout+write",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY13",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/errors.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY14",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/stdlib.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY15",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.12/library/profile.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY16",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/library/timeit.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY17",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.11/library/tracemalloc.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY18",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.11/library/unittest.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY19",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/library/unittest.mock.html?highlight=mock",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY20",
+    "http_status": 200,
+    "effective_url": "https://www.martinfowler.com/books/refactoring.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY21",
+    "http_status": 200,
+    "effective_url": "https://martinfowler.com/bliki/CodeSmell.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY22",
+    "http_status": 200,
+    "effective_url": "https://cw.fel.cvut.cz/old/_media/courses/a4m33sep/materialy/architecture_and_design/01-article_original_de_parnas.pdf",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY23",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.12/tutorial/venv.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY24",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/classes.html?highlight=namespaces",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY25",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/tutorial/floatingpoint.html?highlight=float+notation+format",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY26",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3/howto/free-threading-python.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY27",
+    "http_status": 200,
+    "effective_url": "https://packaging.python.org/en/latest/guides/writing-pyproject-toml/?highlight=2023",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY28",
+    "http_status": 200,
+    "effective_url": "https://docs.python.org/3.12/tutorial/stdlib2.html",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY29",
+    "http_status": 200,
+    "effective_url": "https://martinfowler.com/bliki/DefinitionOfRefactoring.html?trk=article-ssr-frontend-pulse_little-text-block",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  },
+  {
+    "id": "PY30",
+    "http_status": 200,
+    "effective_url": "https://ieeecs-media.computer.org/media/education/swebok/swebok-v4.pdf",
+    "exit_code": 0,
+    "command": "curl -sSL -m 20"
+  }
+]

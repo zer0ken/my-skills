@@ -1,0 +1,2416 @@
+[
+  {
+    "id": "S01",
+    "query": "site.db-book.com database system concepts seventh edition contents relational database design query processing transactions",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 1,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "title": "Database System Concepts",
+        "url": "https://www.db-book.com/"
+      },
+      {
+        "title": "DM SIGCSE 2022 Version",
+        "url": "https://csed.acm.org/knowledge-areas-data-management-dm-sigcse-2022-version/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S02",
+    "query": "site.cs2023.org data management knowledge area data modeling relational graph",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 1,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "title": "Database System Concepts",
+        "url": "https://www.db-book.com/"
+      },
+      {
+        "title": "DM SIGCSE 2022 Version",
+        "url": "https://csed.acm.org/knowledge-areas-data-management-dm-sigcse-2022-version/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S03",
+    "query": "site.csed.acm.org \"DM\" \"Data Modeling\" \"2023\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 2,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "id": "D18",
+        "title": "Isolation anomalies and serialization retry",
+        "url": "https://www.postgresql.org/docs/16/transaction-iso.html"
+      },
+      {
+        "title": "Lecture 6 Normalization continued",
+        "url": "https://cs.rpi.edu/~sibel/csci4380/fall2026/lecture_notes/lecture6.html"
+      },
+      {
+        "id": "D28",
+        "title": "CS 61 Database Systems Spring 2026: Normalization",
+        "url": "https://www.cs.dartmouth.edu/~cs61/notes9.html"
+      }
+    ],
+    "names": [
+      "functional dependency",
+      "lossless decomposition",
+      "dependency preservation"
+    ],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S04",
+    "query": "site.postgresql.org/docs/current ddl constraints json explain indexes transaction isolation explicit locking queries order except recursive",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 2,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "id": "D18",
+        "title": "Isolation anomalies and serialization retry",
+        "url": "https://www.postgresql.org/docs/16/transaction-iso.html"
+      },
+      {
+        "title": "Lecture 6 Normalization continued",
+        "url": "https://cs.rpi.edu/~sibel/csci4380/fall2026/lecture_notes/lecture6.html"
+      },
+      {
+        "id": "D28",
+        "title": "CS 61 Database Systems Spring 2026: Normalization",
+        "url": "https://www.cs.dartmouth.edu/~cs61/notes9.html"
+      }
+    ],
+    "names": [
+      "functional dependency",
+      "lossless decomposition",
+      "dependency preservation"
+    ],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S05",
+    "query": "site.neo4j.com/docs \"modeling\" \"PROFILE\" \"constraints\" \"Cartesian\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 2,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "id": "D18",
+        "title": "Isolation anomalies and serialization retry",
+        "url": "https://www.postgresql.org/docs/16/transaction-iso.html"
+      },
+      {
+        "title": "Lecture 6 Normalization continued",
+        "url": "https://cs.rpi.edu/~sibel/csci4380/fall2026/lecture_notes/lecture6.html"
+      },
+      {
+        "id": "D28",
+        "title": "CS 61 Database Systems Spring 2026: Normalization",
+        "url": "https://www.cs.dartmouth.edu/~cs61/notes9.html"
+      }
+    ],
+    "names": [
+      "functional dependency",
+      "lossless decomposition",
+      "dependency preservation"
+    ],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S06",
+    "query": "database normalization functional dependencies lossless decomposition update anomalies university course notes",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 2,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D01",
+        "title": "CS2023 Data Management knowledge units",
+        "url": "https://csed.acm.org/wp-content/uploads/2025/11/CS2023-Report.htm"
+      },
+      {
+        "id": "D18",
+        "title": "Isolation anomalies and serialization retry",
+        "url": "https://www.postgresql.org/docs/16/transaction-iso.html"
+      },
+      {
+        "title": "Lecture 6 Normalization continued",
+        "url": "https://cs.rpi.edu/~sibel/csci4380/fall2026/lecture_notes/lecture6.html"
+      },
+      {
+        "id": "D28",
+        "title": "CS 61 Database Systems Spring 2026: Normalization",
+        "url": "https://www.cs.dartmouth.edu/~cs61/notes9.html"
+      }
+    ],
+    "names": [
+      "functional dependency",
+      "lossless decomposition",
+      "dependency preservation"
+    ],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S07",
+    "query": "site.postgresql.org/docs/current/ \"Using EXPLAIN\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 3,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html?trk=article-ssr-frontend-pulse_little-text-block",
+        "primary_followed_link": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D05",
+        "title": "JSON design and indexing",
+        "url": "https://www.postgresql.org/docs/current/datatype-json.html"
+      },
+      {
+        "id": "D14",
+        "title": "Costs, rows, loops, buffers, timing and measurement caveats",
+        "url": "https://www.postgresql.org/docs/current/using-explain.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S08",
+    "query": "site.postgresql.org/docs/current/ \"Constraints\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 3,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html?trk=article-ssr-frontend-pulse_little-text-block",
+        "primary_followed_link": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D05",
+        "title": "JSON design and indexing",
+        "url": "https://www.postgresql.org/docs/current/datatype-json.html"
+      },
+      {
+        "id": "D14",
+        "title": "Costs, rows, loops, buffers, timing and measurement caveats",
+        "url": "https://www.postgresql.org/docs/current/using-explain.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S09",
+    "query": "site.postgresql.org/docs/current/ \"JSON Types\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 3,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html?trk=article-ssr-frontend-pulse_little-text-block",
+        "primary_followed_link": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D05",
+        "title": "JSON design and indexing",
+        "url": "https://www.postgresql.org/docs/current/datatype-json.html"
+      },
+      {
+        "id": "D14",
+        "title": "Costs, rows, loops, buffers, timing and measurement caveats",
+        "url": "https://www.postgresql.org/docs/current/using-explain.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S10",
+    "query": "site.neo4j.com/docs \"Data modeling\" \"relationships\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 4,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D06",
+        "title": "Property-graph model",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/"
+      },
+      {
+        "id": "D07",
+        "title": "Relationship typing and modeling for queries",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/tutorial-data-modeling/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S11",
+    "query": "site.neo4j.com/docs \"query tuning\" \"Cartesian\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 4,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D06",
+        "title": "Property-graph model",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/"
+      },
+      {
+        "id": "D07",
+        "title": "Relationship typing and modeling for queries",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/tutorial-data-modeling/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S12",
+    "query": "site.neo4j.com/docs \"ACID\" \"read-committed\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 4,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D06",
+        "title": "Property-graph model",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/"
+      },
+      {
+        "id": "D07",
+        "title": "Relationship typing and modeling for queries",
+        "url": "https://neo4j.com/docs/getting-started/data-modeling/tutorial-data-modeling/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S13",
+    "query": "site.postgresql.org/docs/current/ \"Indexes\" \"overhead\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 5,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D12",
+        "title": "Index benefit and overhead",
+        "url": "https://www.postgresql.org/docs/current/indexes.html"
+      },
+      {
+        "id": "D19",
+        "title": "Lock conflicts, deadlocks and lock ordering",
+        "url": "https://www.postgresql.org/docs/18/explicit-locking.html"
+      },
+      {
+        "id": "D16",
+        "title": "EXPLAIN, PROFILE, result volume, parameters",
+        "url": "https://neo4j.com/docs/cypher-manual/current/planning-and-tuning/query-tuning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S14",
+    "query": "site.postgresql.org/docs/current/ \"Explicit Locking\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 5,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D12",
+        "title": "Index benefit and overhead",
+        "url": "https://www.postgresql.org/docs/current/indexes.html"
+      },
+      {
+        "id": "D19",
+        "title": "Lock conflicts, deadlocks and lock ordering",
+        "url": "https://www.postgresql.org/docs/18/explicit-locking.html"
+      },
+      {
+        "id": "D16",
+        "title": "EXPLAIN, PROFILE, result volume, parameters",
+        "url": "https://neo4j.com/docs/cypher-manual/current/planning-and-tuning/query-tuning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S15",
+    "query": "site.neo4j.com/docs/cypher-manual/current/ \"query tuning\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 5,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D12",
+        "title": "Index benefit and overhead",
+        "url": "https://www.postgresql.org/docs/current/indexes.html"
+      },
+      {
+        "id": "D19",
+        "title": "Lock conflicts, deadlocks and lock ordering",
+        "url": "https://www.postgresql.org/docs/18/explicit-locking.html"
+      },
+      {
+        "id": "D16",
+        "title": "EXPLAIN, PROFILE, result volume, parameters",
+        "url": "https://neo4j.com/docs/cypher-manual/current/planning-and-tuning/query-tuning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S16",
+    "query": "graph query languages survey graph patterns paths semantics complexity academic paper",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 6,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D11",
+        "title": "Sections 2, 3.1, 3.4, 4.1 and 4.5: graph patterns, paths, semantics and complexity",
+        "url": "https://arxiv.org/abs/1610.06264",
+        "primary_followed_link": "https://arxiv.org/html/1610.06264v3"
+      },
+      {
+        "title": "Foundations of Modern Query Languages for Graph Databases",
+        "url": "https://arxiv.org/abs/1610.06264"
+      }
+    ],
+    "names": [
+      "graph-pattern matching",
+      "navigational queries",
+      "regular path queries",
+      "homomorphism semantics",
+      "path semantics"
+    ],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S17",
+    "query": "site.postgresql.org/docs/current/ \"Combining Queries\" \"ALL\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 7,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D08",
+        "title": "Set operations, duplicate multiplicity and union compatibility",
+        "url": "https://www.postgresql.org/docs/16/queries-union.html"
+      },
+      {
+        "id": "D09",
+        "title": "Ordering and NULL ordering",
+        "url": "https://www.postgresql.org/docs/18/queries-order.html"
+      },
+      {
+        "id": "D10",
+        "title": "Recursive evaluation, termination, cycle detection, CTE materialization",
+        "url": "https://www.postgresql.org/docs/16/queries-with.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S18",
+    "query": "site.postgresql.org/docs/current/ \"Sorting Rows\" \"unspecified\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 7,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D08",
+        "title": "Set operations, duplicate multiplicity and union compatibility",
+        "url": "https://www.postgresql.org/docs/16/queries-union.html"
+      },
+      {
+        "id": "D09",
+        "title": "Ordering and NULL ordering",
+        "url": "https://www.postgresql.org/docs/18/queries-order.html"
+      },
+      {
+        "id": "D10",
+        "title": "Recursive evaluation, termination, cycle detection, CTE materialization",
+        "url": "https://www.postgresql.org/docs/16/queries-with.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S19",
+    "query": "site.postgresql.org/docs/current/ \"With Queries\" \"CYCLE\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 7,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D08",
+        "title": "Set operations, duplicate multiplicity and union compatibility",
+        "url": "https://www.postgresql.org/docs/16/queries-union.html"
+      },
+      {
+        "id": "D09",
+        "title": "Ordering and NULL ordering",
+        "url": "https://www.postgresql.org/docs/18/queries-order.html"
+      },
+      {
+        "id": "D10",
+        "title": "Recursive evaluation, termination, cycle detection, CTE materialization",
+        "url": "https://www.postgresql.org/docs/16/queries-with.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S20",
+    "query": "site.neo4j.com/docs/cypher-manual/current/ \"MERGE\" \"uniqueness\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 8,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D20",
+        "title": "Read-committed, locks, lost updates and deadlocks",
+        "url": "https://neo4j.com/docs/operations-manual/current/database-internals/concurrent-data-access/"
+      },
+      {
+        "id": "D21",
+        "title": "MERGE identity, bound patterns and concurrency uniqueness",
+        "url": "https://neo4j.com/docs/cypher-manual/5/clauses/merge/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S21",
+    "query": "site.neo4j.com/docs/cypher-manual/current/ \"PROFILE\" \"DB Hits\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 8,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D20",
+        "title": "Read-committed, locks, lost updates and deadlocks",
+        "url": "https://neo4j.com/docs/operations-manual/current/database-internals/concurrent-data-access/"
+      },
+      {
+        "id": "D21",
+        "title": "MERGE identity, bound patterns and concurrency uniqueness",
+        "url": "https://neo4j.com/docs/cypher-manual/5/clauses/merge/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S22",
+    "query": "site.neo4j.com/docs/operations-manual/current/ \"read-committed\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 8,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D20",
+        "title": "Read-committed, locks, lost updates and deadlocks",
+        "url": "https://neo4j.com/docs/operations-manual/current/database-internals/concurrent-data-access/"
+      },
+      {
+        "id": "D21",
+        "title": "MERGE identity, bound patterns and concurrency uniqueness",
+        "url": "https://neo4j.com/docs/cypher-manual/5/clauses/merge/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S23",
+    "query": "site.postgresql.org/docs/current/ \"Versioning Policy\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 9,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D17",
+        "title": "Batch creation, round trips, result handling",
+        "url": "https://neo4j.com/docs/python-manual/current/performance/"
+      },
+      {
+        "id": "D22",
+        "title": "Write-ahead logging and crash recovery",
+        "url": "https://www.postgresql.org/docs/16/wal-intro.html"
+      },
+      {
+        "title": "PostgreSQL Versioning Policy",
+        "url": "https://www.postgresql.org/support/versioning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S24",
+    "query": "site.postgresql.org/docs/current/ \"Write-Ahead Logging\" \"WAL\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 9,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D17",
+        "title": "Batch creation, round trips, result handling",
+        "url": "https://neo4j.com/docs/python-manual/current/performance/"
+      },
+      {
+        "id": "D22",
+        "title": "Write-ahead logging and crash recovery",
+        "url": "https://www.postgresql.org/docs/16/wal-intro.html"
+      },
+      {
+        "title": "PostgreSQL Versioning Policy",
+        "url": "https://www.postgresql.org/support/versioning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S25",
+    "query": "site.neo4j.com/docs/python-manual/current/performance/ \"batch\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 9,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D17",
+        "title": "Batch creation, round trips, result handling",
+        "url": "https://neo4j.com/docs/python-manual/current/performance/"
+      },
+      {
+        "id": "D22",
+        "title": "Write-ahead logging and crash recovery",
+        "url": "https://www.postgresql.org/docs/16/wal-intro.html"
+      },
+      {
+        "title": "PostgreSQL Versioning Policy",
+        "url": "https://www.postgresql.org/support/versioning/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S26",
+    "query": "site.postgresql.org/docs/current/ \"SQL Conformance\" \"supported\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 10,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D13",
+        "title": "Multicolumn B-tree leading keys and skip scan",
+        "url": "https://www.postgresql.org/docs/18/indexes-multicolumn.html"
+      },
+      {
+        "id": "D15",
+        "title": "Statistics, selectivity, cardinality estimates",
+        "url": "https://www.postgresql.org/docs/current/planner-stats-details.html"
+      },
+      {
+        "id": "D23",
+        "title": "SQL conformance and implementation differences",
+        "url": "https://www.postgresql.org/docs/current/features.html"
+      },
+      {
+        "title": "PREPARE",
+        "url": "https://www.postgresql.org/docs/17/sql-prepare.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S27",
+    "query": "site.postgresql.org/docs/current/ \"Multicolumn Indexes\" \"leading\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 10,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D13",
+        "title": "Multicolumn B-tree leading keys and skip scan",
+        "url": "https://www.postgresql.org/docs/18/indexes-multicolumn.html"
+      },
+      {
+        "id": "D15",
+        "title": "Statistics, selectivity, cardinality estimates",
+        "url": "https://www.postgresql.org/docs/current/planner-stats-details.html"
+      },
+      {
+        "id": "D23",
+        "title": "SQL conformance and implementation differences",
+        "url": "https://www.postgresql.org/docs/current/features.html"
+      },
+      {
+        "title": "PREPARE",
+        "url": "https://www.postgresql.org/docs/17/sql-prepare.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S28",
+    "query": "site.postgresql.org/docs/current/ \"Planner Statistics\" \"statistics\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 10,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D13",
+        "title": "Multicolumn B-tree leading keys and skip scan",
+        "url": "https://www.postgresql.org/docs/18/indexes-multicolumn.html"
+      },
+      {
+        "id": "D15",
+        "title": "Statistics, selectivity, cardinality estimates",
+        "url": "https://www.postgresql.org/docs/current/planner-stats-details.html"
+      },
+      {
+        "id": "D23",
+        "title": "SQL conformance and implementation differences",
+        "url": "https://www.postgresql.org/docs/current/features.html"
+      },
+      {
+        "title": "PREPARE",
+        "url": "https://www.postgresql.org/docs/17/sql-prepare.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S29",
+    "query": "site.postgresql.org/docs/current/ \"PREPARE\" \"generic plan\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 10,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D13",
+        "title": "Multicolumn B-tree leading keys and skip scan",
+        "url": "https://www.postgresql.org/docs/18/indexes-multicolumn.html"
+      },
+      {
+        "id": "D15",
+        "title": "Statistics, selectivity, cardinality estimates",
+        "url": "https://www.postgresql.org/docs/current/planner-stats-details.html"
+      },
+      {
+        "id": "D23",
+        "title": "SQL conformance and implementation differences",
+        "url": "https://www.postgresql.org/docs/current/features.html"
+      },
+      {
+        "title": "PREPARE",
+        "url": "https://www.postgresql.org/docs/17/sql-prepare.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S30",
+    "query": "site.postgresql.org/docs/current/ \"libpq\" \"PQserverVersion\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 11,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D24",
+        "title": "Actual server version from connection metadata",
+        "url": "https://www.postgresql.org/docs/current/libpq-status.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S31",
+    "query": "site.neo4j.com/docs/cypher-manual/current/ \"MATCH\" \"CartesianProduct\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 11,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D24",
+        "title": "Actual server version from connection metadata",
+        "url": "https://www.postgresql.org/docs/current/libpq-status.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S32",
+    "query": "site.postgresql.org/docs/current/ \"unique\" \"null\" \"CHECK\" \"foreign key\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 11,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D04",
+        "title": "CHECK, unique, primary-key, foreign-key, exclusion and NULL behavior",
+        "url": "https://www.postgresql.org/docs/18/ddl-constraints.html"
+      },
+      {
+        "id": "D24",
+        "title": "Actual server version from connection metadata",
+        "url": "https://www.postgresql.org/docs/current/libpq-status.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S33",
+    "query": "site.db-book.com \"lossless-join\" \"BCNF\" \"pdf\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 12,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "CS2023 Body of Knowledge",
+        "url": "https://csed.acm.org/wp-content/uploads/2024/04/3.1-Body-of-Knowledge-1.pdf"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S34",
+    "query": "site.db-book.com \"Relational Database Design\" \"ch7\" \"html\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 12,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "CS2023 Body of Knowledge",
+        "url": "https://csed.acm.org/wp-content/uploads/2024/04/3.1-Body-of-Knowledge-1.pdf"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S35",
+    "query": "site.csed.acm.org \"DM-Modeling: Data Modeling\" -Report.htm -pdf",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 12,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "CS2023 Body of Knowledge",
+        "url": "https://csed.acm.org/wp-content/uploads/2024/04/3.1-Body-of-Knowledge-1.pdf"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S36",
+    "query": "site.neo4j.com/docs/cypher-manual/current/ \"Database hits\" \"PROFILE\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 13,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D26",
+        "title": "NULL, three-valued comparisons and IS DISTINCT FROM",
+        "url": "https://www.postgresql.org/docs/current/functions-comparison.html?trk=article-ssr-frontend-pulse_little-text-block"
+      },
+      {
+        "id": "D27",
+        "title": "EXPLAIN, PROFILE, estimated/actual rows, DB hits and memory",
+        "url": "https://neo4j.com/docs/cypher-manual/current/planning-and-tuning/execution-plans/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S37",
+    "query": "site.postgresql.org/docs/current/ \"null value\" \"unknown\" \"comparison\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 13,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D26",
+        "title": "NULL, three-valued comparisons and IS DISTINCT FROM",
+        "url": "https://www.postgresql.org/docs/current/functions-comparison.html?trk=article-ssr-frontend-pulse_little-text-block"
+      },
+      {
+        "id": "D27",
+        "title": "EXPLAIN, PROFILE, estimated/actual rows, DB hits and memory",
+        "url": "https://neo4j.com/docs/cypher-manual/current/planning-and-tuning/execution-plans/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S38",
+    "query": "database design textbook entity relationship model normalization functional dependency BCNF lossless join open textbook",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 14,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Database Design 2nd Edition",
+        "url": "https://opentextbc.ca/dbdesign01/"
+      },
+      {
+        "title": "Chapter 12 Normalization",
+        "url": "https://opentextbc.ca/dbdesign01/chapter/chapter-12-normalization/"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S39",
+    "query": "site.db-book.com/db6/slide-dir/PDF-dir \"Relational Database Design\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 15,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Database Systems and Concepts",
+        "url": "https://csci3030u.science.ontariotechu.ca/chapter_3/chapter_3_section_1.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S40",
+    "query": "site.db-book.com \"Entity-Relationship\" \"ch6.pdf\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 15,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Database Systems and Concepts",
+        "url": "https://csci3030u.science.ontariotechu.ca/chapter_3/chapter_3_section_1.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S41",
+    "query": "site.db-book.com \"Functional Dependencies\" \"ch8.pdf\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 15,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Database Systems and Concepts",
+        "url": "https://csci3030u.science.ontariotechu.ca/chapter_3/chapter_3_section_1.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S42",
+    "query": "site.opentextbc.ca \"Functional Dependencies\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 15,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Database Systems and Concepts",
+        "url": "https://csci3030u.science.ontariotechu.ca/chapter_3/chapter_3_section_1.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S43",
+    "query": "site.cs.rpi.edu/~sibel/csci4380 \"Entity\" \"cardinality\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 16,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D02",
+        "title": "Entity-relationship models: entities, keys, participation, cardinalities, and relational mapping",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/fall2018/course_notes/er.html"
+      },
+      {
+        "id": "D03",
+        "title": "Normalization: functional dependencies, keys, anomalies, BCNF, lossless and dependency-preserving decomposition",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/spring2016/course_notes/normalization.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S44",
+    "query": "site.cs.rpi.edu/~sibel/csci4380 \"BCNF\" \"functional dependency\" \"anomalies\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 16,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D02",
+        "title": "Entity-relationship models: entities, keys, participation, cardinalities, and relational mapping",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/fall2018/course_notes/er.html"
+      },
+      {
+        "id": "D03",
+        "title": "Normalization: functional dependencies, keys, anomalies, BCNF, lossless and dependency-preserving decomposition",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/spring2016/course_notes/normalization.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S45",
+    "query": "site.cs.rpi.edu/~sibel/csci4380 \"Functional dependencies\" \"keys\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 16,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "id": "D02",
+        "title": "Entity-relationship models: entities, keys, participation, cardinalities, and relational mapping",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/fall2018/course_notes/er.html"
+      },
+      {
+        "id": "D03",
+        "title": "Normalization: functional dependencies, keys, anomalies, BCNF, lossless and dependency-preserving decomposition",
+        "url": "https://www.cs.rpi.edu/~sibel/csci4380/spring2016/course_notes/normalization.html"
+      }
+    ],
+    "names": [],
+    "next": "Next batch refines terminology or source accessibility; see ordered log."
+  },
+  {
+    "id": "S46",
+    "query": "\"The Entity Relationship Data Model\" \"Watt\" -site:opentextbc.ca",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 17,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Main Body Database Design 2nd Edition",
+        "url": "https://ecampusontario.pressbooks.pub/databasedesign02/part/main-body/"
+      }
+    ],
+    "names": [],
+    "next": "Stop: curriculum headings, established relational theory, graph semantics and product-specific criteria have primary-source coverage. Distributed systems, security and specialized access methods remain unsurveyed."
+  },
+  {
+    "id": "S47",
+    "query": "\"Normalization\" \"BCNF\" \"Watt\" site:libretexts.org",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 17,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Main Body Database Design 2nd Edition",
+        "url": "https://ecampusontario.pressbooks.pub/databasedesign02/part/main-body/"
+      }
+    ],
+    "names": [],
+    "next": "Stop: curriculum headings, established relational theory, graph semantics and product-specific criteria have primary-source coverage. Distributed systems, security and specialized access methods remain unsurveyed."
+  },
+  {
+    "id": "S48",
+    "query": "\"Functional Dependencies\" \"Watt\" site:libretexts.org",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": 17,
+    "found_scope": "Combined response for this batch; tool did not expose per-query attribution.",
+    "found": [
+      {
+        "title": "Main Body Database Design 2nd Edition",
+        "url": "https://ecampusontario.pressbooks.pub/databasedesign02/part/main-body/"
+      }
+    ],
+    "names": [],
+    "next": "Stop: curriculum headings, established relational theory, graph semantics and product-specific criteria have primary-source coverage. Distributed systems, security and specialized access methods remain unsurveyed."
+  },
+  {
+    "id": "S49",
+    "query": "dimensional modeling techniques fact dimension grain conformed slowly changing dimension Kimball",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S50",
+    "query": "SQL antipatterns comma separated lists entity attribute value recognized catalog publisher",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S51",
+    "query": "site.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/ \"Grain\" \"Snowflake\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S52",
+    "query": "site.pragprog.com \"SQL Antipatterns\" \"Jaywalking\" \"Entity\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S53",
+    "query": "site.kimballgroup.com \"dimensional modeling\" \"normalized\" \"transaction\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S54",
+    "query": "SQL Antipatterns Volume 1 Bill Karwin pragmatic bookshelf book catalog",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S55",
+    "query": "\"SQL Antipatterns\" \"sample\" \"media.pragprog.com\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S56",
+    "query": "\"SQL Antipatterns\" site:edu syllabus",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S57",
+    "query": "\"SQL Antipatterns\" site:ac.uk reading",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S58",
+    "query": "\"SQL Antipatterns\" \"Entity-Attribute-Value\" \"pragprog.com\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S59",
+    "query": "site.learn.microsoft.com/fabric/data-warehouse \"dimensional modeling\" \"third normal\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-1",
+    "found_scope": "Combined discoveries across revision queries S49-S59; per-query result attribution not retained. Technique pages and publisher excerpt followed from discovered index pages.",
+    "found": [
+      {
+        "id": "D29",
+        "title": "Dimensional Modeling Techniques: source organization and fundamental/basic/integration/SCD technique groups",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?trk=public_post_comment-text",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D30",
+        "title": "Grain: row meaning, binding contract, atomic grain and separate fact tables for different grains",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D31",
+        "title": "Facts for Measurements: business event, row/grain consistency and measurement facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/facts-for-measurement/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D32",
+        "title": "Dimensions for Descriptive Context: context, filtering/grouping and single-valued dimensions at a grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimensions-for-context/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D33",
+        "title": "Star Schemas and OLAP Cubes: fact/dimension key relationships and relational/multidimensional implementations",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D34",
+        "title": "Snowflaked Dimensions: normalized hierarchical attributes; Kimball preference and performance caveat",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D35",
+        "title": "Dimension Surrogate Keys: warehouse-controlled row keys, operational keys, history and date exception",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/dimension-surrogate-key/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D36",
+        "title": "Type 1 Overwrite: current values, loss of history and affected aggregates",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D37",
+        "title": "Type 2 Add New Row: version rows, surrogate foreign keys, effective/expiry timestamps and current indicator",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D38",
+        "title": "Conformed Dimensions: matching names/domain contents and aligned results from separate fact tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D39",
+        "title": "2.1-2.4.2: logical/physical design, OLTP and warehouse 3NF, star schemas, facts/dimensions, grain and conformance",
+        "url": "https://docs.oracle.com/en/database/oracle/oracle-database/19/dwhsg/data-warehouse-logical-design.html",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D40",
+        "title": "Published catalog and Logical Database Design Antipatterns contents: Jaywalking, EAV, Keyless Entry, objectives, legitimate uses and solutions",
+        "url": "https://pragprog.com/titles/bksap1/sql-antipatterns-volume-1/",
+        "discovery": "Search result opened and read"
+      },
+      {
+        "id": "D41",
+        "title": "Public excerpt pp.7-11: Jaywalking, comma-separated identifiers, query/aggregation, validation, separators and length limitations",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D42",
+        "title": "Four-Step Dimensional Design Process: business process, grain, dimensions, facts, requirements and source data",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/four-4-step-design-process/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      },
+      {
+        "id": "D43",
+        "title": "Additive, Semi-Additive, and Non-Additive Facts: summation dimensions and additive components before ratios",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/",
+        "discovery": "Search-discovered Kimball index or publisher page, then linked technique/excerpt"
+      }
+    ],
+    "names": [
+      "dimensional modeling",
+      "grain",
+      "conformed dimensions",
+      "SQL Antipatterns",
+      "Jaywalking",
+      "Entity-Attribute-Value"
+    ],
+    "next": "Read field technique pages and publisher catalog/excerpt; retain legitimate-use caveats and distinguish warehouse schema design from statistical/ML analysis."
+  },
+  {
+    "id": "S60",
+    "query": "site.media.pragprog.com \"Jaywalking\" \"sql-antipatterns\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-access-repair",
+    "found_scope": "First two queries submitted as one batch; third is a separate curl documentation search. Recorded discoveries do not assert exclusive per-query attribution.",
+    "found": [
+      {
+        "title": "SQL Antipatterns public Jaywalking PDF",
+        "url": "https://media.pragprog.com/titles/bksap1/jaywalking.pdf"
+      },
+      {
+        "title": "SQL Antipatterns 2010 introduction and table of contents",
+        "url": "https://media.pragprog.com/titles/bksqla/introduction.pdf"
+      }
+    ],
+    "names": [
+      "Jaywalking",
+      "native transfer resume"
+    ],
+    "next": "Use curl native continuation rather than redownloading the PDF from byte zero; keep failed transfer records. No new source claims from the 2010 edition."
+  },
+  {
+    "id": "S61",
+    "query": "site.pragprog.com/titles/bksqla \"SQL Antipatterns\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-access-repair",
+    "found_scope": "First two queries submitted as one batch; third is a separate curl documentation search. Recorded discoveries do not assert exclusive per-query attribution.",
+    "found": [
+      {
+        "title": "SQL Antipatterns publisher first edition catalog",
+        "url": "https://pip.pragprog.com/titles/bksqla/sql-antipatterns/"
+      }
+    ],
+    "names": [
+      "Jaywalking",
+      "native transfer resume"
+    ],
+    "next": "Use curl native continuation rather than redownloading the PDF from byte zero; keep failed transfer records. No new source claims from the 2010 edition."
+  },
+  {
+    "id": "S62",
+    "query": "site:curl.se/docs/manpage.html \"--continue-at\" \"previous\" \"automatically\"",
+    "tool": "web.run search_query",
+    "generated": false,
+    "batch": "revision-access-repair",
+    "found_scope": "First two queries submitted as one batch; third is a separate curl documentation search. Recorded discoveries do not assert exclusive per-query attribution.",
+    "found": [
+      {
+        "title": "curl manual --continue-at",
+        "url": "https://curl.se/docs/manpage.html?category=23"
+      }
+    ],
+    "names": [
+      "Jaywalking",
+      "native transfer resume"
+    ],
+    "next": "Use curl native continuation rather than redownloading the PDF from byte zero; keep failed transfer records. No new source claims from the 2010 edition."
+  }
+]
