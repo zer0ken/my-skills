@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.11.0"
+  version: "2.12.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -160,7 +160,12 @@ Judge by reading only the change's entry points, public interfaces, data models,
 
 Design decisions and defects are different axes. If a result violates the quality criteria it is a defect, and if its cause is a design decision it counts as a defect arising from the design. Do not exclude something from defects because it is the behavior the design intended.
 
-Separately from the defect search, the review answers the following two questions with evidence. This judgment is not skipped: question 1 fills the `설계와 원인` section of the result and question 2 the `품질` section.
+Separately from the defect search, the review answers the following three questions with evidence. This judgment is not skipped: questions 0 and 1 fill the `설계와 원인` section of the result and question 2 the `품질` section.
+
+0. Is every concept the change handles defined? The user's words (2026-11-12): "명백한 결함보다, 다소 나이브하고 비 효율적으로 짜여진 무언가, 그리고 명확한 아키텍처 없이 애매하게(초점없이 흐릿하게) 구현만 된 구조 (의미적으로 무엇이라고 뚜렷히 정의되지 않은 구현)을 지양해야돼." Answer it before looking for correctness defects, because a review that starts from bugs stops at bugs.
+  0.1 List every unit the change introduces or touches: module, class, function, table, column, JSON field, status value, prompt, and pipeline stage. For each, write one sentence saying what it is and what it is not, from the code, schema, and documents.
+  0.2 A unit for which that sentence cannot be written is a structural defect even when it works: a catch-all column or field that collects whatever each stage adds, a list packed into a string, a status with no defined set of values, a function doing several jobs its name does not state.
+  0.3 Name each such defect with the field's own term and criterion from the area's `-expert` skill (for example its catalog of design antipatterns or its code-smell criterion), and give the defined shape that replaces it. A unit the skill has no term for is still a defect under 0.2.
 
 1. Is this structure the most suitable structure that actually solves the problem logically?
   1.1 Restate the problem being solved at the level of its cause, and judge whether the change removes that cause or only bypasses the symptom.
