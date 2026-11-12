@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.8.0"
+  version: "2.9.0"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -302,6 +302,13 @@ Introduction comes with three conditions.
 - 나쁜 예: `이 모듈은 단순한 캐시가 아니라 요청 수명 주기를 관리하는 계층이다`
 - 좋은 예: `이 모듈은 요청마다 캐시 항목의 만료 시각을 갱신한다`
 
+**Do not frame a definition as what X is and what X is not.** `무엇이고 무엇이 아닌가`, `X는 무엇이 아닌가`, `X는 ~이고 ~가 아니다` and the English `what it is and what it is not` are banned in every position: title, heading, table column, field name, and sentence. The paired frame is a habit of generated prose and adds a denied half nobody claimed. The user's words (2026-11-13): "무엇이고 무엇이 아닌가 <- 이거 금지." and "이 표현 자체가 클로드가 많이 쓰는 말이다. 금지다." Write the definition as the property that decides whether a given thing belongs to X. When a nearby concept must be told apart, name it and state the criterion that separates the two.
+
+- 나쁜 예: `정의(무엇이고 무엇이 아닌가)`
+- 좋은 예: `정의`
+- 나쁜 예: `세션 lease 는 생산자의 권한이고, 판정자의 권한이 아니다`
+- 좋은 예: `세션 lease 는 단계 산출물을 쓰는 생산자 세션 하나가 갖는 쓰기 권한이다. 판정자 세션은 lease 없이 판정만 기록한다`
+
 **Name the source of a claim.** `일반적으로`, `알려져 있다`, `권장된다`, `많은 경우` attribute a claim to nobody. Write who states it or where it was measured, and delete the claim if there is no source.
 
 - 나쁜 예: `일반적으로 배치 크기는 32가 권장된다`
@@ -383,6 +390,6 @@ After writing, reread the text once per line below and fix each violation in pla
 4. Sentences: a named subject, subject before object before predicate, no `!`, `?`, bold, emoji, dash, or arrow in prose, no two sentences for one fact.
 5. Verbs: each verb checked for a technical predicate that fits its meaning in that sentence.
 6. Words: domain and English terms kept as they are without a Korean gloss, every noun found in code or introduced in context, no catch-all noun (`자리`, `부분`, `것`, `내용`, `방식`), no coinage with `재-`, `-화`, `-성`, `~` escaped.
-7. Information: each fact tied to the claim by causality, no sentence that fits another project unchanged, no denial of an unclaimed A, no unsourced `일반적으로`, no closing restatement, no change history in documents and comments, no intensifier, no dropped qualifier, four answers per limitation.
+7. Information: each fact tied to the claim by causality, no sentence that fits another project unchanged, no denial of an unclaimed A, no `무엇이고 무엇이 아닌가` frame or its English form, no unsourced `일반적으로`, no closing restatement, no change history in documents and comments, no intensifier, no dropped qualifier, four answers per limitation.
 8. Head sentences: no list of components or callers, no sentence form shared with other files.
 9. Revising: sentences merged, split, and reordered, not only words replaced; every deleted sentence obtainable from code or another document.
