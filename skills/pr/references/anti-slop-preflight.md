@@ -1,20 +1,20 @@
-# anti-slop 사전 검사와 커밋 메시지 재작성
+# anti-slop preflight and commit message rewriting
 
-한국어 산문 검사(anti-slop)를 CI 에서 처음 만나면 왕복이 반복된다. 검사 범위를 알고 로컬에서 0 건을 만든 뒤 push 한다.
+If you first meet the Korean prose check (anti-slop) in CI, the round trips repeat. Know the check scope, bring it to 0 findings locally, and then push.
 
-## 검사 대상 범위
+## Check target scope
 
-PR 이벤트에서 검사기는 다음을 모두 검사한다. 제목이 명사구인지는 검사하지 않으므로 PR 제목은 스킬의 게시 전 확인으로 따로 확인한다.
+On a PR event the checker checks all of the following. It does not check whether the title is a noun phrase, so check the PR title separately with the skill's pre-posting check.
 
-- PR 제목과 본문
-- PR 에 포함된 **커밋 메시지**
-- diff 의 **추가된 줄**. 코드 주석과 docstring 을 포함한다
+- The PR title and body
+- The **commit messages** included in the PR
+- The **added lines** of the diff. This includes code comments and docstrings
 
-따라서 본문만 고쳐 다시 push 해도 다음 묶음이 걸린다. 커밋 메시지와 주석을 처음부터 함께 검사한다.
+So even if you fix only the body and push again, the next bundle is caught. Check the commit messages and comments together from the start.
 
-## 로컬에서 0 건까지 반복
+## Repeat locally until 0 findings
 
-검사기는 저장소나 action 배포본에 실행 파일로 있다. 이 저장소 계열은 `text` 하위 명령으로 stdin 을 검사한다.
+The checker is an executable in the repository or in the action's distribution. This family of repositories checks stdin with the `text` subcommand.
 
 ```bash
 SLOP=<검사기 실행 파일 경로>
@@ -34,11 +34,11 @@ for c in $(git rev-list origin/main..HEAD); do
 done
 ```
 
-검사기가 상위 10 여 건만 보고하는 경우가 있다. 한 번에 0 건이 나오지 않으면 고치고 다시 돌린다. 출력의 대체어 후보 가운데 그 문장의 뜻에 맞는 것을 고르고, 후보에 없으면 그 문장이 실제로 수행하는 동작을 서술하는 말로 바꾼다.
+The checker sometimes reports only the top 10 or so findings. If you do not get 0 in one run, fix and run again. From the replacement candidates in the output, choose the one that fits the meaning of that sentence, and if none of the candidates fits, change it to wording that describes the action that sentence actually performs.
 
-## 트리를 보존하는 커밋 메시지 재작성
+## Commit message rewriting that preserves the tree
 
-이미 만든 커밋 메시지만 고치려면 이력을 다시 써야 한다. interactive rebase 는 편집기 상호작용과 충돌로 실패하기 쉬우므로, 각 커밋의 트리를 그대로 읽어 새 메시지로 다시 커밋한다. 코드 내용이 바뀌지 않았다는 사실을 트리 hash 로 증명할 수 있다.
+To fix only the commit messages already made, the history must be rewritten. Interactive rebase easily fails from editor interaction and conflicts, so read each commit's tree as it is and commit it again with a new message. The fact that the code content did not change can be proved with the tree hash.
 
 ```bash
 wt=<worktree>
@@ -60,13 +60,13 @@ git rev-parse HEAD^{tree}                             # /tmp/old_tree.txt 와 �
 git push --force-with-lease origin <branch>
 ```
 
-- 재작성 뒤 커밋 메시지와 추가된 줄을 다시 검사해 0 건을 확인한다.
-- 트리 hash 가 같으면 코드·시험 내용은 바뀌지 않았다. 이 사실을 사용자에게 보고한다. 커밋 SHA 가 모두 바뀌므로 이력 재작성 사실도 함께 밝힌다.
-- `git read-tree` 뒤 `git commit` 이 스테이징 트리 검토를 요구하는 pre-commit 훅을 만나면, 훅이 안내하는 확인 절차(`--review` 로 토큰을 받고 `--confirm <토큰>`)를 트리마다 한 번 수행한다. 토큰은 스테이징 트리에 묶여 있으므로 커밋마다 다시 받아야 한다.
+- After rewriting, check the commit messages and added lines again and confirm 0 findings.
+- If the tree hash is the same, the code and test content did not change. Report this fact to the user. All commit SHAs change, so also state that the history was rewritten.
+- If, after `git read-tree`, `git commit` meets a pre-commit hook that requires review of the staged tree, perform the confirmation procedure the hook describes (get a token with `--review` and then `--confirm <token>`) once per tree. The token is bound to the staged tree, so get it again for every commit.
 
-## 흔한 실패
+## Common failures
 
-- 본문만 검사하고 push 해서 커밋 메시지로 다시 실패한다.
-- 주석과 docstring 을 검사 대상에서 빼먹는다. diff 의 추가 줄에 구어 동사가 있으면 그대로 걸린다.
-- 검사기 출력 10 건을 전부로 착각하고 두어 번 더 왕복한다. 로컬에서 0 건이 될 때까지 반복한다.
-- 커밋 메시지를 나중에 고치려다 이력을 다시 쓰게 된다. 커밋하기 전에 메시지를 검사한다.
+- Checking only the body and pushing, then failing again on the commit messages.
+- Leaving comments and docstrings out of the check target. If an added line of the diff has a colloquial verb, it is caught as it is.
+- Mistaking the 10 findings the checker printed for all of them and making a couple more round trips. Repeat until it reaches 0 locally.
+- Trying to fix commit messages later and ending up rewriting the history. Check the message before committing.

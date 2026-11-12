@@ -1,9 +1,9 @@
 ---
 name: pr
-description: "PR 을 올리고 CI 게이트를 거쳐 병합까지 마무리한다. 제목은 명사구로 쓰고, 본문은 맨 위의 이슈 참조 줄과 세 개 내외의 짧은 - 불릿 요약(하위 불릿 포함 10줄 이하)을 담고, 상세 설명은 본문 하단에 배치한다. 한국어 산문에는 sucks 스킬을 반드시 적용한다. 사용자가 /pr 을 호출하거나 PR 을 올리라고 지시할 때, PR 을 병합하거나 마무리할 때, 방금 push 하거나 병합한 코드의 CI 가 실패했을 때 사용한다."
+description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고), when merging or finishing a PR, and when CI fails on code that was just pushed or merged."
 metadata:
   author: hrlee
-  version: "1.13.0"
+  version: "1.14.0"
   domain: workflow
   triggers: PR, pull request, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -13,144 +13,144 @@ metadata:
 
 # PR
 
-작성자는 관련 전역 규칙과 프로젝트 규칙을 다시 읽고 적용 범위를 확인한다.
+The author rereads the relevant global rules and project rules and confirms the scope of application.
 
-## 선행 조건
+## Prerequisite
 
-Skill 도구로 `sucks` 를 먼저 호출한다. 본문의 한국어 산문 전체에 그 규칙을 적용한다.
+Call `sucks` first with the Skill tool. Apply its rules to all Korean prose in the body.
 
-## 브랜치와 이력
+## Branch and history
 
-작성자는 PR 브랜치 이름에 `{접두어}/[이슈번호-]PR의-목표` 형식을 사용한다. 이슈가 없으면 번호와 뒤 하이픈을 생략하며 목표는 짧게 작성한다. `fix/1208-resume-recovery`와 `refactor/ingestion-pipeline` 형식이다.
+The author names a PR branch in the form `{prefix}/[issue-number-]goal-of-the-PR`. If there is no issue, omit the number and the following hyphen, and keep the goal short. The forms are `fix/1208-resume-recovery` and `refactor/ingestion-pipeline`.
 
-작성자는 로컬 commit을 자유롭게 만들되 원격에는 PR용 브랜치만 push하고 worktree의 임시 브랜치는 push하지 않는다. 원격 이력은 추적할 가치가 있는 최소 개수의 의미 있는 commit으로 정리한다. 이미 push한 이력도 필요한 경우 `--force-with-lease`로 갱신하며, 이력을 다시 쓸 때는 다른 PR이나 main이 소유한 commit의 SHA가 바뀌지 않는지 확인한다(filter-branch는 서명을 버리므로 `--ancestry-path`로 범위를 좁힌다).
+The author makes local commits freely but pushes only the PR branch to the remote, and does not push a worktree's temporary branch. Tidy the remote history into the minimum number of meaningful commits worth tracking. History that was already pushed is also updated with `--force-with-lease` when necessary, and when rewriting history, check that the SHAs of commits owned by other PRs or main do not change (filter-branch discards signatures, so narrow the range with `--ancestry-path`).
 
-작성자는 승인된 draft PR 작업을 단위 완료 때마다 원격 브랜치·본문에 동기화하고 최종 검토 전 이력을 정리한다. push마다 요약·배포 영향, 검증, 남은 범위를 해당 commit에 맞춘다. 지정된 ready 전환 조건이 충족되면 즉시 전환한다. PR 생성, push, 병합과 삭제는 승인 범위에서만 수행한다.
+The author synchronizes approved draft PR work to the remote branch and body each time a unit is completed, and tidies the history before the final review. With every push, fit the summary and deployment impact, the verification, and the remaining scope to that commit. When the specified conditions for switching to ready are met, switch immediately. Creating, pushing, merging, and deleting a PR are performed only within the approved scope.
 
-작성자는 PR worktree에서 읽기 전용 설정·데이터를 symlink로 연결하고 변경 가능한 DB는 복사한다. 가상환경과 node_modules는 독립 설치하며 공유 의존성 변경으로 다른 작업에 영향을 주지 않는다. PR worktree 를 제거하기 전에는 그 worktree 의 빌드 산출물에서 실행 중인 프로세스가 없는지 확인한다. 실행 중인 프로세스는 디렉터리 제거를 `Device or resource busy` 로 실패시키므로, 작성자가 기동한 프로세스만 PID 로 종료한 뒤 제거한다. Windows junction 처럼 공유 자료로 연결한 링크는 제거 전에 먼저 해제한다. 저장소의 검증·commit 관례를 따르고 commit 본문에는 실행한 검증을 기록한다.
+The author links read-only settings and data into the PR worktree with symlinks and copies any mutable DB. The virtual environment and node_modules are installed independently, and the author does not affect other work through changes to shared dependencies. Before removing a PR worktree, check that no process is running from that worktree's build outputs. A running process makes the directory removal fail with `Device or resource busy`, so terminate only the processes the author started, by PID, and then remove. A link made to shared material, like a Windows junction, is released first before removal. Follow the repository's verification and commit conventions, and record the verification that was run in the commit body.
 
-## CI 게이트와 문서 갱신
+## CI gate and document updates
 
-작성자는 변경을 완료로 보고하거나 commit, push, 병합하기 전에 CI 가 실행하는 검사를 로컬에서 같은 명령으로 모두 실행한다. 검사 목록은 기억한 목록이 아니라 저장소의 CI 설정 파일이나 CI 가 호출하는 빌드 대상이 실행하는 명령 집합이다. 그 일부만 실행하거나 옵션을 바꾸면 로컬에서 통과한 검사가 CI 에서 실패한다. 경고를 실패로 다루는 옵션처럼 CI 명령에 붙은 옵션도 그대로 쓰고, 비용이 작은 검사부터 실행한다.
+Before reporting a change as complete, or before committing, pushing, or merging, the author runs locally, with the same commands, every check that CI runs. The list of checks is not a remembered list but the set of commands run by the repository's CI configuration file or by the build target that CI calls. If only part of it is run or the options are changed, a check that passed locally fails in CI. Use the options attached to the CI commands as they are, such as an option that treats warnings as failures, and run the cheaper checks first.
 
-CI 가 실행하지 않는 검사는 그 저장소의 게이트가 아니다. formatter 나 linter 가 변경하지 않은 기본 브랜치에서 이미 실패하고, 그 도구의 설정 파일이 없고, 어느 CI job 도 그 도구를 실행하지 않으면, 작성자는 그 실패를 고치지 않고 작업자에게도 요구하지 않는다. 이때는 새 코드가 주변 코드의 형식을 따르고 새 경고를 더하지 않는지만 확인한다.
+A check that CI does not run is not that repository's gate. If a formatter or linter already fails on the unchanged default branch, the tool has no configuration file, and no CI job runs the tool, the author does not fix that failure and does not require it of the worker. In this case, check only that the new code follows the format of the surrounding code and adds no new warning.
 
-저장소 전체를 대상으로 하는 검사는 추적하지 않는 파일 때문에 로컬에서만 실패한다. CI 의 checkout 에는 그 파일이 없으므로, 실패가 추적하지 않는 파일에서만 발생하면 작성자는 `git status` 로 작업 트리에 남은 임시 파일을 정리하고 commit 한 트리 기준으로 다시 검사한다.
+A check that targets the whole repository can fail only locally because of untracked files. The CI checkout does not have those files, so if the failure occurs only in untracked files, the author cleans up the temporary files left in the working tree with `git status` and re-checks against the committed tree.
 
-변경이 문서에 적힌 동작을 바꾸면, 작성자는 리뷰를 요청하거나 병합하기 전에 그 문서를 코드와 같은 동작으로 고치고 같은 commit 에 포함한다. 대상은 README, `docs/`, 설계 결정 기록, 모듈별 `AGENTS.md` 처럼 저장소가 유지하는 문서다. 모든 검사를 통과해도 자기 문서와 어긋나는 PR 은 설계 회귀다. 문서는 현재 동작을 사실로 적고 변경 전후 이력을 적지 않는다. 문서에 적힌 동작이 바뀌지 않았으면 갱신을 생략하고, 생략한 판단을 PR 본문 상세에 적는다.
+If a change alters behavior described in a document, the author fixes that document to the same behavior as the code before requesting review or merging, and includes it in the same commit. The targets are the documents the repository maintains, such as the README, `docs/`, design decision records, and per-module `AGENTS.md`. A PR that contradicts its own documents even though every check passes is a design regression. The document states the current behavior as fact and does not write the before-and-after history of the change. If the behavior described in a document did not change, omit the update and write that judgment in the details of the PR body.
 
-## PR 상태와 검증
+## PR state and verification
 
-PR은 draft, ready, 리뷰 검증·수정, 병합 순서로 진행한다. draft는 작업 중 상태이고 ready는 확정한 변경을 리뷰받는 상태다. 사람에게 리뷰를 요청하면 PR 을 리뷰받는 상태로 내놓는 것이므로 draft 이면 먼저 ready 로 바꾼 뒤 리뷰어를 지정하고, draft 로 둔 채 리뷰어만 지정하거나 `--draft` 와 `--reviewer` 를 함께 넘기지 않는다. 사용자가 사람 리뷰 요청을 지시하면 작업 단계와 상관없이 그 지시가 ready 전환의 지시이며, 병합 시점은 바뀌지 않는다. 리뷰 단계에서는 리뷰 결함 해소에 집중하고 새로운 설계는 지적이 요구할 때 재검토한다. 검증과 수정은 현재 head를 기준으로 수행한다.
+A PR proceeds in the order draft, ready, review verification and fixes, merge. Draft is the in-progress state, and ready is the state in which the finalized change is reviewed. Requesting review from a person puts the PR up for review, so if it is a draft, first change it to ready and then assign the reviewer, and do not assign only a reviewer while leaving it as a draft, nor pass `--draft` and `--reviewer` together. When the user instructs a request for a person's review, that instruction is the instruction to switch to ready regardless of the work stage, and the merge timing does not change. In the review stage, concentrate on resolving review defects, and reconsider the new design only when a finding requires it. Verification and fixes are performed against the current head.
 
-작성자는 ready 로 바꾸거나 리뷰를 요청하기 전에 `git diff <base>...HEAD` 전체를 직접 읽고 디버그 코드, 목적과 무관한 변경, 빠진 파일을 바로잡는다. 이런 흔적은 작성자가 diff 를 읽으면 대부분 잡히며, 남겨 두면 리뷰어가 결함 대신 흔적에 시간을 쓴다. 크기와 재사용은 rv 의 `크기와 증가` 판단을 자기 변경에 같은 방식으로 적용한다.
+Before switching to ready or requesting review, the author reads the entire `git diff <base>...HEAD` directly and corrects debug code, changes unrelated to the purpose, and missing files. Most of these traces are caught when the author reads the diff, and if left, the reviewer spends time on the traces instead of on defects. For size and reuse, apply rv's `크기와 증가` judgment to one's own change in the same way.
 
-작성자는 PR 상태나 본문 수치를 보고하기 전에 그 PR 이 가리키는 head 에서 검증한다. 작업 worktree 의 HEAD 는 다른 세션이 같은 브랜치에 남긴 미푸시 commit 때문에 PR head 보다 앞서 있을 수 있으므로, `git log origin/<브랜치>..HEAD` 로 차이를 확인하고 차이가 있으면 PR head 를 detached 임시 worktree 로 꺼내 검증한 뒤 제거한다. 시험 통과 수치도 작업자 보고를 그대로 옮기지 않고 같은 head 의 CI 로그에서 확인한다. `gh pr checks <번호>` 가 주는 job URL 의 마지막 숫자가 job ID 이므로 `gh run view --job <ID> --log | grep -E '[0-9]+ (passed|failed)' | tail -2` 로 샤드마다 건수를 읽고, 본문에는 판정 근거인 격리 환경 수치를 쓰고 호스트 pytest 값은 참고값으로 표시한다. 저장소 실행기에 경로·`-k` 인자 전달이 없어 경로 단위 격리 수치를 로컬에서 재현할 수 없으면, 재현 불가한 수치를 본문에 남기지 말고 CI 샤드 합계로 대체한다.
+Before reporting the PR state or numbers in the body, the author verifies at the head the PR points to. The working worktree's HEAD can be ahead of the PR head because of unpushed commits another session left on the same branch, so check the difference with `git log origin/<branch>..HEAD`, and if there is a difference, check out the PR head into a detached temporary worktree, verify, and then remove it. The test pass count is also not carried over from a worker's report but confirmed from the CI log of the same head. The last number of the job URL that `gh pr checks <number>` gives is the job ID, so read the count per shard with `gh run view --job <ID> --log | grep -E '[0-9]+ (passed|failed)' | tail -2`, write the isolated-environment figures that are the basis of the judgment in the body, and mark the host pytest values as reference values. If the repository runner has no path or `-k` argument passing so that the per-path isolated figures cannot be reproduced locally, do not leave irreproducible figures in the body and substitute the CI shard total.
 
-작성자는 게시 후 CI를 확인하고 실패를 해결한다. 실패가 나타나면 같은 검사를 base 에서 실행해 이미 있던 실패인지 가리고, 이 변경이 새 실패를 더하지 않았음을 그 결과로 보인다. 의존 PR이 있으면 저장소의 스택 절차를 먼저 확인하며 `~/.pi/agent/rules-optional/github-pr-stacks.md`가 적용되는 환경이면 읽는다. 병합 방식은 실제 저장소 설정과 사용자 지시를 확인한다. squash 와 rebase 병합은 사용자나 저장소가 그 방식을 정했을 때만 쓴다. merge commit을 허용하고 별도 지시가 없을 때는 `gh pr merge --merge`를 사용한다. squash에 `--subject`를 지정하면 제목에 PR 번호 `(#N)`을 직접 포함한다.
+After posting, the author checks CI and resolves failures. When a failure appears, run the same check on the base to tell whether it is a failure that already existed, and show with that result that this change added no new failure. If a dependent PR exists, first check the repository's stacking procedure, and in an environment where `~/.pi/agent/rules-optional/github-pr-stacks.md` applies, read it. Check the actual repository settings and the user's instructions for the merge method. Use a squash or rebase merge only when the user or the repository decided on that method. When merge commits are allowed and there is no separate instruction, use `gh pr merge --merge`. When `--subject` is specified for a squash, include the PR number `(#N)` in the title directly.
 
-작성자는 병합 전에 공식 CI 의 필수 검사가 모두 통과했는지 `gh pr checks`로 확인한다. 작업자 보고와 로컬에서 일부만 실행한 검사는 병합 근거가 아니다. 관리자 우회(`--admin`)는 사용자가 먼저 쓰라고 지시한 경우에만 그 지시에 따라 사용한다. 병합 승인이나 my-workflow 시작은 이 지시가 아니다. 사용자 원문(2026-11-10): "사용자에가 먼저 그렇게 하라고 지시한 경우 사용자 지시에 따라." 그런 지시가 없는데 토큰이 스스로 줄 수 없는 승인을 브랜치 보호가 요구하면 PR 을 열어 둔 채 그 승인을 기다린다고 보고한다. 병합, 원격 브랜치 삭제와 리뷰 dismiss는 명시적인 승인 범위에서만 수행한다.
+Before merging, the author confirms with `gh pr checks` that all the required checks of the official CI passed. A worker's report and checks run only partly locally are not grounds for merging. The administrator bypass (`--admin`) is used, following the instruction, only when the user first instructed to use it. Approval to merge or starting my-workflow is not this instruction. The user's words (2026-11-10): "사용자에가 먼저 그렇게 하라고 지시한 경우 사용자 지시에 따라." If there is no such instruction and branch protection requires an approval that the token cannot give by itself, report that the PR is left open and waiting for that approval. Merging, deleting a remote branch, and dismissing a review are performed only within an explicitly approved scope.
 
-작성자는 생성 뒤 `closingIssuesReferences`를 다시 확인한다. 병합 명령의 성공 출력은 병합 완료의 근거가 아니므로, 병합 뒤 `gh pr view <번호> --json state,mergedAt,mergeCommit` 로 병합 commit 을 확인하고 실제 이슈 상태도 조회한다. 자동 종료가 실패했으면 승인된 범위에서 PR·SHA와 함께 종료하며, 승인 범위를 벗어나면 남은 상태를 보고한다. 핵심 이슈를 닫는 데 필요한 범위를 축소하거나 별도 이슈로 분리해 완료로 처리하지 않는다.
+After creation, the author checks `closingIssuesReferences` again. The success output of the merge command is not grounds that the merge is complete, so after the merge confirm the merge commit with `gh pr view <number> --json state,mergedAt,mergeCommit` and also look up the actual issue state. If the automatic closing failed, close it within the approved scope together with the PR and SHA, and if it goes beyond the approved scope, report the remaining state. Do not narrow the scope needed to close the core issue, nor split it into a separate issue, and treat it as complete.
 
-base 가 기본 브랜치가 아닌 스택 PR 에서는 GitHub 가 닫기 참조를 계산하지 않으므로 `Closes #N` 을 써도 `closingIssuesReferences` 가 비어 있는 것이 정상이다. 이때는 이를 누락으로 보고 고치지 말고, base 가 기본 브랜치로 바뀐 뒤 다시 조회하며, 병합 직후 연결 이슈의 상태를 직접 확인해 승인된 범위에서 닫는다.
+In a stacked PR whose base is not the default branch, GitHub does not compute closing references, so even if `Closes #N` is written, it is normal for `closingIssuesReferences` to be empty. In this case, do not treat it as an omission and fix it; look it up again after the base has changed to the default branch, and directly check the state of the linked issue right after the merge and close it within the approved scope.
 
-작성자는 게시할 한국어 본문에 존댓말을 사용하고 사용자 이름 대신 이유, 측정, 출처로 설명한다. 병합 전 제안과 확정된 사용자 결정을 구분한다. 리뷰는 "10-28 15:30 리뷰(대상 `SHA`)"처럼 일시(KST)와 대상 SHA로 부르고, 모델이나 에이전트 이름, 내부 파일 이름, 회차 접미 글자를 쓰지 않는다. GitHub 산문은 문단당 한 줄로 작성한다. 로컬 검사가 있으면 게시 전에 현재 commit·본문을 검사하고 게시 후 실제 결과를 확인한다. 검사 대상은 본문만이 아니라 커밋 메시지와 diff 의 추가된 줄(주석·docstring)까지이며, 검사기가 finding 을 일부만 보고하면 로컬에서 0 건이 될 때까지 반복한 뒤 push 한다. 절차와 커밋 메시지 재작성 방법은 `references/anti-slop-preflight.md` 를 따른다. AI 사용 흔적은 추가하지 않는다.
+The author uses honorific speech (존댓말) in the Korean body to be posted and explains with reasons, measurements, and sources instead of the user's name. Distinguish a proposal before the merge from a confirmed user decision. Refer to a review by date and time (KST) and target SHA, like "10-28 15:30 리뷰(대상 `SHA`)", and do not use a model or agent name, an internal file name, or a round suffix letter. Write GitHub prose with one line per paragraph. If a local check exists, check the current commit and body before posting and confirm the actual result after posting. The check target is not only the body but also the commit messages and the added lines of the diff (comments and docstrings), and if the checker reports only some of the findings, repeat until it reaches 0 locally and then push. Follow `references/anti-slop-preflight.md` for the procedure and for how to rewrite commit messages. Do not add traces of AI use.
 
-큰 PR의 그림은 `visuals`를 따른다. 비공개 저장소의 raw 이미지 URL을 화면 검증 없이 사용하지 않는다. 첨부가 필요하면 PNG를 전달하고 로그인한 브라우저에서 생성한 GitHub 첨부 URL로 게시 결과를 확인한다.
+For diagrams in a large PR, follow `visuals`. Do not use a raw image URL of a private repository without verifying it on screen. If an attachment is needed, deliver the PNG and confirm the posted result with the GitHub attachment URL generated in a logged-in browser.
 
-## 리뷰 대응
+## Responding to review
 
-작성자는 PR 생성이나 ready 전환 뒤 CI를 확인하고, 가능한 알림·예약 기능으로 최대 한 시간 리뷰를 감지해 승인된 범위에서 대응한다. 진행 안내와 anti-slop 결과는 리뷰로 세지 않는다. 저장소 리뷰 절차를 따르고 수정 뒤 새 리뷰어의 재확인을 받는다. 리뷰어 provider 의 사용 한도 소진으로 특정 모델 계열의 검증을 받지 못하면 남은 provider 로 대체하되, 어떤 계열의 검증이 빠졌는지 PR 본문과 최종 보고에 밝히고 그 계열이 쓸 수 있게 된 뒤 재확인할지 사용자와 정한다. 응답만 작성한 지적은 해결로 계산하지 않으며 작성자가 리뷰어의 thread를 대신 resolve하지 않는다.
+After creating the PR or switching it to ready, the author checks CI, detects reviews for at most one hour with the available notification or scheduling feature, and responds within the approved scope. Progress notices and anti-slop results are not counted as reviews. Follow the repository's review procedure, and after a fix, get a recheck from a new reviewer. If the verification of a particular model family cannot be obtained because the reviewer provider's usage limit is exhausted, substitute the remaining provider, but state in the PR body and the final report which family's verification is missing, and decide with the user whether to recheck after that family becomes available. A finding for which only a reply was written is not counted as resolved, and the author does not resolve the reviewer's thread on their behalf.
 
-응답의 형식은 응답하는 글의 형식과 자리를 따른다. finding ID 와 심각도를 단 정형 리뷰에는 저장소 리뷰 절차의 응답 형식(`A-001` 등)으로 답한다. 동료가 산문으로 쓴 의견, 질문, 논의에는 동료에게 말하듯 산문으로 답한다. 지적마다 한 문단에 무엇을 받아들여 어떻게 바꿨는지와 그 이유를, 받아들이지 않은 지적은 그 근거를 쓰고, 지적은 ID 가 아니라 주제로 가리킨다. 응답 ID, 수용 표식, 근거 구분, `파일:줄` 목록을 붙이지 않고, 필요한 commit 과 문서는 문장 안에서 링크한다. 그 자리에 남기는 수정 결과 안내도 같은 산문으로 쓴다. 사용자 원문(2026-11-12): "깃허브 코멘트는 상황을 잘 봐서 작성해라... 지금 사람들이 논의하는 자리니까 방금처럼 코드 리뷰에 대한 응답 포멧을 사용하면 안되는 상황이었다." osiri `TECHNICAL_REVIEW_GUIDE.md` 가 정형 finding 리뷰와 GitHub 논의 초안을 나누는 기준과 같다.
+The form of a response follows the form and place of the writing being answered. To a formal review with finding IDs and severities, answer in the response form of the repository's review procedure (`A-001` and so on). To an opinion, question, or discussion a colleague wrote in prose, answer in prose as if speaking to the colleague. For each finding, write in one paragraph what was accepted and how it was changed and the reason, and for a finding not accepted, its grounds, and refer to a finding by topic, not by ID. Do not attach a response ID, an acceptance marker, a grounds category, or a `file:line` list, and link the needed commits and documents within the sentence. The notice of the fix result left in that place is also written in the same prose. The user's words (2026-11-12): "깃허브 코멘트는 상황을 잘 봐서 작성해라... 지금 사람들이 논의하는 자리니까 방금처럼 코드 리뷰에 대한 응답 포멧을 사용하면 안되는 상황이었다." This is the same as the criterion by which osiri `TECHNICAL_REVIEW_GUIDE.md` separates a formal finding review from a GitHub discussion draft.
 
-작성자는 새 지적이 없고 기존 지적의 해결이 재확인된 경우에만 최종 보고 뒤 병합 여부를 묻는다. 보고는 대화를 읽지 않은 독자에게 기존 증상·원인, 변경 전후 동작, 배포 영향, 실행한 검증·미실행 범위와 결정할 일을 설명한다. 이미 받은 병합 승인은 같은 범위에서 다시 요청하지 않는다.
+Only when there is no new finding and the resolution of the existing findings has been rechecked, the author asks whether to merge after the final report. The report explains, to a reader who has not read the conversation, the earlier symptom and cause, the behavior before and after the change, the deployment impact, the verification that was run and the scope not run, and what is left to decide. A merge approval already received is not requested again for the same scope.
 
-## 무인 병합과 릴리스
+## Unattended merge and release
 
-사용자가 반복 실행에 그 실행이 올린 PR 의 병합과 릴리스를 맡겨도 리뷰는 생략되지 않고 다른 에이전트가 맡는다. 리뷰어는 구현자와 다른 모델 계열이고, PR 번호와 base commit 만 전달받으며 오케스트레이터의 결론은 전달받지 않는다. 작성자는 병합 전에 리뷰어의 판정과 검사 대상 commit 을 PR 코멘트로 게시하고, 이 코멘트도 리뷰를 일시와 대상 SHA 로 가리킨다. 반복 실행에 병합을 맡긴 것은 관리자 우회 지시가 아니므로, 브랜치 보호가 그 실행의 토큰이 줄 수 없는 승인을 요구하면 PR 을 열어 둔 채 그 승인을 기다린다고 보고한다.
+Even when the user entrusts a recurring run with the merge and release of the PRs that run opened, the review is not skipped and another agent takes it. The reviewer is of a different model family from the implementer and receives only the PR number and the base commit, not the orchestrator's conclusion. Before merging, the author posts the reviewer's verdict and the reviewed commit as a PR comment, and this comment also refers to the review by date and time and target SHA. Entrusting the merge to a recurring run is not an administrator bypass instruction, so if branch protection requires an approval that the run's token cannot give, report that the PR is left open and waiting for that approval.
 
-릴리스는 다음 조건을 모두 만족할 때만 진행한다.
+A release proceeds only when all of the following conditions are met.
 
-- 이번 실행에서 제품 코드 변경이 병합되었다
-- 열린 PR 이 없다
-- 목표 버전의 tag 가 없다
-- 같은 날 실행한 릴리스가 없다
+- A product code change was merged in this run
+- There is no open PR
+- There is no tag for the target version
+- There is no release run on the same day
 
-작성자는 manifest 의 patch 버전을 올리고 lockfile 에서는 이름을 지정한 패키지만 갱신한다. lockfile 전체에서 버전 문자열을 일괄 치환하면 의존성 요구 버전까지 바뀐다. 그 뒤 CI 게이트, PR, 리뷰, 병합을 거쳐 릴리스 workflow 를 실행하고, tag, `latest` release, 배포 산출물, 실행 파일의 `--version` 출력이 같은 버전인지 확인한다.
+The author raises the patch version in the manifest and updates only the named package in the lockfile. Replacing the version string across the whole lockfile in bulk also changes the versions required by dependencies. After that, go through the CI gate, PR, review, and merge, run the release workflow, and confirm that the tag, the `latest` release, the deployment artifacts, and the `--version` output of the executable show the same version.
 
-## 메타데이터
+## Metadata
 
-생성 전에 저장소 규칙과 GitHub의 실제 선택지를 조회한다. `.github/PULL_REQUEST_TEMPLATE*`, `CONTRIBUTING`, 저장소별 `AGENTS.md`, 연결할 이슈, 같은 종류의 최근 PR을 확인하고 `gh label list`, `gh api`, `gh project list`, `gh project field-list` 등으로 유효한 값을 확인한다.
+Before creating, look up the repository rules and the actual choices on GitHub. Check `.github/PULL_REQUEST_TEMPLATE*`, `CONTRIBUTING`, the repository's `AGENTS.md`, the issue to link, and recent PRs of the same kind, and confirm valid values with `gh label list`, `gh api`, `gh project list`, `gh project field-list`, and so on.
 
-라벨은 매번 전체 목록과 설명을 조회한 뒤 선택한다. 페이지가 나뉘면 마지막 페이지까지 확인한다. 변경 대상뿐 아니라 변경 유형도 판단하고, 라벨 설명의 배타 조건을 지킨다. 이전 PR의 라벨이나 기억만으로 선택하지 않는다.
+Choose labels each time after looking up the full list and descriptions. If the list is paginated, check through the last page. Judge not only the change target but also the change type, and keep the exclusivity conditions in the label descriptions. Do not choose from a previous PR's labels or from memory alone.
 
-아래 항목을 모두 내부 체크리스트로 만들고 각각을 `값`, `해당 없음`, `사용자 확인 필요`로 판정한다.
+Make all of the items below into an internal checklist and judge each as `a value`, `not applicable`, or `user confirmation needed`.
 
-- 라벨
+- Labels
 - Assignee
 - Reviewer
 - Milestone
-- Project 포함 여부
-- Project의 편집 가능한 필드
-- Draft 여부
-- Base와 head 브랜치
-- 연결 이슈와 종료 키워드
+- Whether to include in a Project
+- The editable fields of the Project
+- Whether it is a draft
+- Base and head branches
+- Linked issues and closing keywords
 
-명시적인 요청, 저장소 규칙, 연결 이슈, 같은 종류의 최근 PR 순으로 근거를 사용한다. 연결 이슈의 값은 저장소의 PR 규칙이 그 값을 승계하도록 할 때만 사용한다. Assignee와 Reviewer를 구분하고, 자기 자신을 Reviewer로 선택하지 않는다. 적용할 값이 유일하게 정해지지 않으면 생성하기 전에 사용자에게 묻는다. 계산 필드와 읽기 전용 필드는 편집 대상에서 뺀다. 작업 중인 이슈는 작업을 시작하거나 PR에 연결하거나 작업 범위에 새로 넣는 즉시 assignee를 확인하고, `gh issue edit <번호> --add-assignee <사용자 계정>`으로 기존 assignee를 지우지 않고 추가한다.
+Use evidence in this order: an explicit request, repository rules, the linked issue, recent PRs of the same kind. Use the linked issue's values only when the repository's PR rules make the PR inherit them. Distinguish Assignee from Reviewer, and do not choose oneself as Reviewer. If the value to apply is not uniquely determined, ask the user before creating. Exclude computed fields and read-only fields from editing. For an issue being worked on, check the assignee the moment work starts, the moment the issue is linked to the PR, or the moment it is newly added to the work scope, and add the user's account with `gh issue edit <number> --add-assignee <user account>` without removing the existing assignee.
 
-`gh pr create`가 지원하는 값은 `--label`, `--assignee`, `--reviewer`, `--milestone`, `--project`, `--draft`, `--base`, `--head`로 생성할 때 같이 넘긴다. Project 필드는 PR을 Project에 추가한 뒤 `gh project item-list` 결과의 item ID와 `gh project field-list` 결과의 field ID를 사용해 `gh project item-edit`로 설정한다. 설치된 `gh` 버전의 `--help`를 기준으로 실제 인자를 선택한다.
+Values that `gh pr create` supports, `--label`, `--assignee`, `--reviewer`, `--milestone`, `--project`, `--draft`, `--base`, and `--head`, are passed together at creation. Set Project fields by adding the PR to the Project and then running `gh project item-edit` with the item ID from the `gh project item-list` result and the field ID from the `gh project field-list` result. Choose the actual arguments from the `--help` of the installed `gh` version.
 
-생성 직후 `gh pr view --json url,body,labels,assignees,reviewRequests,milestone,projectItems,isDraft,baseRefName,headRefName,closingIssuesReferences`로 일반 메타데이터와 연결 이슈를 다시 읽고, `gh project item-list`로 Project 필드를 다시 읽는다. `Refs` 참조는 `closingIssuesReferences`에 포함되지 않으므로 본문도 대조한다. 생성 전 체크리스트와 실제 값을 대조하고 누락이 있으면 즉시 보정한 뒤 다시 조회한다. 권한이나 `project` scope 부족으로 설정하지 못한 값은 조용히 빼지 말고 어느 항목이 남았는지 보고한다.
+Right after creation, reread the general metadata and the linked issues with `gh pr view --json url,body,labels,assignees,reviewRequests,milestone,projectItems,isDraft,baseRefName,headRefName,closingIssuesReferences`, and the Project fields with `gh project item-list`. A `Refs` reference is not included in `closingIssuesReferences`, so also compare against the body. Compare the pre-creation checklist with the actual values, correct any omission immediately, and look it up again. Do not silently drop a value that could not be set because of missing permission or `project` scope; report which item remains.
 
-## 독자
+## Reader
 
-독자는 이 저장소에서 함께 일하는 개발자다. 그들이 아는 어휘로 쓰고, 이해하는 데 필요한 최소한의 맥락만 담는다. 이 저장소에 이미 있는 도메인 지식이나 전문 용어는 풀어 쓰지 않고 그대로 쓴다. 프로젝트의 자체 규칙(CONTRIBUTING, README, 저장소별 AGENTS.md, 기존 이슈·PR 형식)을 최우선으로 존중한다. 프로젝트 규칙과 이 스킬의 지침이 어긋나면 프로젝트 규칙을 따른다.
+The reader is a developer who works together in this repository. Write in the vocabulary they know and include only the minimum context needed to understand. Use domain knowledge and technical terms that already exist in this repository as they are, without explaining them. Respect the project's own rules (CONTRIBUTING, README, the repository's AGENTS.md, the existing issue and PR formats) above all. If a project rule and this skill's instructions conflict, follow the project rule.
 
-독자는 사용자도, 사용자의 에이전트도, 작성 중인 세션도 아니다. 이 대화와 작업 기록을 보지 못한 동료 개발자가 PR 제목과 본문만 읽고 이해한다. 작성자, 사용자, 에이전트 세션만 아는 이름을 쓰지 않는다. 실험 run 의 산출물 이름, 평가 집합 라벨(`A 6,211쌍` 같은 것), 설정 라벨(`route-1500` 같은 것), ledger seq, 세션 id, 내부 파일 이름, 회차 이름이 그 예다. 본문의 고유명, 약어, 이름 붙은 수치, 지표, 임계값, 방법은 둘 중 하나를 만족해야 한다. 하나는 동료가 볼 수 있는 곳(이 저장소의 코드·문서, 연결한 이슈, 링크한 공개 출처)에 이미 있는 것이다. 다른 하나는 본문에서 쉬운 말로 풀어 쓰고 출처를 밝힌 것이다. 이 저장소에 이미 있는 도메인 용어를 풀어 쓰지 않는다는 위 문장은 이 조건을 만족하는 이름에만 적용한다.
+The reader is not the user, not the user's agent, and not the session that is writing. A fellow developer who has not seen this conversation or the work record reads only the PR title and body and understands it. Do not use names that only the author, the user, or the agent session knows. Examples are the output file names of an experiment run, evaluation set labels (like `A 6,211쌍`), configuration labels (like `route-1500`), ledger seq, session ids, internal file names, and round names. Every proper noun, abbreviation, named number, metric, threshold, and method in the body must satisfy one of two conditions. One is that it already exists where a fellow developer can see it (the code and documents of this repository, a linked issue, a linked public source). The other is that the body explains it in plain words and states its source. The sentence above that says not to explain domain terms that already exist in this repository applies only to names that satisfy this condition.
 
-제목, 이슈 참조, 요약, 상세 순서로 작성하고 게시 전 확인으로 끝낸다.
+Write in the order of title, issue reference, summary, and details, and finish with the pre-posting check.
 
-## 제목
+## Title
 
-제목은 이 PR 이 병합되면 달라지는 동작의 이름이다. 명사구로 쓰고 마지막 단어는 명사다. 종결어미(`~다`, `~습니다`), 명사형 어미(`~함`, `~음`, `~하기`), 문장부호를 넣지 않는다.
+The title is the name of the behavior that changes when this PR is merged. Write it as a noun phrase whose last word is a noun. Do not put in a sentence-final ending (`~다`, `~습니다`), a nominalizing ending (`~함`, `~음`, `~하기`), or punctuation.
 
-커밋 제목을 PR 제목으로 옮기지 않는다. 저장소의 커밋 관례가 문장이면 커밋 제목은 문장이고, 이를 그대로 옮긴 PR 제목도 문장이 된다. `gh pr create` 의 `--fill` 계열 인자는 커밋 제목으로 PR 제목을 채우므로 쓰지 않고 `--title` 로 명사구를 넘긴다. 커밋이 하나뿐인 PR 도 같다.
+Do not carry the commit title over as the PR title. If the repository's commit convention is a sentence, the commit title is a sentence, and a PR title carried over as it is also becomes a sentence. The `--fill` family of arguments of `gh pr create` fills the PR title from the commit title, so do not use them and pass a noun phrase with `--title`. The same applies to a PR with only one commit.
 
-문장을 명사구로 바꿀 때는 목적어를 남기고 서술어를 그 동작의 명사로 바꾼다.
+When turning a sentence into a noun phrase, keep the object and change the predicate into the noun of that action.
 
-| 문장 | 명사구 |
+| Sentence | Noun phrase |
 | --- | --- |
 | `LightRAG 질의 경로에 BM25 키워드 검색을 붙인다` | `LightRAG 질의 경로의 BM25 키워드 검색 추가` |
 | `빈 응답에서 파서가 실패하는 문제를 수정함` | `빈 응답의 파서 실패 수정` |
 | `fix(#12): 재시도 간격이 음수가 되지 않게 한다` | `fix(#12): 재시도 간격의 음수 방지` |
 
-저장소가 `fix(#12):` 같은 접두어나 `(#12)` 접미를 요구하면 그 형식을 지키고 나머지를 명사구로 쓴다. `관련 수정`, `개선`, `정리` 만으로 끝나는 제목은 다른 PR 과 구별되지 않으므로 바뀌는 대상의 이름을 넣는다. 코드 식별자는 번역하지 않는다.
+If the repository requires a prefix such as `fix(#12):` or a suffix such as `(#12)`, keep that format and write the rest as a noun phrase. A title that ends in only `관련 수정`, `개선`, or `정리` cannot be distinguished from other PRs, so put in the name of the target that changes. Do not translate code identifiers.
 
-## 이슈 참조
+## Issue reference
 
-대응되는 이슈가 있는지 PR 마다 확인한다. 브랜치 이름과 커밋 메시지에 남은 번호를 먼저 확인하고, 없으면 `gh issue list` 로 변경 내용과 맞는 이슈를 찾는다. 대응되는 이슈가 없으면 참조 줄을 넣지 않고, 없는 번호를 지어내지 않는다.
+Check for each PR whether a corresponding issue exists. First check the numbers left in the branch name and commit messages, and if there are none, find an issue that matches the change with `gh issue list`. If there is no corresponding issue, do not put in a reference line, and do not invent a nonexistent number.
 
-이슈를 찾았으면 본문 맨 위에 참조 줄을 넣고, 빈 줄을 둔 뒤 요약을 쓴다. 독자는 본문 첫 줄에서 이 PR 이 해결하는 이슈를 확인한다. 키워드는 이 PR 이 병합된 뒤 이슈가 닫혀도 되는지로 정한다.
+If you found an issue, put the reference line at the very top of the body, leave a blank line, and then write the summary. The reader confirms from the first line of the body which issue this PR resolves. Decide the keyword by whether the issue may be closed after this PR is merged.
 
-- `Closes #12` : 이 PR 이 이슈의 핵심 문제를 해결한다. GitHub 가 병합 시점에 이슈를 닫는다.
-- `Refs #12` : 이슈의 일부만 다루거나, 상위 트래킹 이슈이거나, 배경으로만 연결된다. 이슈는 열린 채로 남는다.
+- `Closes #12` : This PR resolves the core problem of the issue. GitHub closes the issue at merge time.
+- `Refs #12` : It handles only part of the issue, or the issue is a parent tracking issue, or it is linked only as background. The issue stays open.
 
-이 PR 이 해결하려고 만든 핵심 이슈는 `Closes` 로 연결한다. 연결할 이슈가 모두 `Refs` 이면 핵심 이슈가 빠졌는지 다시 확인한다. 핵심 문제를 해결했으면 부수 항목이 남아도 `Closes` 를 쓰고, 남은 항목은 상세의 남은 작업에 적는다.
+Link the core issue this PR was made to resolve with `Closes`. If every issue to link is `Refs`, check again whether the core issue was left out. If the core problem was resolved, use `Closes` even if side items remain, and write the remaining items in the remaining work of the details.
 
-참조 줄은 두 줄까지다. 첫 줄에 `Closes` 를, 다음 줄에 `Refs` 를 쓰고, 해당 키워드가 없는 줄은 생략한다. `Refs` 는 키워드를 한 번만 쓰고 번호를 쉼표로 잇는다. `Closes` 는 GitHub 가 키워드 바로 뒤 번호 하나만 닫으므로 이슈마다 키워드를 반복해 마침표로 잇는다.
+The reference lines are at most two. Write `Closes` on the first line and `Refs` on the next, and omit the line for a keyword that does not apply. For `Refs`, write the keyword only once and join the numbers with commas. For `Closes`, GitHub closes only the one number right after the keyword, so repeat the keyword for each issue and join them with periods.
 
-## 요약
+## Summary
 
-요약은 무엇을 변경했는지와 왜 변경했는지를 서술한다. 이슈 링크, 파일·함수 목록, 구현 단계, 시험 결과는 이 서술을 대신하지 못한다. 기존에 불가능하거나 잘못되었던 동작과 이 PR 로 가능해지거나 바로잡히는 동작을 연결해, 대화 기록이나 diff 를 읽지 않은 독자가 병합 뒤 시스템이 지금과 무엇이 다르게 동작하는지 알게 쓴다. 핵심 동작이 추상적이면 대표 요청이나 사용 상황 하나로 변경 전후를 설명한다.
+The summary describes what was changed and why it was changed. An issue link, a list of files and functions, implementation steps, and test results cannot replace this description. Connect the behavior that was impossible or wrong before with the behavior that this PR makes possible or corrects, and write it so that a reader who has not read the conversation record or the diff learns how the system behaves differently from now after the merge. If the core behavior is abstract, explain before and after with one representative request or usage situation.
 
-요약은 `-` 불릿 세 개 내외로 쓴다. 개수는 변경의 수에 맞추며, 세 개를 채우려고 늘리거나 줄이지 않는다.
+Write the summary as about three `-` bullets. The count follows the number of changes, and is not increased or reduced to fill three.
 
-1. 한 불릿에는 한 가지만 쓴다. 서로 관련 없는 내용을 한 문장에 이어 붙이지 않는다.
-2. 문장은 짧게 쓴다. 설명이 더 필요하면 문장을 늘리지 않고 하위 불릿(두 칸 들여쓰기)을 더한다. 하위 불릿도 짧은 한 문장이다.
-3. 요약 전체는 하위 불릿을 포함해 10줄을 넘지 않는다. 넘으면 덜 중요한 하위 불릿을 상세로 옮긴다.
-4. 요약 안에 `#` 제목 줄, 굵은 글씨, 체크박스(`- [ ]`)를 넣지 않는다. 본문은 병합될 변경을 서술하고 진행 상태를 추적하지 않는다.
+1. Write only one thing in one bullet. Do not string unrelated content together in one sentence.
+2. Keep sentences short. If more explanation is needed, do not lengthen the sentence; add sub-bullets (indented two spaces). A sub-bullet is also one short sentence.
+3. The whole summary, including sub-bullets, does not exceed 10 lines. If it does, move the less important sub-bullets to the details.
+4. Do not put a `#` heading line, bold text, or a checkbox (`- [ ]`) in the summary. The body describes the change to be merged and does not track progress.
 
 ```
 Closes #12. Closes #15.
@@ -162,11 +162,11 @@ Refs #1111, #1112.
 - 검색 응답에 키워드 점수를 더한다
 ```
 
-## 상세
+## Details
 
-배경, 설계 근거, 검증 방법, 해결하지 않은 범위, 남은 작업처럼 요약에 포함되지 않는 서술은 전부 본문 하단에 배치한다. 요약 뒤에 빈 줄을 두고 이어 쓰며, 코멘트로 나누지 않고 본문 하나에 모두 둔다. 접지 않는 것은 이슈 참조와 요약뿐이고, 상세의 섹션은 각각 `<details>` 태그로 접어 `<summary>` 에 섹션 이름을 명사구로 적는다.
+Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`.
 
-큰 변경은 기능 그룹별로 나누고, 그룹마다 기존 동작과 변경 후 동작을 대조한다. 함수·클래스 이름 등 코드 식별자는 번역하지 않는다.
+Divide a large change by feature group, and for each group contrast the existing behavior with the behavior after the change. Do not translate code identifiers such as function and class names.
 
 ```
 <details>
@@ -190,18 +190,18 @@ Refs #1111, #1112.
 </details>
 ```
 
-## 게시 전 확인
+## Pre-posting check
 
-제목과 본문만 읽고 다음을 확인한다. 하나라도 어긋나면 다시 작성한다.
+Read only the title and body and check the following. If any one is off, write it again.
 
-1. 제목의 마지막 단어가 명사이고, 제목이 커밋 제목과 같은 문장이 아니다.
-2. 본문만으로 기존에 어떤 문제나 필요가 있었는지 답할 수 있다. 답이 코드 식별자나 시험 수치에 그치지 않는다.
-3. 본문만으로 이 PR 을 적용하면 사용자나 시스템의 동작이 어떻게 달라지는지 답할 수 있다.
-4. AI 서명, Generated with 문구, 에이전트 세션 URL 이 없다.
-5. 본문의 고유명, 약어, 이름 붙은 수치·지표·임계값·방법을 모두 나열하고 하나씩 `git grep` 으로 이 저장소에서, 연결한 이슈 본문에서 찾는다. 찾지 못한 이름은 본문에서 쉬운 말로 풀고 출처를 밝히거나, 풀어 쓴 말로 바꾼다. 내가 이 작업에서 붙인 이름인지 동료가 볼 수 있는 이름인지 구분하지 못하면 내가 붙인 이름으로 본다.
+1. The last word of the title is a noun, and the title is not the same sentence as the commit title.
+2. The body alone can answer what problem or need existed before. The answer does not stop at code identifiers or test figures.
+3. The body alone can answer how the behavior of the user or the system differs when this PR is applied.
+4. There is no AI signature, no Generated with phrase, and no agent session URL.
+5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
 
 ```bash
 gh pr create --title "<명사구 제목>" --body-file body.md
 ```
 
-본문은 파일로 넘긴다. 인라인 문자열은 여러 줄에서 깨진다. 게시한 뒤 `gh pr view --json title` 로 제목을 다시 읽어 확인하고, 문장이면 `gh pr edit --title` 로 고친다.
+Pass the body as a file. An inline string breaks across multiple lines. After posting, reread the title with `gh pr view --json title` to confirm, and if it is a sentence, fix it with `gh pr edit --title`.
