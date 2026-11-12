@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.10.1"
+  version: "2.10.2"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -314,6 +314,5 @@ This section is settings applied to a specific repository. In other repositories
 
 enterprise-memory repository:
 
-1. Review procedure: follow `docs/REVIEWING.md`. A finding's evidence_class is 재현, 관찰, or 추론, as the review document format of REVIEWING.md prescribes. The six classes of REVIEWING.md (Observed, Measured, Derived, Sourced, Inferred, Hypothesized) classify the atomic claims of the PR body, CHANGELOG, and API.md, not findings.
+1. Review procedure and document format: follow `docs/REVIEWING.md` on the default branch. It holds the mandatory sections, severities, and evidence classes.
 2. anti-slop rules: read `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and replace detected vocabulary with alternatives.
-3. Reference format: the review of PR #1208, `pullrequestreview-5646450494`.
