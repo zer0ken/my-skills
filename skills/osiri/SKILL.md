@@ -1,9 +1,9 @@
 ---
 name: osiri
-description: "사용자가 /osiri 또는 $osiri로 직접 호출할 때만 코드, 설계, PR, 근거가 있는 기술 보고서를 검토한다. 사용자가 허용한 rv 리뷰 절차 안에서는 참조할 수 있다. 그 밖의 리뷰 요청이나 다른 스킬의 참조로 자동 적용하지 않는다."
+description: "Review code, designs, PRs, and evidence-bearing technical reports, only when the user calls /osiri or $osiri directly. It may be referenced inside an rv review procedure the user has allowed. Do not apply automatically on any other review request or on a reference from another skill."
 metadata:
   author: 오세연
-  version: "1.1.1"
+  version: "1.1.2"
   domain: review
   triggers: technical review, code review, design review, pull request review, peer review, osiri, claim audit, evidence check, reviewer, author response, benchmark report, provenance, recheck
   role: guardian
@@ -13,7 +13,7 @@ metadata:
 
 # osiri - technical and peer review
 
-에이전트는 사용자가 `/osiri`나 `$osiri`로 직접 호출한 경우에만 이 스킬을 단독으로 적용한다. 사용자가 허용한 `rv` 리뷰 절차 안에서는 예외로 이 스킬을 참조한다.
+The agent applies this skill on its own only when the user called it directly with `/osiri` or `$osiri`. As an exception, it references this skill inside an `rv` review procedure the user has allowed.
 
 Review guidance shared by 오세연 for code, design, pull requests, and evidence-bearing reports.
 
