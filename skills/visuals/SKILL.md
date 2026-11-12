@@ -1,8 +1,8 @@
 ---
 name: visuals
-description: Apply the user's visual preferences to HTML, UI, diagrams, slides, and other visual materials. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
+description: Apply the user's visual preferences to HTML, UI, data charts, diagrams, slides, and other visual materials; read it before making any data chart. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Visual materials
@@ -26,7 +26,7 @@ Arrange the screen in this order: top bar, statistics chips, legend, SVG graph, 
 
 ## Charts and diagrams
 
-Use the `ztd-charts` skill and CLI for data charts. Apply a light theme and Korean settings, validate the spec, and inspect the actual render. For structural diagrams and visuals outside data charts, use SVG with explicitly chosen coordinates and paths; do not use automatic layout engines such as Mermaid or Graphviz. Give each figure one central point and highlight only its relevant elements. Lower context elements to grayscale and omit unrelated elements. Reduce crowding with grid alignment, consistent generous spacing, and two or three meaningful colors.
+Use `ztd-charts` for data charts. Read the installed `~/.agents/skills/ztd-charts/SKILL.md` and its referenced chart schema before choosing channels and options. The shared CLI is `~/.local/bin/ztd-charts` (package `ztd-charts-cli`, runtime `~/.local/share/ztd-charts-runtime`); validate the spec before rendering and inspect the actual output. Use the light theme, Korean labels and `options.locale: "ko-KR"`; CLI rendering uses `--theme light --locale ko`. For example, run `ztd-charts validate spec.json` followed by `ztd-charts render spec.json --out chart.png --theme light --locale ko`. Keep the theme preferences above and real render checks. The hand-positioned SVG rule below continues to govern structural diagrams and other visuals outside data charts. For structural diagrams and visuals outside data charts, use SVG with explicitly chosen coordinates and paths; do not use automatic layout engines such as Mermaid or Graphviz. Give each figure one central point and highlight only its relevant elements. Lower context elements to grayscale and omit unrelated elements. Reduce crowding with grid alignment, consistent generous spacing, and two or three meaningful colors.
 
 Flows run left to right and top to bottom. Draw arrows as smooth curves without crossings. Show only one unavoidable return path, with a dashed line. ERDs also follow the latest curved-line instruction: connect relationships at the referenced column's row and show multiplicity as `1` and `N`, never `0..*`.
 
