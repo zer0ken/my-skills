@@ -1,9 +1,9 @@
 ---
 name: rv
-description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. Prefer the project's result format; if there is none, follow this skill's format."
+description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.4.1"
+  version: "2.5.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -17,6 +17,8 @@ metadata:
 Apply this procedure when the user asks for a review or calls `/rv` or `$rv`. The agent first reads all project rules closely and consults the project review rules, `osiri`, and `refactor` together. Consulting `osiri` happens inside this review procedure that the user allowed, and `teqr` is not applied without a direct call. The result format prefers the project rules.
 
 Assume defects exist and find every defect in the review scope. Look for inputs and execution orders that refute the behavior and completion claims, and when you find a defect, trace the paths along which the same cause propagates. Prove each finding with its occurrence condition and a reachable execution path.
+
+A review serves gatekeeping, accident prevention, maintaining norms, and education (Sadowski et al., "Modern Code Review: A Case Study at Google", ICSE-SEIP 2018). Gatekeeping covers the code health the change leaves behind, not only its behavior. Google's code review standard says "Nothing in this document justifies checking in CLs that definitely worsen the overall code health of the system." and its reviewer guide says "Most systems become complex through many small changes that add up, so it's important to prevent even small complexities in new changes." (https://google.github.io/eng-practices/review/reviewer/standard.html, https://google.github.io/eng-practices/review/reviewer/looking-for.html). A review that only hunts behavior defects lets the codebase grow without limit; the user's words (2026-11-12): "코드베이스가 무한정 늘어나기만 하면 안돼." For education, state with each simplification or design finding the alternative and the reason it is better.
 
 This skill is divided into seven units (U0-U6). A single agent runs them in sequence, or an agent that distributes work starts workers per unit. The agent that distributes work is called the coordinator. Each unit has defined inputs and outputs, so it can run independently. Sections are ordered from the cheapest review onward.
 
@@ -59,6 +61,13 @@ One row is one finding.
 | action | Sentence | Action |
 | propagation | List of file paths or "확인 완료" | Locations where the same cause propagates |
 | verdict | CONFIRMED, PLAUSIBLE, REJECTED | U4 verification result (BLOCKER and MAJOR only) |
+
+Severities have these meanings, after the severity mapping of osiri `TECHNICAL_REVIEW_GUIDE.md`. BLOCKER and MAJOR block approval; MINOR and NIT do not.
+
+1. BLOCKER: a supported path returns a wrong result, loses or corrupts data, fails to terminate or recover, or breaks a public contract or security boundary.
+2. MAJOR: a reachable correctness defect; a structure worse than a feasible alternative (U2); or a code-health defect the change introduces or grows: growth the problem does not require, a duplicate of an existing implementation, an unnecessary layer, wrapper, branch, or abstraction, code without callers, an old path left unretired, or changed behavior with no test that fails on the defect.
+3. MINOR: a bounded defect without a demonstrated wrong result or lasting code-health cost, such as an unenforced contract, a missing check, or a local naming fault.
+4. NIT: a concrete low-cost correction with no behavior change.
 
 Use the project's classification for evidence_class if it has one. Otherwise use three classes by default, written in Korean in the result: 재현 (confirmed by running or measuring), 관찰 (confirmed directly in code or documents), 추론 (inferred from evidence, or an unverified hypothesis).
 
@@ -129,10 +138,13 @@ Separately from code content, review the shape of the codebase the change leaves
   3.2 Name quality: words absent from the domain and code, catch-all names (`utils`, `helpers`, `common`, `misc` and the like), singular or plural not matching the target, violations of the project naming rules (checkers, AGENTS.md, existing layout on main).
   3.3 Leftovers of moves and renames: old names remain in documents, tests, patch targets, serialization keys, and settings.
 
-4. Size and leftovers
-  4.1 Compare the number of files, lines, modules, classes, and functions before and after the change, and flag parts that grew relative to solving the problem.
-  4.2 Code without callers, unused config keys, queries, schema objects, and tests and documents of retired features remain.
-  4.3 Directory AGENTS.md, README, and design documents differ from the actual placement, names, and contracts.
+4. Size and leftovers. These items fill the `크기와 증가` section of the result from tool output, not from estimates.
+  4.1 Dimension table: for merge_base and head, count product lines, files, modules, classes, functions, public names and config keys, tests, and documents, with the difference per dimension. Count generated and moved code separately so it neither inflates nor hides growth.
+  4.2 New unit table: for each new file, class, function, public name, config key, query, and schema object, write its caller, the reuse search run for it (the search and its result) and why an existing implementation cannot serve, and the verdict: keep, merge into a named existing unit, or delete. A new unit without a caller or with a reusable existing implementation is a MAJOR finding.
+  4.3 Proportion: judge whether the growth is what the problem defined in U0 requires, and list the deletion candidates the change could take with it, such as code it makes unnecessary. Growth the problem does not require is a MAJOR finding that names what to remove or reuse.
+  4.4 Split: Google's guide says "100 lines is usually a reasonable size for a CL, and 1000 lines is usually too large, but it's up to the judgment of your reviewer." and "reviewers have discretion to reject your change outright for the sole reason of it being too large." (https://google.github.io/eng-practices/review/developer/small-cls.html). These numbers are reference points, not thresholds. When a change is large or spread over many files, judge whether it splits into independently reviewable changes, and if it does, propose the split as a finding. The size blocks only when it prevents reviewing the change to the required depth, and the review then writes that limit in `검증 범위`.
+  4.5 Code without callers, unused config keys, queries, schema objects, and tests and documents of retired features remain.
+  4.6 Directory AGENTS.md, README, and design documents differ from the actual placement, names, and contracts.
 
 5. Citing precedent
   5.1 Status of the grounds: if the grounds for a change are "기존 코드와 일치", "관례상", "원래 이렇게 한다", or "다른 모듈도 같다", collect the commits and PRs that created that precedent with `git log -S`, `git blame`, and `rg`, and if there are zero candidates, flag the claim itself. That the code is a certain way is not grounds that it should be.
@@ -145,7 +157,7 @@ Judge by reading only the change's entry points, public interfaces, data models,
 
 Design decisions and defects are different axes. If a result violates the quality criteria it is a defect, and if its cause is a design decision it counts as a defect arising from the design. Do not exclude something from defects because it is the behavior the design intended.
 
-Separately from the defect search, the review answers the following two questions with evidence. This judgment is not skipped and stays in its own section of the result document.
+Separately from the defect search, the review answers the following two questions with evidence. This judgment is not skipped: question 1 fills the `설계와 원인` section of the result and question 2 the `품질` section.
 
 1. Is this structure the most suitable structure that actually solves the problem logically?
   1.1 Restate the problem being solved at the level of its cause, and judge whether the change removes that cause or only bypasses the symptom.
@@ -172,7 +184,9 @@ Find what the change breaks beyond the diff.
 3. Prove the one fact by running real code when it is cheap: a small script or test that calls the exact function and fails loudly if the fact is wrong. Record how far each safety fact got: asserted, pointed at a `file:line`, walked step by step to show the bad case cannot be reached, run, or reproduced in the running app. If it was not proven, say it is unproven.
 4. Keep confirmed risks as findings, and list separately what you checked and cleared, with the reason it is fine, so the reader can see the scope covered.
 
-Check that the fix solves the cause directly and simplifies the structure. First check whether an existing implementation can be reused, and judge whether it is the minimal sufficient change that preserves every caller contract and the error, retry, and regression paths. Even with few lines, hiding an exception or bypassing only a specific case is not a sufficient fix. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact on maintenance, change, and verification and the direction of simplification.
+Check that the fix solves the cause directly and simplifies the structure. For every new unit, first search the repository for an existing implementation that can be reused and record the search in the new unit table (U1 4.2); a passing CI or an agent author does not exempt a change from this search. Judge whether it is the minimal sufficient change that preserves every caller contract and the error, retry, and regression paths. Even with few lines, hiding an exception or bypassing only a specific case is not a sufficient fix. Even if it works, flag unnecessary branches, duplication, wrappers, abstractions, and old paths not retired, with their concrete impact on maintenance, change, and verification and the direction of simplification.
+
+Judge the tests as code. Each changed behavior needs a test that fails on the defective code; tests observe public behavior rather than internal names or private state; boundary and error paths are covered; fakes return the same shape as the real implementation. Tests that only pin internals, and test volume that grows without covering a new behavior, count as growth in U1 item 4.
 
 Compare quality, performance, and completion claims with actual results. For verification, check the SHA, input, environment, scope, and latest run results. Do not extend a CI pass into a guarantee of the correctness or quality of other paths. Distinguish defects, verification gaps, and explicitly agreed follow-up scope.
 
@@ -232,9 +246,11 @@ If the same wrong pattern repeats across several locations or changes, write the
 
 ## U6 Assemble and post
 
-Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill. Post or report in the conversation according to approval_scope.
+Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
 
-The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The grounds for verdicts and the structure and quality judgment have no fields in the ReportFindings schema, so include them only in the markdown.
+Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md>` and fix the document until it prints `rv review format: 1 document(s) passed`. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, or has no table in `크기와 증가`. Exit code 1 is a format violation and 2 is a read failure.
+
+The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
 
 ## Termination condition
 
@@ -244,90 +260,44 @@ When the round cap is reached, mark unverified propagated findings as PLAUSIBLE 
 
 ## Result format
 
-Prefer the project's format, severity, and status system; if there is none, follow the format below. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
+The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
 
 1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base, the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
 
 2. Index: if findings span two or more areas or it is a follow-up review, include a table of section, scope, severity, status, and latest comment / next actor.
 
-3. Grounds for the verdict: write the answers to the four codebase-review items and the two structure and quality questions in one section of three or four sentences. Write the alternative structure compared in one sentence, and record defects in the finding list.
+3. Judgment sections: one `##` section per judgment, in the order below. Each holds short sentences or tables, one judgment per line, and a judgment that does not apply is written as `해당 없음: <이유>`. Record defects in the finding list and point to them by R-ID. A follow-up review keeps every section for the current head; a section whose judgment did not change says so in one line with the earlier review link, but `크기와 증가` is always remeasured.
+  3.1 `## 설계와 원인`: U2 question 1. Whether the change removes the cause or bypasses the symptom, the alternative structure compared in one sentence, and which is better.
+  3.2 `## 기능과 완료 기준`: whether the change does what the issue's completion criteria and the PR's claims say for the code's users, and whether it adds functionality nobody asked for.
+  3.3 `## 크기와 증가`: U1 item 4. The dimension table, the new unit table, deletion candidates, and the split judgment.
+  3.4 `## 품질`: U2 question 2. Every metric against the baseline, or the measurement gap.
+  3.5 `## 시험`: the test judgment of U3.
+  3.6 `## 이름과 문서`: U1 items 3 and 4.6 and the document review of U3.
 
-4. Findings: under a `###` section per review area, write one finding as one `-` item.
+4. Findings: under a `##` section per review area, write one finding as one `-` item.
   4.1 The format is `R-001 심각도, 근거 구분: 문제. 위치. 조치.`, where 근거 구분 is the project classification or 재현, 관찰, 추론.
   4.2 The problem states the occurrence condition and result in one sentence, with numbers short in parentheses.
   4.3 The location is only the target head's `file:line`, and the action is one sentence.
   4.4 If an item exceeds three sentences, split the finding or trim the evidence.
   4.5 Mark the verdict on BLOCKER and MAJOR findings.
 
-5. Verification scope: in the last `###` section, write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope.
+5. Human review recommendation: if there is a DB schema change, write the change target and the risks a person should check in a `## 사람 리뷰 권고` section after the findings. It is not counted among defects, and do not presume whether the reviewer approves.
 
-6. Human review recommendation: if there is a DB schema change, write the change target and the risks a person should check as a separate item. It is not counted among defects, and do not presume whether the reviewer approves.
+6. `## 확인하고 배제한 항목`: the risks checked and cleared in U3 step 4, each with the reason it is fine and how far its safety fact was proven.
 
-The default severities are BLOCKER, MAJOR, MINOR, NIT. Unresolved BLOCKER or MAJOR findings and a verdict that the structure is worse than an alternative mean request changes; if a core verification gap prevents judgment, the verdict is withheld.
+7. `## 검증 범위`: the last section. Write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope. Only HTML comment lines, such as a machine-read verdict marker, may follow it.
+
+Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. A change that works or passes CI is not approved on that ground when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
 
 A follow-up review preserves existing IDs and opinions, records responses as `A-001` and rechecks as `R-001-C`. Statuses are OPEN, ANSWERED, RECHECK, RESOLVED, SKIP, and a status changes to RESOLVED only after the fix and evidence are confirmed. Write the reason on SKIP.
-
-## Posting rules
-
-Apply the sucks skill to the result document before writing it, for both terminal output and external posting. Sentence endings follow the project rules or the reference format.
-
-The procedure for posting as a PR review or comment is as follows. Post and edit only within the scope allowed by approval_scope.
-
-1. Mention the PR author (the login from `gh pr view --json author`) as `@login` in the first sentence of the result document. The same for follow-up reviews.
-
-2. Before posting, recheck the latest head and PR state, the applicable target conditions, CI and conflict conditions, and new reviews and comments. If the head changed, do not post stale results. If there is a review with a different verdict on the same head, do not post; report the conflicting evidence.
-
-3. Outside code spans, `~` becomes strikethrough on GitHub, so write ranges with a hyphen, as in `R-001-R-006`.
-
-4. If the repository has an anti-slop check, read the latest rules and vocabulary through the connected repository tools and compare the draft. Clean up vocabulary and unnecessary phrases without changing technical meaning, severity, evidence, or verification limits. Do not download or run executables.
-
-5. After posting or editing, wait until all anti-slop runs finish, and check the section for your own comment id in the bot thread comment. If there is no section, there are 0 detections. If there are detections, edit the same comment and check again.
-
-6. Do not fix detections from other authors' comments and changed files; report them.
-
-7. Distinguish GitHub Conversation comments from formal PR Review COMMENT, REQUEST_CHANGES, and APPROVE. Choose the action that fits the allowed posting scope and the repository's verdict criteria, and distinguish confirmed findings that need fixes from non-blocking explanations and questions. Do not submit REQUEST_CHANGES on taste or on presumptions without sufficient grounds. Submit APPROVE only when the approval authority and the needed user confirmation are met. After submitting, re-query the actual review state and commit, and report self-PR review limits and remaining verification conditions as they are. Do not report a general comment as a formal review or completed approval.
 
 ## Criticism of the review
 
 When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), confirm the code and records the criticism relies on from primary sources, then accept it or reject it with grounds, and if accepted, correct that review and reply. If the cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
 
-## Per-agent execution
+## Posting and per-agent execution
 
-This presents how each agent maps rv's unit structure. rv does not force an execution method. The agent's delegation rules (AGENTS.md etc.) take precedence over this section.
-
-### Reviewer assignment
-
-A review presumes that one does not judge one's own work, so choose reviewers and verifiers from a model family different from the producer's. Codex takes independent review from a different model family, Claude takes perspective-specific expert review, and pi and Hermes have no review role (pi takes narrow edits whose location and method are fixed, Hermes takes research, documents, and operations). If one family cannot be launched because of limits or outages, write that fact and the remaining verification gap in the result document, and replace it with a worker of another family under the same conditions or ask the caller. Do not fill the review count by sending in agents outside their role.
-
-Submit APPROVE, REQUEST_CHANGES, or COMMENT according to the verdict, but GitHub does not let a PR author approve their own PR, so on your own PR post a verdict equivalent to APPROVE as COMMENT. This record does not meet the approval requirement, and the merge state stays `REVIEW_REQUIRED`. If approval is needed, report that another person's approval or the repository admin's ruleset judgment is needed, and do not create an approval with another account.
-
-### Claude Code
-
-The coordinator starts subagents with the Agent tool. Whether the coordinator edits code directly or only delegates to workers follows the project's delegation rules.
-
-| Unit | Execution |
-|---|---|
-| U0 | Run by the coordinator |
-| U1, U2 | Parallel Agent forks |
-| U3 | Agent per area, with expert type specified |
-| U4 | Verified by a fresh Agent (not a fork) different from U3 |
-| U5 | Agent |
-| U6 | The coordinator assembles the markdown document |
-
-### Codex
-
-Codex runs the independent review unit assigned to it. When split execution is needed, the orchestrator starts workers with Paseo `create_agent` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated Codex worker does not re-delegate without explicit permission.
-
-| Unit | Execution |
-|---|---|
-| U0 | Run by the coordinator |
-| U1-U2 | Review worker |
-| U3 | Worker per area |
-| U4 | Verification worker different from U3 |
-| U5 | Propagation check worker |
-| U6 | The coordinator assembles and posts the markdown document |
-
-A worker brief includes every value of the input contract, past rejection types, a self-check script, a prohibition on side work, and the report scope.
+Posting rules, including the PR author mention, rechecks before posting, anti-slop checks, and the choice among COMMENT, REQUEST_CHANGES, and APPROVE, are in `references/posting.md`; read it before any posting. Reviewer assignment and how Claude Code and Codex map the units to workers are in `references/agents.md`; read it before splitting the review across workers.
 
 ## Project-specific settings
 
@@ -335,6 +305,6 @@ This section is settings applied to a specific repository. In other repositories
 
 enterprise-memory repository:
 
-1. Review procedure: follow `docs/REVIEWING.md`. evidence_class uses the six classes of REVIEWING.md as they are (Observed, Measured, Derived, Sourced, Inferred, Hypothesized).
+1. Review procedure: follow `docs/REVIEWING.md`. A finding's evidence_class is 재현, 관찰, or 추론, as the review document format of REVIEWING.md prescribes. The six classes of REVIEWING.md (Observed, Measured, Derived, Sourced, Inferred, Hypothesized) classify the atomic claims of the PR body, CHANGELOG, and API.md, not findings.
 2. anti-slop rules: read `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and replace detected vocabulary with alternatives.
 3. Reference format: the review of PR #1208, `pullrequestreview-5646450494`.
