@@ -1,58 +1,58 @@
 ---
 name: pov
-description: "현재 제품과 관련 기술을 조사하고 프로그래밍 언어, DBMS·SQL, 병렬처리, 아키텍처, 문제 해결, 마케팅, 세일즈·비즈니스의 일곱 전문가 관점에서 의견을 수집·종합한다. /pov, $pov, 여러 전문가의 관점이나 기술·사업 관점의 교차 검토를 요청할 때 사용한다."
+description: "Investigate the current product and the related technologies, and collect and synthesize opinions from seven expert perspectives: programming language, DBMS and SQL, parallel processing, architecture, problem solving, marketing, and sales and business. Use when the user calls /pov or $pov, or asks for several expert perspectives or a cross-review from technical and business viewpoints."
 ---
 
 # POV
 
-POV는 현재 제품의 실제 제약과 분야별 근거를 바탕으로 의사결정에 필요한 의견을 수집하는 스킬이다. 관점은 전문가의 판단 기준을 적용한 에이전트 분석이며, 실제 전문가의 자문이나 인터뷰 결과로 제시하지 않는다.
+POV is a skill that collects the opinions needed for a decision, based on the current product's actual constraints and field-specific evidence. A perspective is an agent analysis that applies an expert's criteria of judgment, and it is not presented as the result of consulting or interviewing a real expert.
 
-## 조사 범위
+## Investigation scope
 
-사용자가 지정한 제품과 질문을 우선한다. 질문 없이 호출하면 현재 작업 디렉터리의 제품을 대상으로 개선 기회와 위험을 검토한다. 제품을 식별할 근거가 없으면 제품명이나 자료 위치를 질문하고, 확인 가능한 범위의 조사를 먼저 진행한다.
+The product and question the user specified come first. If invoked without a question, review the product in the current working directory for improvement opportunities and risks. If there is no basis for identifying the product, ask for the product name or the location of the materials, and carry out the investigation possible within the verifiable range first.
 
-에이전트는 적용되는 AGENTS.md, 제품 설명, 의존성·버전 파일, 주요 구현, 테스트와 배포 설정을 읽어 공통 맥락을 작성한다. 연결된 자료가 있으면 고객 요구와 제품 전략을 확인한다. 문서의 의도와 구현에서 확인한 동작이 다르면 구분한다. 기존 변경 검토에서는 기준 커밋과 작업 트리 변경도 기록한다.
+The agent writes the common context by reading the applicable AGENTS.md, the product description, the dependency and version files, the main implementation, and the test and deployment settings. If connected materials exist, it checks customer needs and product strategy. If the intent of a document and the behavior confirmed in the implementation differ, it distinguishes them. In a review of existing changes, it also records the base commit and the working tree changes.
 
-공통 맥락에는 검토 질문, 제품의 사용자와 해결하려는 문제, 현재 기술과 실행 환경, 확인된 제약, 성공 기준, 미확인 가정을 포함한다. 전체 제품 조사와 특정 기능 검토의 범위를 구분하고, 지정된 범위를 확대하지 않는다.
+The common context includes the review question, the product's users and the problem it tries to solve, the current technology and execution environment, the confirmed constraints, the success criteria, and the unconfirmed assumptions. It distinguishes the scope of a whole-product investigation from that of a review of a specific feature, and does not widen the specified scope.
 
-## 관점별 근거 조사
+## Evidence investigation per perspective
 
-에이전트는 의견을 작성하기 전에 각 분야에서 이 제품에 적용할 판단 기준을 조사한다. 직함만 다른 일반론을 반복하지 않고, 사용 중인 언어·DBMS의 버전과 제품의 운영·판매 형태에 맞춰 기준을 구체화한다.
+Before writing an opinion, the agent investigates the criteria of judgment that apply to this product in each field. It does not repeat generalities that differ only in job title, and it makes the criteria concrete to the versions of the language and DBMS in use and to the product's operating and sales form.
 
-기술 기준은 공식 문서, 표준, 원문 논문에서 확인한다. 시장·경쟁·가격·구매 관행처럼 변할 수 있는 사실은 현재 자료로 확인하고 날짜와 출처를 기록한다. 제품의 비공개 코드나 고객 정보를 외부 검색어에 포함하지 않는다. 외부 자료에 접근할 수 없으면 로컬 근거로 분석하고 조사하지 못한 범위를 밝힌다.
+Technical criteria are checked in official documentation, standards, and original papers. Facts that can change, such as market, competition, price, and purchasing practice, are checked against current material, and the date and source are recorded. The product's non-public code and customer information are not included in external search queries. If external material cannot be accessed, analyze with local evidence and state the scope that was not investigated.
 
-인용한 자료는 어떤 판단을 뒷받침하는지 연결한다. 특정 인물의 이름이나 권위가 필요하지 않으며, 실존 전문가의 발언이나 의견을 만들어 내지 않는다. 외부의 일반 원칙만으로 제품에 결함이 있다고 판정하지 않는다.
+Each cited source is linked to the judgment it supports. A specific person's name or authority is not needed, and statements or opinions of real experts are not fabricated. A defect in the product is not declared on the basis of external general principles alone.
 
-## 일곱 관점
+## Seven perspectives
 
-사용자가 관점을 한정하지 않으면 다음 일곱 관점을 모두 검토한다. 적용 근거가 없는 관점도 검토 결과와 이유를 남기며, 관련 없는 문제를 만들지 않는다. 제품에 여러 언어나 DBMS가 있으면 역할과 중요도에 따라 해당 관점 안에서 나누어 검토한다.
+If the user does not limit the perspectives, review all seven of the following. A perspective with no applicable basis also leaves its review result and the reason, and does not invent unrelated problems. If the product has several languages or DBMSs, review them separately within that perspective according to their role and importance.
 
-| 관점 | 제품에 맞춰 조사할 판단 기준 | 의견의 초점 |
+| Perspective | Criteria of judgment to investigate for the product | Focus of the opinion |
 | --- | --- | --- |
-| 프로그래밍 언어 전문가 | 실제 언어·런타임 버전의 의미론, 타입·오류 처리, 자원 수명, 표준 라이브러리와 관용적 구현 | 정확성, 유지보수성, 언어 특성에 맞는 구현과 성능 제약 |
-| DBMS 및 SQL 전문가 | 실제 DBMS·확장, 데이터 모델과 질의, 제약·트랜잭션·격리 수준, 실행 계획과 인덱스 | 정합성, DB와 애플리케이션의 책임 배치, 질의 비용과 운영·마이그레이션 영향 |
-| 멀티 프로세싱·멀티 스레딩 병렬처리 전문가 | 프로세스·스레드·비동기 작업 구조, 공유 상태와 동기화, 연결 풀, 취소·재시도·종료 | 경쟁 조건, 교착, 중복 실행, backpressure, CPU·I/O 병목과 자원 상한 |
-| 소프트웨어 아키텍트 | 모듈·서비스 경계, 의존 방향과 계약, 데이터 흐름, 인프라와 장애 경계 | 디자인 패턴의 적합성, 변경 비용, 확장성과 운영 복잡성의 균형 |
-| 문제 정의 및 해결의 시니어 엔지니어 | 사용자 문제, 성공 기준, 재현 근거, 원인 가설, 기존 제약과 대안 | 문제 정의의 타당성, 원인과 증상의 구분, 가장 작은 유효한 해결과 검증 방법 |
-| 제품 홍보 및 마케팅 | 목표 사용자와 사용 상황, 대체 제품, 차별점의 증거, 메시지와 도입 경로 | 고객이 이해하는 가치, 주장과 실제 기능의 일치, 유입·활성화 실험 |
-| 세일즈·비즈니스 | 사용자·구매자·의사결정자, 구매 절차, 가격·비용 구조, 도입·지원 부담 | 지불 의사와 ROI 가설, 계약·조달의 장애물, 매출 가능성과 제공 비용 |
+| Programming language expert | Semantics of the actual language and runtime versions, types and error handling, resource lifetime, standard library and idiomatic implementation | Correctness, maintainability, implementation that fits the language's characteristics, and performance constraints |
+| DBMS and SQL expert | Actual DBMS and extensions, data model and queries, constraints, transactions, isolation levels, execution plans and indexes | Integrity, placement of responsibility between the DB and the application, query cost, and operation and migration impact |
+| Multi-processing and multi-threading parallel processing expert | Process, thread, and async task structure, shared state and synchronization, connection pools, cancellation, retry, and shutdown | Race conditions, deadlock, duplicate execution, backpressure, CPU and I/O bottlenecks, and resource limits |
+| Software architect | Module and service boundaries, dependency direction and contracts, data flow, infrastructure and failure boundaries | Fitness of design patterns, cost of change, and the balance between scalability and operational complexity |
+| Senior engineer in problem definition and solving | User problem, success criteria, reproduction evidence, cause hypotheses, existing constraints and alternatives | Validity of the problem definition, distinction between cause and symptom, the smallest effective solution, and the verification method |
+| Product promotion and marketing | Target users and usage situations, substitute products, evidence for differentiators, messaging and adoption path | Value the customer understands, match between claims and actual features, and acquisition and activation experiments |
+| Sales and business | Users, buyers, and decision makers, purchasing process, price and cost structure, adoption and support burden | Willingness to pay and ROI hypothesis, contract and procurement obstacles, revenue potential and delivery cost |
 
-## 의견 수집
+## Collecting opinions
 
-에이전트 분담 도구가 있으면 관점별 독립 분석을 맡긴다. 동시 실행 한도 안에서 나누어 진행하고, 모든 관점에 같은 공통 맥락과 관련 원자료를 전달한다. 각 담당자는 해당 분야의 추가 조사를 수행하며 다른 담당자의 결론을 보기 전에 최초 의견을 제출한다. 도구가 없으면 관점별로 순차 분석하고 독립된 전문가 여러 명이 검증한 것처럼 표현하지 않는다.
+If an agent delegation tool exists, assign an independent analysis per perspective. Proceed in divided batches within the concurrent execution limit, and hand every perspective the same common context and the related primary materials. Each assignee performs additional investigation in its field and submits its first opinion before seeing the conclusions of the other assignees. If there is no such tool, analyze perspective by perspective in sequence, and do not describe it as if several independent experts had verified it.
 
-각 관점의 의견에는 판단 기준과 출처, 제품에서 확인한 근거, 유지할 강점, 중요한 우려나 기회, 권고와 대안, 검증 방법을 포함한다. 의견을 채우기 위한 고정 개수는 두지 않는다. 각 권고는 영향을 받는 사용자나 운영 경로와 연결한다.
+Each perspective's opinion includes the criteria of judgment and sources, the evidence confirmed in the product, the strengths to keep, the important concerns or opportunities, recommendations and alternatives, and the verification method. No fixed count is set for the purpose of filling out an opinion. Each recommendation is linked to the affected user or operational path.
 
-코드에 관한 주장은 파일·행 또는 식별자에 연결하고, 외부 사실은 원문 링크와 연결한다. 실행한 측정, 정적 분석으로 도출한 추론, 검증이 필요한 가설을 구분한다. 실행 계획이나 부하 측정 없이 병목을 확정하지 않고, 고객 근거 없이 수요·매출·ROI 수치를 사실로 작성하지 않는다.
+Claims about code are linked to a file and line or an identifier, and external facts to a link to the original source. Distinguish measurements that were run, inferences derived by static analysis, and hypotheses that need verification. Do not confirm a bottleneck without an execution plan or load measurement, and do not write demand, revenue, or ROI figures as fact without customer evidence.
 
-분석 담당자는 조사와 의견 작성만 수행한다. 코드·설정 변경, 이슈 생성, 외부 연락, 배포는 의견 수집에 포함되지 않는다. 추가 실행은 사용자의 요청과 기존 승인 범위를 따른다.
+The analysis assignee performs only investigation and opinion writing. Changing code or settings, creating issues, contacting outside parties, and deploying are not part of collecting opinions. Additional execution follows the user's request and the existing approval scope.
 
-## 교차 검토와 종합
+## Cross-review and synthesis
 
-진행 에이전트는 수집된 의견의 근거를 확인하고, 같은 원인의 중복 의견을 합친다. 서로 다른 출처처럼 보이는 의견이 같은 원자료나 미확인 가정에 의존하는지도 확인한다. 여러 관점의 동의만으로 신뢰도를 높이지 않는다.
+The lead agent checks the evidence of the collected opinions and merges duplicate opinions with the same cause. It also checks whether opinions that look like different sources depend on the same primary material or the same unconfirmed assumption. Agreement among several perspectives alone does not raise confidence.
 
-의견이 충돌하면 각 관점이 우선하는 목표와 전제, 대안별 비용을 비교한다. 필요한 경우 관련 담당자에게 반론과 근거를 전달해 재검토한다. 근거가 부족하면 다수결로 결론을 정하지 않고 결정을 바꿀 관찰이나 실험을 제시한다.
+If opinions conflict, compare the goals and premises each perspective prioritizes and the cost of each alternative. When necessary, pass the counterargument and its evidence to the relevant assignee for re-review. If the evidence is insufficient, do not settle the conclusion by majority vote, and present the observation or experiment that would change the decision.
 
-최종 결과는 검토 대상·범위와 핵심 판단을 먼저 설명하고, 일곱 관점의 의견을 비교할 수 있게 정리한다. 중요한 의견은 근거와 한계를 설명할 수 있는 문단을 덧붙인다. 합의한 내용, 남은 이견, 미확인 가정을 구분하고, 후속 조치에는 기대 효과·비용·회귀 위험·검증 방법을 적는다. 기술 우아함이나 예상 매출만으로 우선순위를 정하지 않고 사용자 영향과 현재 제품 단계도 함께 고려한다.
+The final result first explains the review target and scope and the key judgment, and organizes the opinions of the seven perspectives so they can be compared. Add a paragraph that can explain the evidence and limits of each important opinion. Distinguish what was agreed, the remaining disagreements, and the unconfirmed assumptions, and state the expected effect, cost, regression risk, and verification method for each follow-up action. Do not set priority by technical elegance or expected revenue alone; also consider user impact and the product's current stage.
 
-결과를 제출하기 전에 일곱 관점의 검토 여부, 제품 근거와 분야별 조사 근거의 연결, 사실·추론·가설의 구분, 실행하지 않은 검증의 표시를 확인한다. 별도 저장 요청이 없으면 대화로 결과를 제공한다.
+Before submitting the result, check whether all seven perspectives were reviewed, whether the product evidence is linked to the field-specific investigation evidence, whether facts, inferences, and hypotheses are distinguished, and whether verification not run is marked. Unless a separate request to save is made, provide the result in the conversation.
