@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document."
 metadata:
   author: hrlee
-  version: "1.0.0"
+  version: "1.0.1"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -70,4 +70,4 @@ Local-model severity is not used. The consolidator re-grades every finding.
 
 A stale base produces false findings that verification does not catch. In the first trial the reviewers and the verifier all read the commit the work began on after the branch had been rebased, so a finding that called an existing table new (C01) was confirmed. Give every session the review base.
 
-Precision varies by reviewer and is low enough that unverified findings must not reach the plan owner. First trial (#1303 r2, 2026-11-14, blind, one shared brief, no perspectives, `artifacts/blind-review-1/VERIFY-1.md`): CONFIRMED / findings per reviewer, against that stale base, were pi 9/17, pi 6/22, Hermes 4/15, Hermes 4/14, and the four together found 7 confirmed clusters that the Claude `rv` design review of the same document had not raised. Second trial (six pi reviewers, one perspective each, `artifacts/blind-review-2/CONSOLIDATED-1.md`): pending; update this paragraph from its numbers.
+Precision varies by reviewer and is low enough that unverified findings must not reach the plan owner. First trial (#1303 r2, 2026-11-14, blind, one shared brief, no perspectives, `artifacts/blind-review-1/VERIFY-1.md`): CONFIRMED / findings per reviewer, against that stale base, were pi 9/17, pi 6/22, Hermes 4/15, Hermes 4/14, and the four together found 7 confirmed clusters that the Claude `rv` design review of the same document had not raised. Second trial (six pi reviewers, one perspective each, review base 466912e55, `artifacts/blind-review-2/CONSOLIDATED-1.md`): precision 57.14% (20/35) against 37.70% (23/61) in the first; per perspective P1 trace 5/6, P2 query 4/7, P3 concurrency 1/5, P4 backends 4/7, P5 ops 2/5, P6 perf 4/5. It recovered 15 of the first trial's 23 confirmed findings (5 of its 10 confirmed clusters; C01 did not recur at the right base) and found 9 confirmed clusters neither earlier review had raised, 8 of which still applied to the revised design. The two trials differ in perspectives and finding counts, so these numbers compare the two setups on one document, not model quality. P3's checklist produced the lowest precision; sharpen it before relying on it.
