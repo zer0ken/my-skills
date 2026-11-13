@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.9.0"
+  version: "2.10.0"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -220,6 +220,21 @@ The judgment is not a list lookup. For each verb used, check whether a correspon
 
 **Do not make up translations that do not exist.** Do not coin new Korean expressions to use in place of technical terms. A forced translation cannot be searched, and the reader must trace back the original term.
 
+- 나쁜 예: `info_judgment의 두 끝점`(graph node), `끝점 삭제`
+- 좋은 예: `info_judgment의 두 노드`, `노드 삭제`
+
+**Do not use everyday or literary words for technical concepts.** A word that belongs to news, history, or essays, not to technical documents, gives the sentence a tone and no referent the reader can find in the system. Use the field's term for the concept.
+
+- 나쁜 예: `검증 국면에서 실패한다`
+- 좋은 예: `검증 단계에서 실패한다`, `검증 phase에서 실패한다`
+
+**Judge each Korean noun that names a technical concept by its source term.** A word a checker does not flag is not thereby correct, so judge every such noun this way.
+
+1. Write down the English term the noun stands for, taken from the code, the settings, or the source the text describes. `끝점` in a review of a graph stands for node.
+2. Find how Korean developers write that term: the repository's own documents, and the product's or the field's Korean official documentation. Use the form found there, whether English, a transliteration (`노드`, `페이즈`, `엔드포인트`), or a Korean name (`단계`).
+3. If no Korean form is found, write the English term.
+4. If the noun stands for no English term at all, as `국면` does, it is an everyday or literary word; replace it with the term of the concept it means.
+
 **Avoid transliterations only when a commonly used Korean name exists.** If a word that writes English sounds in Hangul has a widely used Korean name, use that name. If there is no commonly used name, use the English or the transliteration as is.
 
 - 나쁜 예: `불릿으로 분리한다`, `레벨이 내려간다`
@@ -389,7 +404,7 @@ After writing, reread the text once per line below and fix each violation in pla
 3. Lists: no enumerated cases that one property covers, no comma list or `와` chain inside a sentence, no item added to reach three, a table where items have several attributes.
 4. Sentences: a named subject, subject before object before predicate, no `!`, `?`, bold, emoji, dash, or arrow in prose, no two sentences for one fact.
 5. Verbs: each verb checked for a technical predicate that fits its meaning in that sentence.
-6. Words: domain and English terms kept as they are without a Korean gloss, every noun found in code or introduced in context, no catch-all noun (`자리`, `부분`, `것`, `내용`, `방식`), no coinage with `재-`, `-화`, `-성`, `~` escaped.
+6. Words: domain and English terms kept as they are without a Korean gloss, every Korean noun for a technical concept traced to its source term and written in the form Korean developers use, no forced translation or everyday or literary word for a technical concept, every noun found in code or introduced in context, no catch-all noun (`자리`, `부분`, `것`, `내용`, `방식`), no coinage with `재-`, `-화`, `-성`, `~` escaped.
 7. Information: each fact tied to the claim by causality, no sentence that fits another project unchanged, no denial of an unclaimed A, no `무엇이고 무엇이 아닌가` frame or its English form, no unsourced `일반적으로`, no closing restatement, no change history in documents and comments, no intensifier, no dropped qualifier, four answers per limitation.
 8. Head sentences: no list of components or callers, no sentence form shared with other files.
 9. Revising: sentences merged, split, and reordered, not only words replaced; every deleted sentence obtainable from code or another document.
