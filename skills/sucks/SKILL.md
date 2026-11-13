@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.10.2"
+  version: "2.10.3"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -235,7 +235,7 @@ The judgment is not a list lookup. For each verb used, check whether a correspon
 3. If no Korean form is found, write the English term.
 4. If the noun stands for no English term at all, as `국면` does, it is an everyday or literary word; replace it with the term of the concept it means.
 
-The user's words (2026-11-13), given on reviews that wrote `끝점` for node, `국면` for phase, and `은퇴` for a deprecated key: "기술 용어는 영어로 적어도 다 알아듣는다." and "지금 끝점 -> 노드 (끝점은 억지 번역임), 국면 -> 페이즈/단계/ 기타 등등  (국면은 별로 기술적인 단어가 아님) 이런 식으로 한국어 산문에서 AI 쓰래기 냄새가 나는 게 너무 많어."
+The reader is a developer who uses English technical terms every day, so translating a term into Korean does not help that reader. The user's words (2026-11-13), given on reviews that wrote `끝점` for node, `국면` for phase, and `은퇴` for a deprecated key: "기술 용어는 영어로 적어도 다 알아듣는다.", "개발자를 뭐라고 생각하는거냐", and "지금 끝점 -> 노드 (끝점은 억지 번역임), 국면 -> 페이즈/단계/ 기타 등등  (국면은 별로 기술적인 단어가 아님) 이런 식으로 한국어 산문에서 AI 쓰래기 냄새가 나는 게 너무 많어."
 
 **Avoid transliterations only when a commonly used Korean name exists.** If a word that writes English sounds in Hangul has a widely used Korean name, use that name. If there is no commonly used name, use the English or the transliteration as is.
 
