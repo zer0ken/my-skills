@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.16.0"
+  version: "2.17.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -47,7 +47,7 @@ When the user calls `/rv` directly, the agent fills head, merge_base, and target
 
 Without a checkout, read files, diffs, and metadata pinned to the head SHA through the connected repository tools (GitHub API, gh CLI).
 
-When several agents fetch in one repository they overwrite each other's `FETCH_HEAD`, so take the review target by SHA or with `git fetch origin <branch>:refs/review/<name>`. Write the commit SHA actually reviewed at the top of the result document.
+When several agents fetch in one repository they overwrite each other's `FETCH_HEAD`, so take the review target by SHA or with `git fetch origin <branch>:refs/review/<name>`. Write the commit actually reviewed at the top of the result document, as a commit link whose text is the 7-character short SHA; the full SHA goes only in the link and in machine inputs such as head and merge_base.
 
 ## Finding schema
 
@@ -277,9 +277,9 @@ When the round cap is reached, mark unverified propagated findings as PLAUSIBLE 
 
 ## Result format
 
-The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
+Identifiers (commits, issues, PRs, files) are written for a person to read easily and reach, as the global instructions on replies and reports say, and this is not settled by the stricter-rule comparison below. The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
 
-1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base, the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
+1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base each as a commit link whose text is the 7-character short SHA (the 40-character SHA does not appear in the prose), the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
 
 2. Index: if findings span two or more areas or it is a follow-up review, include a table of section, scope, severity, status, and latest comment / next actor.
 
