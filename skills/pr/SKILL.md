@@ -3,7 +3,7 @@ name: pr
 description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.16.0"
+  version: "1.16.1"
   domain: workflow
   triggers: PR, pull request, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -164,7 +164,7 @@ Refs #1111, #1112.
 
 ## Details
 
-Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large.
+Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded.
 
 Divide a large change by feature group, and for each group contrast the existing behavior with the behavior after the change. Do not translate code identifiers such as function and class names.
 
