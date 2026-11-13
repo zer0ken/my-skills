@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document."
 metadata:
   author: hrlee
-  version: "1.0.1"
+  version: "1.1.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -56,7 +56,7 @@ A perspective is a checklist, not a persona. The user's words (2026-11-12): "전
 
 1. Prepare the review directory: the two copies, the review-base worktree, and one brief from `references/brief.md` with its placeholders filled. Check the brief for unfilled `<...>` before launching.
 2. Check the local model server before loading it: no measurement is running on it (no open `run-*` terminal of another session that calls it, as the harness instructions require), and it answers (`curl -sS -m 5 <server>/v1/models`).
-3. Launch one reviewer per perspective as a Paseo pi session (`create_agent`, provider pi, the local model, thinking high), with the brief path, the perspective's method file, and its output file `P<n>-<perspective>.md`. At most four sessions of one provider run at a time (harness Delegation practice), so launch in waves of four and start the next as one finishes. Each reviewer ends its turn with its counts and output path; do not read the review bodies.
+3. Launch one reviewer per perspective as a Paseo pi session (`create_agent`, provider pi, the local model, thinking high), with the brief path, the perspective's method file, and its output file `P<n>-<perspective>.md`. Reviewers on the self-hosted server are exempt from the four-session cap, which exists for paid-provider cost (harness Delegation practice; the user's words, 2026-11-14: "동시 규칙은 비용문제때문에 있는거야"), so launch them all at once after the load check of step 2. The number of sessions per perspective is one until the trial of three sessions per perspective (`artifacts/blind-review-3/CONSOLIDATED-1.md`, pending) shows whether more sessions add confirmed clusters. Each reviewer ends its turn with its counts and output path; do not read the review bodies.
 4. When every reviewer has finished, launch one consolidator of another family (Codex by default) with `references/consolidate.md` filled. It verifies, clusters, and writes the consolidated file. Read only its top table `## 현재 계획에 남은 확정 결함` and its closing reply.
 5. Hand the confirmed clusters to whoever owns the plan as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line.
 
