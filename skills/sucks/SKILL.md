@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.10.0"
+  version: "2.10.1"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -220,8 +220,8 @@ The judgment is not a list lookup. For each verb used, check whether a correspon
 
 **Do not make up translations that do not exist.** Do not coin new Korean expressions to use in place of technical terms. A forced translation cannot be searched, and the reader must trace back the original term.
 
-- 나쁜 예: `info_judgment의 두 끝점`(graph node), `끝점 삭제`
-- 좋은 예: `info_judgment의 두 노드`, `노드 삭제`
+- 나쁜 예: `info_judgment의 두 끝점`(graph node), `끝점 삭제`, `경고만 내는 은퇴 키`(deprecated config key)
+- 좋은 예: `info_judgment의 두 노드`, `노드 삭제`, `경고만 내는 deprecated 키`
 
 **Do not use everyday or literary words for technical concepts.** A word that belongs to news, history, or essays, not to technical documents, gives the sentence a tone and no referent the reader can find in the system. Use the field's term for the concept.
 
