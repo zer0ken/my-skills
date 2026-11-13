@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.15.0"
+  version: "2.16.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -17,6 +17,8 @@ metadata:
 Apply this procedure when the user asks for a review or calls `/rv` or `$rv`. The agent first reads all project rules closely and consults the project review rules, `osiri`, and `refactor` together. Consulting `osiri` happens inside this review procedure that the user allowed, and `teqr` is not applied without a direct call. The result format prefers the project rules.
 
 Assume defects exist and find every defect in the review scope. Look for inputs and execution orders that refute the behavior and completion claims, and when you find a defect, trace the paths along which the same cause propagates. Prove each finding with its occurrence condition and a reachable execution path.
+
+Every review is an exhaustive review (전수 지적): a review that reports, in one pass, every defect it can find at the head it reviews, so the author fixes them in one round instead of discovering them over several. Do not hold a found defect back for a later round, release findings in batches, or stop searching once a blocking finding is enough to request changes. A follow-up review is exhaustive too, because the fixes made in response can cause new defects; it searches again for (a) whether each earlier finding is resolved, (b) defects the response commits introduced, including in code they did not touch but now rely on, and (c) defects anywhere in the whole change that earlier reviews missed. The diff since the last reviewed head is where a follow-up starts, not where its search ends. The user's words (2026-11-13): "리뷰할 ㄸㅐ, 한 번의 리뷰에 모든 결함을 지적해야 하며, 후속 리뷰에서는 대응 과정에서 다른 지적이 생길 수도 있다는 걸 인지해서 다시 최대한 많은 지적을 만들어야돼."
 
 A review serves gatekeeping, accident prevention, maintaining norms, and education (Sadowski et al., "Modern Code Review: A Case Study at Google", ICSE-SEIP 2018). Gatekeeping covers the code health the change leaves behind, not only its behavior. Google's code review standard says "Nothing in this document justifies checking in CLs that definitely worsen the overall code health of the system." and its reviewer guide says "Most systems become complex through many small changes that add up, so it's important to prevent even small complexities in new changes." (https://google.github.io/eng-practices/review/reviewer/standard.html, https://google.github.io/eng-practices/review/reviewer/looking-for.html). A review that only hunts behavior defects lets the codebase grow without limit; the user's words (2026-11-12): "코드베이스가 무한정 늘어나기만 하면 안돼." For education, state with each simplification or design finding the alternative and the reason it is better.
 
@@ -101,7 +103,7 @@ Check the target head, the comparison base, and uncommitted changes. Read all pr
 
 Compare existing reviews, responses, and user decisions and verification results against the current code. Recheck each finding in prior_ids down to its occurrence condition and related call paths, and when a verdict changes, leave the new evidence and reason. Confirm that a user decision used as grounds for a finding has not been cancelled or replaced by later instructions.
 
-In a follow-up review, even at the same head, read new responses, questions, rebuttals, and body changes and decide whether to respond. The head record exists to prevent duplicate posting of the same full review and is not grounds for skipping a follow-up review. Link existing R-IDs and review links and report only the changed evidence and checked scope; record the ID and time of the last checked comment or review, body changes, and whether it was answered, so you do not answer the same request twice. Do not treat a notification that duplicates your own review as a new request.
+In a follow-up review, even at the same head, read new responses, questions, rebuttals, and body changes and decide whether to respond. The head record exists to prevent duplicate posting of the same full review and is not grounds for skipping a follow-up review. Brevity applies to the report, not to the search: link existing R-IDs and review links instead of restating unchanged findings and report the changed evidence and the checked scope, while the search stays exhaustive over the whole change at the current head; record the ID and time of the last checked comment or review, body changes, and whether it was answered, so you do not answer the same request twice. Do not treat a notification that duplicates your own review as a new request.
 
 GitHub's requested_reviewers is the list of pending requests. Do not infer the withdrawal of an existing request or the end of follow-up work solely from removal from the list after a review is submitted. Confirm explicit cancellation, reassignment, and PR closing from the latest conversation and state.
 
@@ -205,7 +207,7 @@ Judge the tests as code. Each changed behavior needs a test that fails on the de
 
 Compare quality, performance, and completion claims with actual results. For verification, check the SHA, input, environment, scope, and latest run results. Do not extend a CI pass into a guarantee of the correctness or quality of other paths. Distinguish defects, verification gaps, and explicitly agreed follow-up scope.
 
-Check the core paths, existing unresolved findings, and required verification to the end. Leave the scope you could not confirm, and do not assert that every defect was found. Edits and external posting, DB, model, and benchmark runs follow approval_scope.
+Check the core paths, existing unresolved findings, and required verification to the end, and report every defect confirmed in this review in this review. Leave the scope you could not confirm, and do not assert that every defect was found. Edits and external posting, DB, model, and benchmark runs follow approval_scope.
 
 ### DB schema and usage
 
