@@ -3,7 +3,7 @@ name: pr
 description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.16.1"
+  version: "1.17.0"
   domain: workflow
   triggers: PR, pull request, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -166,27 +166,30 @@ Refs #1111, #1112.
 
 Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded.
 
+Write the content inside each `<details>` in HTML, not Markdown: paragraphs as `<p>`, lists as `<ol>`/`<ul>`/`<li>`, bold as `<b>`, inline code as `<code>`, code blocks as `<pre><code>`, links as `<a href>`, and tables as `<table>`. GitHub renders Markdown inside `<details>` only when a blank line follows `</summary>`, and inside an HTML block Markdown syntax (backticks, `[text](url)`, `- ` items, table pipes) is not interpreted, so mixing the two leaves parts literal. Do not mix: inside `<details>` use HTML tags only and put no Markdown syntax. The issue reference line and the `-` bullet summary at the top of the body stay Markdown.
+
 Divide a large change by feature group, and for each group contrast the existing behavior with the behavior after the change. Do not translate code identifiers such as function and class names.
 
 ```
 <details>
 <summary><h3>기존 대비 변경 사항</h3></summary>
-
-1. 카탈로그 도입과 설정 필수화
-- 기존: 카탈로그를 선택하는 설정이 없었고 등록 명령으로 넣었다.
-- 변경: 설정이 유일한 등록 경로가 되고, 설정이 없으면 시작이 실패한다.
-
-2. 삭제 동작
-- 기존: 채워진 타입의 삭제가 거부됐다.
-- 변경: 삭제는 엔티티를 null type 으로 변환하고 id 접두사를 유지한다.
-
+<ol>
+<li>카탈로그 도입과 설정 필수화
+<ul>
+<li>기존: 카탈로그를 선택하는 설정이 없었고 등록 명령으로 넣었다.</li>
+<li>변경: 설정이 유일한 등록 경로가 되고, 설정이 없으면 시작이 실패한다.</li>
+</ul></li>
+<li>삭제 동작
+<ul>
+<li>기존: 채워진 타입의 삭제가 거부됐다.</li>
+<li>변경: 삭제는 엔티티를 <code>null</code> type 으로 변환하고 id 접두사를 유지한다.</li>
+</ul></li>
+</ol>
 </details>
 
 <details>
 <summary><h3>배경과 범위</h3></summary>
-
-문서 추가만 포함한다. 제품 코드와 시험은 변경하지 않는다.
-
+<p>문서 추가만 포함한다. 제품 코드와 시험은 변경하지 않는다.</p>
 </details>
 ```
 
