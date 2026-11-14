@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.18.0"
+  version: "2.19.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -317,7 +317,7 @@ When you receive a criticism of the review output itself (verdict errors, format
 
 ## Posting and per-agent execution
 
-Posting rules, including the PR author mention, rechecks before posting, anti-slop checks, and the choice among COMMENT, REQUEST_CHANGES, and APPROVE, are in `references/posting.md`; read it before any posting. Reviewer assignment and how Claude Code and Codex map the units to workers and send each review item as its own turn are in `references/agents.md`; read it before splitting the review across workers or driving a reviewing session.
+Posting rules, including the PR author mention, rechecks before posting, anti-slop checks, and the choice among COMMENT, REQUEST_CHANGES, and APPROVE, are in `references/posting.md`; read it before any posting. Reviewer assignment and how Claude Code maps the units to workers and send each review item as its own turn are in `references/agents.md`; read it before splitting the review across workers or driving a reviewing session.
 
 ## Project-specific settings
 
