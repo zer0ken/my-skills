@@ -15,6 +15,8 @@ Decide which data has a concrete reuse purpose before deleting anything. Preserv
 
 Verify the preserved files and `readme.md` before removing their source. Record the discoverable absolute path, summary, date, original user request or decision, and validity condition in the executing agent's existing memory mechanism. This is reusable work context, not a new global instruction; do not copy it into every agent's memory. If preservation or memory recording fails, retain the source and report the failure.
 
+Decide context notes one by one. A context note is a file a session wrote when it switched away from an activity, holding that activity's state so that a return reads the note instead of accumulated context; a my-workflow run keeps them at `<run root>/notes/<NNN>-<phase>-<doc|code>.md`. The user's words (2026-11-14): "맥락이 바뀔 때마다 노트를 쓰게 해. 그리고 그 노트는 클린업할 때 보존할지 지울지 결정한다." Preserve a note when it holds context that outlives the session and that the artifacts, commits, PR, or issue do not already carry, such as an open decision, work left for a follow-up, or a finding about the codebase; delete it otherwise. Preserve under `~/agent-assets/<project>/context-notes-<run>/` with the `readme.md` above, and list every note in the report with its decision and the reason in one line.
+
 ## Execution
 
 State the concrete cleanup targets, retained resources, and assets before executing. This preview adds no recurring approval requirement: proceed within the existing authorization, asking only for actions that already require permission.
