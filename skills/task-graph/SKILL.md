@@ -3,7 +3,7 @@ name: task-graph
 description: "Plan work that will take several turns as a directed acyclic graph (tasks as nodes, dependencies as directed edges) and schedule from it: start every ready task, overlap long waits with other work, and replan when results change the graph. Use when the user calls /task-graph, asks to plan or schedule a long task, or when starting work of medium difficulty that takes several turns but is smaller than a whole issue. Work at the scale of a whole issue uses my-workflow, and task-graph may be nested inside it. Do not use for work that finishes in one turn or for a single short chain of steps."
 metadata:
   author: hrlee
-  version: "1.2.0"
+  version: "1.3.0"
   domain: planning
   triggers: 작업 그래프, 태스크 그래프, 의존성 그래프, 작업 계획, 스케줄링, 긴 작업, 여러 턴, task graph, dependency graph, scheduling
 ---
@@ -16,7 +16,7 @@ The method connects two known techniques. The ready set comes from Kahn's algori
 
 ## Build the graph
 
-1. List the tasks. A node is a task with one verifiable result: a file, a measurement, a decision, a passing check. Split a task only when the pieces can be scheduled differently, and merge steps that always run together.
+1. List the tasks top-down: from the goal, write the completion conditions that must hold, then for each condition the components that produce it and their current state, then the tasks each component still needs. Do not start from the task in hand or the latest finding; place such an input under the condition it affects. A node is a task with one verifiable result: a file, a measurement, a decision, a passing check. Split a task only when the pieces can be scheduled differently, and merge steps that always run together.
 2. Draw the edges. An edge from A to B means B needs A's result. Draw one only for a real need:\
   2.1 B reads an output of A.\
   2.2 A and B edit the same file or worktree, or load the same server, so they cannot overlap.\
