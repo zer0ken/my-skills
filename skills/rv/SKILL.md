@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.17.0"
+  version: "2.18.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -23,6 +23,8 @@ Every review is an exhaustive review (전수 지적): a review that reports, in 
 A review serves gatekeeping, accident prevention, maintaining norms, and education (Sadowski et al., "Modern Code Review: A Case Study at Google", ICSE-SEIP 2018). Gatekeeping covers the code health the change leaves behind, not only its behavior. Google's code review standard says "Nothing in this document justifies checking in CLs that definitely worsen the overall code health of the system." and its reviewer guide says "Most systems become complex through many small changes that add up, so it's important to prevent even small complexities in new changes." (https://google.github.io/eng-practices/review/reviewer/standard.html, https://google.github.io/eng-practices/review/reviewer/looking-for.html). A review that only hunts behavior defects lets the codebase grow without limit; the user's words (2026-11-12): "코드베이스가 무한정 늘어나기만 하면 안돼." For education, state with each simplification or design finding the alternative and the reason it is better.
 
 This skill is divided into seven units (U0-U6). A single agent runs them in sequence, or an agent that distributes work starts workers per unit. The agent that distributes work is called the coordinator. Each unit has defined inputs and outputs, so it can run independently. Sections are ordered from the cheapest review onward.
+
+The checklist judgments of U0-U3 are review items (검토 항목), listed in the catalog of `references/items.md`. Each item is examined in its own turn, one item per turn, in consecutive turns of the same reviewing session, and its row in the item ledger (항목 원장) is written in that turn: what was checked for each of its sub-checks, the evidence, and the R-IDs or the reason it is cleared. The user's words (2026-11-14): "Rv 스킬로 리뷰를 할 때, 각 항목 반드시 별도의 턴으로 파악하도록 해야도ㅑ. 그리고 철저히 리뷰할 수 있어야돼." and "같은 세션의 연속 턴." Without this split one turn could run every item and an item could pass with no written check; the ledger and its check make each item's coverage verifiable. Read `references/items.md` before U0; it holds the catalog, who sends each item's prompt, and the ledger format. The turn split applies inside a reviewing session; U4 verifiers stay separate fresh sessions.
 
 ## Input contract
 
@@ -265,7 +267,7 @@ If the same wrong pattern repeats across several locations or changes, write the
 
 Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
 
-Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md>` and fix the document until it prints `rv review format: 1 document(s) passed`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. Exit code 1 is a format violation and 2 is a read failure.
+Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md> --ledger <ledger.md>` and fix the document and the ledger until it prints `rv review format: review and item ledger passed (<n> items)`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. It rejects a ledger that misses an item of the catalog (per area for the per-area items), puts two items in one turn, leaves a cell empty, gives no `file:line`, backtick command, or URL as evidence, omits a sub-check from `확인한 범위`, has a verdict that is not R-IDs, `배제: <이유>`, or `해당 없음: <이유>`, or names an R-ID the review document does not contain. A fix the check forces goes back to the item's turn: rerun the item, do not edit the row alone. Exit code 1 is a format violation and 2 is a read failure.
 
 The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
 
@@ -315,7 +317,7 @@ When you receive a criticism of the review output itself (verdict errors, format
 
 ## Posting and per-agent execution
 
-Posting rules, including the PR author mention, rechecks before posting, anti-slop checks, and the choice among COMMENT, REQUEST_CHANGES, and APPROVE, are in `references/posting.md`; read it before any posting. Reviewer assignment and how Claude Code and Codex map the units to workers are in `references/agents.md`; read it before splitting the review across workers.
+Posting rules, including the PR author mention, rechecks before posting, anti-slop checks, and the choice among COMMENT, REQUEST_CHANGES, and APPROVE, are in `references/posting.md`; read it before any posting. Reviewer assignment and how Claude Code and Codex map the units to workers and send each review item as its own turn are in `references/agents.md`; read it before splitting the review across workers or driving a reviewing session.
 
 ## Project-specific settings
 

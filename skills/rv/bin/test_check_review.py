@@ -1,6 +1,9 @@
 """Pin the rv review format check: a complete document passes, each gap fails."""
 
+import contextlib
 import importlib.util
+import io
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -56,6 +59,130 @@ COMPLETE = """\
 시험 미실행.
 <!-- emem-review-verdict: REQUEST_CHANGES blocking=1 -->
 """
+
+
+CATALOG = check_review.read_catalog(check_review.ITEMS_PATH.read_text(encoding="utf-8"))
+HEADER = "| 턴 | 항목 | 영역 | 확인한 범위 | 근거 | 판정 |\n|---|---|---|---|---|---|\n"
+
+
+def ledger_row(turn: int, item, area: str = "전체", verdict: str = "배제: 결함 없음") -> str:
+    scope = "; ".join(f"{check} 확인" for check in item.sub_checks)
+    return f"| 리뷰어:{turn} | {item.id} | {area} | {scope} | `relation.py:10` | {verdict} |"
+
+
+def build_ledger(areas=("전체",), verdicts=None) -> str:
+    verdicts = verdicts or {}
+    rows, turn = [], 0
+    for item in CATALOG.values():
+        for area in areas if item.per_area else ("전체",):
+            turn += 1
+            rows.append(ledger_row(turn, item, area, verdicts.get(item.id, "배제: 결함 없음")))
+    return HEADER + "\n".join(rows) + "\n"
+
+
+LEDGER = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다"})
+
+
+class CheckLedgerTest(unittest.TestCase):
+    def test_catalog_lists_every_item(self):
+        self.assertEqual(len(CATALOG), 20)
+        self.assertEqual(CATALOG["U1-import"].sub_checks, ("1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"))
+        self.assertTrue(CATALOG["U3-db"].per_area)
+        self.assertFalse(CATALOG["U2-concepts"].per_area)
+
+    def test_complete_ledger_passes(self):
+        self.assertEqual(check_review.check_ledger(LEDGER, COMPLETE, CATALOG), [])
+
+    def test_missing_item_fails(self):
+        text = "\n".join(line for line in LEDGER.splitlines() if "| U3-security |" not in line)
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장에 `U3-security`(전체) 행이 없다: 모든 항목을 각자의 턴에서 검토해야 한다."],
+        )
+
+    def test_two_items_in_one_turn_fails(self):
+        text = LEDGER.replace("| 리뷰어:3 |", "| 리뷰어:2 |")
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 턴 `리뷰어:2` 에 항목이 둘 이상이다: 한 턴에는 한 항목만 검토한다."],
+        )
+
+    def test_skipped_sub_check_fails(self):
+        text = LEDGER.replace("1.6 확인; ", "")
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U1-import`(전체) 행 확인한 범위에 세부 점검 1.6 가 없다: 세부 점검마다 결과를 적는다."],
+        )
+
+    def test_finding_absent_from_review_fails(self):
+        text = LEDGER.replace("| R-001 |", "| R-002 |")
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U1-size`(전체) 행이 리뷰 문서에 없는 R-002 를 가리킨다."],
+        )
+
+    def test_verdict_without_reason_fails(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("배제: 결함 없음", "문제없음"))
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U1-names`(전체) 행 판정이 R-ID, `배제: <이유>`, `해당 없음: <이유>` 가 아니다."],
+        )
+
+    def test_evidence_without_location_fails(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("`relation.py:10`", "코드를 읽었다"))
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U1-names`(전체) 행 근거에 `file:line`, 백틱 명령, URL 이 없다: 근거는 다시 확인할 수 있어야 한다."],
+        )
+
+    def test_empty_cell_fails(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("| `relation.py:10` |", "|  |"))
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U1-names`(전체) 행에 빈 칸이 있다(근거): 빈 칸은 그 항목을 검토했는지 확인할 수 없게 한다."],
+        )
+
+    def test_per_area_item_missing_for_one_area_fails(self):
+        text = build_ledger(areas=("DB", "프롬프트"), verdicts={"U1-size": "R-001"})
+        text = "\n".join(line for line in text.splitlines() if "| U3-db | 프롬프트 |" not in line)
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장에 `U3-db`(프롬프트) 행이 없다: 모든 항목을 각자의 턴에서 검토해야 한다."],
+        )
+
+    def test_whole_item_with_area_fails(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("| U1-names | 전체 |", "| U1-names | DB |"))
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            [
+                "항목 원장의 `U1-names`(DB) 행 영역이 `전체` 가 아니다: 이 항목은 영역별 항목이 아니다.",
+                "항목 원장에 `U1-names`(전체) 행이 없다: 모든 항목을 각자의 턴에서 검토해야 한다.",
+            ],
+        )
+
+    def test_unknown_item_fails(self):
+        text = LEDGER + "| 리뷰어:99 | U9-extra | 전체 | 확인 | `a.py:1` | 배제: 없음 |\n"
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            ["항목 원장의 `U9-extra` 는 목록에 없는 항목이다: 항목은 `references/items.md` 목록에서만 고른다."],
+        )
+
+    def test_main_requires_ledger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            review, ledger = Path(tmp, "review.md"), Path(tmp, "ledger.md")
+            review.write_text(COMPLETE, encoding="utf-8")
+            ledger.write_text(LEDGER, encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(check_review.main([str(review), "--ledger", str(ledger)]), 0)
+            self.assertEqual(out.getvalue(), "rv review format: review and item ledger passed (20 items)\n")
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                check_review.main([str(review)])
+            self.assertEqual(raised.exception.code, 2)
 
 
 class CheckReviewTest(unittest.TestCase):

@@ -10,6 +10,10 @@ A review presumes that one does not judge one's own work, so choose reviewers an
 
 Submit APPROVE, REQUEST_CHANGES, or COMMENT according to the verdict, but GitHub does not let a PR author approve their own PR, so on your own PR post a verdict equivalent to APPROVE as COMMENT. This record does not meet the approval requirement, and the merge state stays `REVIEW_REQUIRED`. If approval is needed, report that another person's approval or the repository admin's ruleset judgment is needed, and do not create an approval with another account.
 
+## Item turns
+
+Each review item of `references/items.md` goes to the reviewing session that runs its unit as its own prompt, and the next item goes to the same session as a follow-up prompt once the previous turn ended. Use the agent product's native means of continuing a session with its context intact; do not start a new session per item, because the user chose consecutive turns of one session. A reviewing session ends each turn with the item's ledger row and does not re-delegate.
+
 ## Claude Code
 
 The coordinator starts subagents with the Agent tool. Whether the coordinator edits code directly or only delegates to workers follows the project's delegation rules.
@@ -17,8 +21,8 @@ The coordinator starts subagents with the Agent tool. Whether the coordinator ed
 | Unit | Execution |
 |---|---|
 | U0 | Run by the coordinator |
-| U1, U2 | Parallel Agent forks |
-| U3 | Agent per area, loading that area's `-expert` skill |
+| U1, U2 | Parallel Agent forks, one per unit; each next item goes to the same agent with SendMessage, which the Agent tool documents as continuing "a previously spawned agent with its context intact" |
+| U3 | Agent per area, loading that area's `-expert` skill; items sent one per turn the same way |
 | U4 | Verified by a fresh Agent (not a fork) different from U3 |
 | U5 | Agent |
 | U6 | The coordinator assembles the markdown document |
@@ -30,8 +34,8 @@ Codex runs the independent review unit assigned to it. When split execution is n
 | Unit | Execution |
 |---|---|
 | U0 | Run by the coordinator |
-| U1-U2 | Review worker |
-| U3 | Worker per area |
+| U1-U2 | Review worker; each next item is a `send_agent_prompt` to the same agent id |
+| U3 | Worker per area; items sent one per turn the same way |
 | U4 | Verification worker different from U3 |
 | U5 | Propagation check worker |
 | U6 | The coordinator assembles and posts the markdown document |
