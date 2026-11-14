@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.19.0"
+  version: "2.19.1"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -156,7 +156,7 @@ Separately from code content, review the shape of the codebase the change leaves
 5. Citing precedent
   5.1 Status of the grounds: if the grounds for a change are "기존 코드와 일치", "관례상", "원래 이렇게 한다", or "다른 모듈도 같다", collect the commits and PRs that created that precedent with `git log -S`, `git blame`, and `rg`, and if there are zero candidates, flag the claim itself. That the code is a certain way is not grounds that it should be.
   5.2 Primary grounds: for each precedent, confirm one of the issue body, design document, test that pins the intent, or user decision record that answered for that decision. Commit messages and review approvals are not grounds. Flag citing an ungrounded precedent as normative grounds, and have the norm newly backed by a document or issue.
-  5.3 Repetition: if the same pattern repeats across several changes without grounds, do not read it as a repository standard. Write the repetition count and the commit list and report it as a defect candidate; a person decides whether to promote it to a standard.
+  5.3 Repetition: a repetition count points at a body to read, not at a finding about placement; read the repeated body and judge it against the area's `-expert` criteria first, because consolidating a wrong body only moves the defect. If the same pattern repeats across several changes without grounds, do not read it as a repository standard. Write the repetition count and the commit list and report it as a defect candidate; a person decides whether to promote it to a standard.
 
 ## U2 Structure and quality judgment
 
