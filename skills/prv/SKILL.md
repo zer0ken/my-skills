@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document."
 metadata:
   author: hrlee
-  version: "1.3.0"
+  version: "1.4.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -26,6 +26,7 @@ prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document b
 | perspective | One review dimension defined by a method checklist file under `references/perspectives/`; a reviewer reports only defects inside it |
 | reviewer | A local-model session that applies one perspective to the plan, blind to everything but its inputs |
 | consolidator | One session of another model family that verifies every finding and writes the consolidated table |
+| review workspace | The Paseo workspace one prv run creates in the caller's project, whose directory is the review-base worktree; every reviewer and the consolidator run in it, and the run archives it when it ends |
 | confirmed cluster | A group of duplicate findings that the consolidator verified against the cited lines (CONFIRMED) |
 
 ## Inputs
@@ -52,13 +53,25 @@ Choose the perspectives the plan touches; `trace` always runs.
 
 A perspective is a checklist, not a persona. The user's words (2026-11-12): "전문 작업에서는 '역할극'이 아니라, 메소돌로지를 적용해야돼." A new perspective is a new method file whose items come from a field's sources or its `-expert` skill.
 
+## Review workspace
+
+prv runs all its sessions in a review workspace of its own and archives it when the run ends. The user's words (2026-11-14): "Prv는 호출된 파세오 프로젝트 안에 새 워크스페이스를 만들고 그 안에 필요한 세션들을 모두 소환해줘" and "그리고 끝나면 자동으로 워크스페이스를 보관햐줘".
+
+1. Find the caller's project: the caller's `workspaceId` is in `get_agent_status` for its own agent id (confirm the snapshot is its own, because `PASEO_AGENT_ID` can name the session that launched it), and that workspace's `projectId` is in `list_workspaces`.
+2. Create the review workspace with `create_workspace`: `isolation: "local"`, `path` the review-base worktree, `projectId` the caller's project, `title` `prv <plan name> <run number>`. Pass the `projectId` explicitly: a local workspace on a subdirectory is otherwise registered as a project of its own. Local isolation adopts the directory, so a session created there starts in the review-base worktree, which is the current directory the brief assumes.
+3. Create every reviewer and the consolidator with `create_agent` and `workspaceId` the review workspace. A session placed in another workspace stays the caller's subagent (Paseo docs, MCP "Mental model": "Passing a `workspaceId` places that subagent in another workspace without detaching it from its parent."), so finish notifications still reach the caller.
+4. When the run ends, whether finished or abandoned, confirm that no session in the review workspace has a running turn (`get_agent_status`), then `archive_workspace` it, which archives the sessions it owns and reports them in `archivedAgentIds`. Archiving a local workspace leaves its directory (`removedDirectory: false`), and the review files live outside it, so remove the review-base worktree afterwards with `git worktree remove`.
+
+Outside Paseo there is no workspace to create; launch the sessions as the harness allows and skip this section.
+
 ## Procedure
 
-1. Prepare the review directory: the two copies, the review-base worktree, and one brief from `references/brief.md` with its placeholders filled. Check the brief for unfilled `<...>` before launching.
+1. Prepare the review directory: the two copies, the review-base worktree, the review workspace on it, and one brief from `references/brief.md` with its placeholders filled. Check the brief for unfilled `<...>` before launching.
 2. Check the local model server before loading it: no measurement is running on it (no open `run-*` terminal of another session that calls it, as the harness instructions require), and it answers (`curl -sS -m 5 <server>/v1/models`).
-3. Launch three reviewers per perspective as Paseo pi sessions (`create_agent`, provider pi, the local model, thinking high), with the brief path, the perspective's method file, and its own output file `P<n>-<a|b|c>.md`. The three sessions of a perspective get the same brief and do not see each other's output. The user's words (2026-11-14): "그냥 관점을 나열하고 입력을 주면 각 관점 별로 3 세션 씩 생성하게 해보면?" Reviewers on the self-hosted server are exempt from the four-session cap, which exists for paid-provider cost (harness Delegation practice; the user's words, 2026-11-14: "동시 규칙은 비용문제때문에 있는거야"), so launch them all at once after the load check of step 2. Three is the default because the third trial measured it (Limits); raise it only with a measurement that the next session still adds confirmed clusters. Each reviewer ends its turn with its counts and output path; do not read the review bodies.
-4. When every reviewer has finished, launch one consolidator (it also merges the duplicates the three sessions of a perspective produce) of another family, a Claude session (Codex takes code only and does not review) with `references/consolidate.md` filled. It verifies, clusters, and writes the consolidated file. Read only its top table `## 현재 계획에 남은 확정 결함` and its closing reply.
+3. Launch three reviewers per perspective as Paseo pi sessions in the review workspace (`create_agent`, provider pi, the local model, thinking high), with the brief path, the perspective's method file, and its own output file `P<n>-<a|b|c>.md`. The three sessions of a perspective get the same brief and do not see each other's output. The user's words (2026-11-14): "그냥 관점을 나열하고 입력을 주면 각 관점 별로 3 세션 씩 생성하게 해보면?" Reviewers on the self-hosted server are exempt from the four-session cap, which exists for paid-provider cost (harness Delegation practice; the user's words, 2026-11-14: "동시 규칙은 비용문제때문에 있는거야"), so launch them all at once after the load check of step 2. Three is the default because the third trial measured it (Limits); raise it only with a measurement that the next session still adds confirmed clusters. Each reviewer ends its turn with its counts and output path; do not read the review bodies.
+4. When every reviewer has finished, launch one consolidator in the review workspace (it also merges the duplicates the three sessions of a perspective produce) of another family, a Claude session (Codex takes code only and does not review) with `references/consolidate.md` filled. It verifies, clusters, and writes the consolidated file. Read only its top table `## 현재 계획에 남은 확정 결함` and its closing reply.
 5. Hand the confirmed clusters to whoever owns the plan as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line.
+6. Archive the review workspace and remove the review-base worktree, as step 4 of the review workspace section says.
 
 In a my-workflow run, the review directory is `<root>/artifacts/<P>-prv/` and the consolidated file is `<root>/artifacts/<P>-prv.md`, where `<P>` is the stage's artifact prefix (`N1` for feature-1-design).
 
