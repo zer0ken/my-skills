@@ -313,7 +313,7 @@ A follow-up review preserves existing IDs and opinions, records responses as `A-
 
 ## Criticism of the review
 
-When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), handle it as a round of findings with the `respond-to-findings` skill: understand it against the code and records it relies on, trace its root cause, accept it or reject it with grounds, correct that review, and reply. If the root cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
+When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), handle it as a round of findings with the `response-rv` skill: understand it against the code and records it relies on, trace its root cause, accept it or reject it with grounds, correct that review, and reply. If the root cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
 
 ## Posting and per-agent execution
 

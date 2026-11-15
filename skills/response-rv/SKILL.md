@@ -1,5 +1,5 @@
 ---
-name: respond-to-findings
+name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review, a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
@@ -11,7 +11,7 @@ metadata:
     - sucks
 ---
 
-# respond-to-findings
+# response-rv
 
 The user's words (2026-11-16), after a lead answered "아니오" to "각 지적에 대한 근본 원인을 전부 분석했어?" on fifteen review findings it had already triaged and drafted replies for, while the same cause had recurred in two self-review rounds: "지적에 대해 대응할때는, 그 지적에 대해 올바르게 이해하고, 근본 원인을 분석하고, 어떻게 대응할지 결정하고, 실제로 대응한 뒤에, 답변을 만들어야돼. 이것을 rv같은 기존 스킬이 아니라 별도 스킬로 분리하고, 각 단계는 오래 걸리고 컨텍스트 압축이 일어날 수 있으니, 각 단계를 올바르게 수행했다는 것을 문서로 작성해서 보존하고, 아까처럼 내가 똑바로 한게 맞냐고 물어볼 때 그것을 즉시 제시 가능하도록 작업해야돼. 이 파일은 클린업때 정리될 수 있어".
 
