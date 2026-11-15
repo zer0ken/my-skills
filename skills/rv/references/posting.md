@@ -10,9 +10,11 @@ The procedure for posting as a PR review or comment is as follows. Post and edit
 
 3. Outside code spans, `~` becomes strikethrough on GitHub, so write ranges with a hyphen, as in `R-001-R-006`.
 
-4. If the repository has an anti-slop check, read the latest rules and vocabulary through the connected repository tools and compare the draft. Clean up vocabulary and unnecessary phrases without changing technical meaning, severity, evidence, or verification limits. Do not download or run executables.
+4. Check every review body and comment with anti-slop before posting, whether or not the repository runs the anti-slop workflow, as the global instructions require of every text posted on GitHub: read the latest rules and vocabulary through the connected repository tools and compare the draft. Clean up vocabulary and unnecessary phrases without changing technical meaning, severity, evidence, or verification limits. Do not download or run executables.
 
-5. After posting or editing, wait until all anti-slop runs finish, and check the section for your own comment id in the bot thread comment. If there is no section, there are 0 detections. If there are detections, edit the same comment and check again.
+   A review body over 50 lines folds every heading into a `<details>` block whose `<summary>` is the heading, keeps the summary at the top unfolded, and separates headings with one `---` line that has a blank line above and below it.
+
+5. Where the repository runs the anti-slop workflow, after posting or editing, wait until all anti-slop runs finish, and check the section for your own comment id in the bot thread comment. If there is no section, there are 0 detections. If there are detections, edit the same comment and check again.
 
 6. Do not fix detections from other authors' comments and changed files; report them.
 

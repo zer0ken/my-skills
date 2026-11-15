@@ -3,7 +3,7 @@ name: issue
 description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
 metadata:
   author: hrlee
-  version: "1.9.0"
+  version: "1.10.0"
   domain: workflow
   triggers: 이슈, issue, 이슈 올려, 이슈 생성, gh issue create
   role: guardian
@@ -103,7 +103,7 @@ When the cause has been confirmed:
 
 ## Details
 
-End each item of the body in one line. Put everything that does not fit in one line at the bottom of the body: reproduction steps, logs, the course of the investigation, the grounds for a presumption, causes that were examined and ruled out, and the detailed steps of the plan. Leave a blank line so it is distinct from the bullet summary, and continue writing. Do not split the details into comments; put all of them in the single body.
+End each item of the body in one line. Put everything that does not fit in one line at the bottom of the body: reproduction steps, logs, the course of the investigation, the grounds for a presumption, causes that were examined and ruled out, and the detailed steps of the plan. Leave a blank line so it is distinct from the bullet summary, and continue writing. Do not split the details into comments; put all of them in the single body. When the whole body runs over 50 lines, fold every heading of the details into a `<details>` block whose `<summary>` is the heading, leave the item bullets at the top unfolded, and separate headings with one `---` line that has a blank line above and below it; the global instructions hold this rule and its grounds.
 
 ## Issues written on the user's behalf
 
@@ -126,6 +126,7 @@ Read only the title and body and check the following. If any one is off, write i
 3. The `문제` item describes the observed phenomenon, not a solution or a cause.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
 5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
+6. anti-slop finds nothing in the title and body: read the latest `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and compare, or run the checker as the `pr` skill's `references/anti-slop-preflight.md` describes. Where the repository runs the anti-slop workflow, also read its bot result after posting.
 
 ```bash
 gh issue create --title "<명사구 제목>" --body-file body.md

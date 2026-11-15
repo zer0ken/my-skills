@@ -4,8 +4,9 @@
 The body is, in order: at most two issue reference lines (`Closes #N` first, then `Refs #N`) and a blank line,
 a summary of `-` bullets (sub-bullets indented two spaces) of at most 10 lines with no heading, bold or
 checkbox, and then only `<details>` sections, each opening with `<summary><h3>name</h3></summary>` and
-written in HTML with no Markdown syntax. Anything else outside `<details>`, such as a bare `## heading`,
-is a violation, because every detail section is folded.
+written in HTML with no Markdown syntax, and two consecutive sections separated by exactly a blank line, a
+`---` line and a blank line. Anything else outside `<details>`, such as a bare `## heading`, is a violation,
+because every detail section is folded.
 
 Usage: check_pr_body.py BODY.md [--json RECEIPT.json]
 Prints one `path:line: RULE message` per violation and exits 1 when there is any, 0 otherwise. The receipt
@@ -24,6 +25,8 @@ from pathlib import Path
 SUMMARY_MAX_LINES = 10
 REFERENCE = re.compile(r"^(Closes #\d+(\. Closes #\d+)*\.?|Refs #\d+(, #\d+)*\.?)$")
 BULLET = re.compile(r"^(  )?- \S")
+# The gap between two `<details>` sections: one horizontal rule with the blank lines GitHub needs around it.
+SEPARATOR = ["", "---", ""]
 SUMMARY_TAG = re.compile(r"^<summary><h3>[^<]+</h3></summary>$")
 # Markdown syntax that GitHub leaves literal inside an HTML block (SKILL.md Details).
 MARKDOWN_IN_HTML = [
@@ -67,6 +70,7 @@ def check(lines: Sequence[str]) -> list[tuple[int, str, str]]:
                            f"the summary has {at - summary_start} lines; at most {SUMMARY_MAX_LINES}"))
     in_details = in_pre = outside = False
     expect_summary = False
+    gap_start: int | None = None  # index after the last `</details>`, while outside a section
     for index in range(at, len(lines)):
         line, number = lines[index], index + 1
         if not in_details:
@@ -74,7 +78,12 @@ def check(lines: Sequence[str]) -> list[tuple[int, str, str]]:
                 outside = False
                 continue
             if line.strip() == "<details>":
-                in_details, expect_summary, outside = True, True, False
+                if gap_start is not None and [gap.strip() for gap in lines[gap_start:index]] != SEPARATOR:
+                    violations.append((number, "SEPARATOR", "separate sections with a blank line, `---`, "
+                                       "and a blank line"))
+                in_details, expect_summary, outside, gap_start = True, True, False, None
+                continue
+            if line.strip() == "---" and gap_start is not None:
                 continue
             if not outside:  # one violation per paragraph outside <details>
                 violations.append((number, "OUTSIDE", "after the summary write only <details> sections: "
@@ -88,6 +97,7 @@ def check(lines: Sequence[str]) -> list[tuple[int, str, str]]:
             continue
         if line.strip() == "</details>":
             in_details = in_pre = False
+            gap_start = index + 1
             continue
         if "<pre" in line:
             in_pre = True
@@ -100,6 +110,8 @@ def check(lines: Sequence[str]) -> list[tuple[int, str, str]]:
             in_pre = False
     if in_details:
         violations.append((len(lines), "DETAILS", "a <details> section is not closed"))
+    elif gap_start is not None and any(line.strip() == "---" for line in lines[gap_start:]):
+        violations.append((len(lines), "SEPARATOR", "`---` goes only between two sections"))
     return violations
 
 

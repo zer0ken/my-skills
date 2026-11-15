@@ -3,7 +3,7 @@ name: pr
 description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), when stacking PRs with the GitHub stacked PR feature (PR 을 스택하라고 지시할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.22.0"
+  version: "1.23.0"
   domain: workflow
   triggers: PR, pull request, PR 스택, stacked PR, gh stack, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -53,7 +53,7 @@ Before merging, the author confirms with `gh pr checks` that all the required ch
 
 After creation, the author checks `closingIssuesReferences` again. The success output of the merge command is not grounds that the merge is complete, so after the merge confirm the merge commit with `gh pr view <number> --json state,mergedAt,mergeCommit` and also look up the actual issue state. If the automatic closing failed, close it within the approved scope together with the PR and SHA, and if it goes beyond the approved scope, report the remaining state. Do not treat the work as complete by narrowing the scope needed to close the core issue or by splitting that scope into a separate issue.
 
-The author uses honorific speech (존댓말) in the Korean body to be posted and explains with reasons, measurements, and sources instead of the user's name. Distinguish a proposal before the merge from a confirmed user decision. Refer to a review by date and time (KST) and target SHA, like "10-28 15:30 리뷰(대상 [`e61006b`](commit link))", where the target is a commit link whose text is the 7-character short SHA and the 40-character SHA does not appear in the prose, and do not use a model or agent name, an internal file name, or a round suffix letter. Write GitHub prose with one line per paragraph. If a local check exists, check the current commit and body before posting and confirm the actual result after posting. The check target is not only the body but also the commit messages and the added lines of the diff (comments and docstrings), and if the checker reports only some of the findings, repeat until it reaches 0 locally and then push. Follow `references/anti-slop-preflight.md` for the procedure and for how to rewrite commit messages. Do not add traces of AI use.
+The author uses honorific speech (존댓말) in the Korean body to be posted and explains with reasons, measurements, and sources instead of the user's name. Distinguish a proposal before the merge from a confirmed user decision. Refer to a review by date and time (KST) and target SHA, like "10-28 15:30 리뷰(대상 [`e61006b`](commit link))", where the target is a commit link whose text is the 7-character short SHA and the 40-character SHA does not appear in the prose, and do not use a model or agent name, an internal file name, or a round suffix letter. Write GitHub prose with one line per paragraph. Check the title, body, and current commits with anti-slop before posting, as the global instructions require of every text posted on GitHub, and confirm the actual result after posting. The check target is not only the body but also the commit messages and the added lines of the diff (comments and docstrings), and if the checker reports only some of the findings, repeat until it reaches 0 locally and then push. Follow `references/anti-slop-preflight.md` for the procedure and for how to rewrite commit messages. Do not add traces of AI use.
 
 For diagrams in a large PR, follow `visuals`. Do not use a raw image URL of a private repository without verifying it on screen. If an attachment is needed, deliver the PNG and confirm the posted result with the GitHub attachment URL generated in a logged-in browser.
 
@@ -173,7 +173,7 @@ Refs #1111, #1112.
 
 ## Details
 
-Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded.
+Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded. Separate two consecutive `<details>` sections with one `---` line with a blank line above and below it, not with blank lines alone; without those blank lines GitHub renders a `---` right after `</details>` as literal text. The user's words (2026-11-16): "제목 사이에는 공백 줄 말고 구분선 줄 하나로만 구분해라."
 
 Write the content inside each `<details>` in HTML, not Markdown: paragraphs as `<p>`, lists as `<ol>`/`<ul>`/`<li>`, bold as `<b>`, inline code as `<code>`, code blocks as `<pre><code>`, links as `<a href>`, and tables as `<table>`. GitHub renders Markdown inside `<details>` only when a blank line follows `</summary>`, and inside an HTML block Markdown syntax (backticks, `[text](url)`, `- ` items, table pipes) is not interpreted, so mixing the two leaves parts literal. Do not mix: inside `<details>` use HTML tags only and put no Markdown syntax. The issue reference line and the `-` bullet summary at the top of the body stay Markdown.
 
@@ -196,6 +196,8 @@ Divide a large change by feature group, and for each group contrast the existing
 </ol>
 </details>
 
+---
+
 <details>
 <summary><h3>배경과 범위</h3></summary>
 <p>문서 추가만 포함한다. 제품 코드와 시험은 변경하지 않는다.</p>
@@ -211,7 +213,7 @@ Read only the title and body and check the following. If any one is off, write i
 3. The body alone can answer how the behavior of the user or the system differs when this PR is applied.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
 5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
-6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the reference lines, the summary of at most 10 lines, and that everything after the summary is a `<details>` section written in HTML, so a bare `## 제목` section or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
+6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the reference lines, the summary of at most 10 lines, that everything after the summary is a `<details>` section written in HTML, and that consecutive sections are separated by `---`, so a bare `## 제목` section or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
 
 ```bash
 gh pr create --title "<명사구 제목>" --body-file body.md

@@ -16,6 +16,13 @@ Refs #1111, #1112.
 <pre><code>- literal `code`
 </code></pre>
 </details>
+
+---
+
+<details>
+<summary><h3>검증</h3></summary>
+<p>단위 시험을 실행했다.</p>
+</details>
 """.splitlines()
 
 
@@ -29,7 +36,7 @@ class CheckPrBodyTests(unittest.TestCase):
 
     def test_bare_heading_section_is_outside_details(self) -> None:
         self.assertEqual(check(GOOD + ["", "## 검증 범위", "본문"]),
-                         [(14, "OUTSIDE", "after the summary write only <details> sections: ## 검증 범위")])
+                         [(21, "OUTSIDE", "after the summary write only <details> sections: ## 검증 범위")])
 
     def test_markdown_inside_details_is_refused(self) -> None:
         body = GOOD[:8] + ["- 목록", "[링크](https://example.com)"] + GOOD[8:]
@@ -44,6 +51,17 @@ class CheckPrBodyTests(unittest.TestCase):
     def test_section_needs_h3_summary(self) -> None:
         body = GOOD[:7] + ["<summary>배경</summary>"] + GOOD[8:]
         self.assertEqual(rules(body), ["DETAILS"])
+
+    def test_sections_separated_by_blank_line_alone_are_refused(self) -> None:
+        body = GOOD[:12] + [""] + GOOD[15:]
+        self.assertEqual(check(body), [(14, "SEPARATOR", "separate sections with a blank line, `---`, and a blank line")])
+
+    def test_separator_without_blank_lines_is_refused(self) -> None:
+        body = GOOD[:12] + ["---"] + GOOD[15:]
+        self.assertEqual(rules(body), ["SEPARATOR"])
+
+    def test_trailing_separator_is_refused(self) -> None:
+        self.assertEqual(rules(GOOD + ["", "---"]), ["SEPARATOR"])
 
 
 if __name__ == "__main__":
