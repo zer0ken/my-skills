@@ -1,0 +1,80 @@
+---
+name: respond-to-findings
+description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review, a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
+metadata:
+  author: hrlee
+  version: "0.1.0"
+  domain: workflow
+  triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인
+  dependencies:
+    - pr
+    - sucks
+---
+
+# respond-to-findings
+
+The user's words (2026-11-16), after a lead answered "아니오" to "각 지적에 대한 근본 원인을 전부 분석했어?" on fifteen review findings it had already triaged and drafted replies for, while the same cause had recurred in two self-review rounds: "지적에 대해 대응할때는, 그 지적에 대해 올바르게 이해하고, 근본 원인을 분석하고, 어떻게 대응할지 결정하고, 실제로 대응한 뒤에, 답변을 만들어야돼. 이것을 rv같은 기존 스킬이 아니라 별도 스킬로 분리하고, 각 단계는 오래 걸리고 컨텍스트 압축이 일어날 수 있으니, 각 단계를 올바르게 수행했다는 것을 문서로 작성해서 보존하고, 아까처럼 내가 똑바로 한게 맞냐고 물어볼 때 그것을 즉시 제시 가능하도록 작업해야돼. 이 파일은 클린업때 정리될 수 있어".
+
+## Concepts
+
+A finding is one claim, made by someone other than the producer at that moment (a person's or agent's review, a review comment, a gate verdict, the user's criticism of a delivered artifact), that something in the work is wrong and asks for a change. A question that only asks why you did something is not a finding: answer it first as the instructions require, and if the answer shows a change is needed, that change becomes a finding here. A round is the set of findings that arrived together, such as one submitted review or one gate verdict, and is answered together. A stage record is the file a stage leaves for the whole round: one section per finding, and a completion check that says which of the stage's criteria hold, with evidence. The round index is the one file that shows, per finding, which stages are complete, and is the first thing to show when asked whether the response was done properly.
+
+## Stages
+
+Run the stages in order for the whole round. A finding enters a stage only when its section in the previous stage's record is complete, and a stage record is complete only when its completion check holds for every finding. A finding may close a stage in one line when that line is enough, as for a typo, but no finding skips a stage. Write each record with the file-writing tool as you go, not after the fact, and update the round index when a stage completes.
+
+### 1. Understand (이해)
+
+For each finding, write its original text verbatim with its source link, then restate in your own words the condition it claims and the result it claims, and what it asks for. Read the primary sources the finding relies on (the code at the reviewed head, the contract, the rules, the measurement) and write the paths and lines read. Classify the claim as 사실, 부분 사실, 사실 아님, or 불명, each with the evidence kind 재현, 관찰, or 추론. A finding whose meaning has two readings is 불명: write both readings and the question that would settle it, and do not pick one; it waits at this stage and its reply asks that question.
+
+Completion check: every finding has the verbatim text, the restatement, the sources read with paths and lines, and a classification with its evidence.
+
+### 2. Root cause (근본 원인)
+
+For each finding classified 사실 or 부분 사실, write the whole causal chain in one place, as the instructions define it for "문제가 뭐냐": the symptom, each cause of the cause in turn, up to the root cause, the highest node whose content caused it (the reading of the goal, a completion condition, a component's design, a plan or spec node, a procedure), then your own procedural error that let it through (which step or check should have caught it, and why it did not), and the links you did not check, each marked 미확인. A chain that stops at the line the finding points to is not a root cause. For a finding classified 사실 아님, write what led the reader to the claim, such as a misleading name, document, or PR text; when that is on your side it is the cause to fix, and otherwise write `원인 없음` with the evidence.
+
+Then group the findings by shared root cause, and for each root cause search for the other places it produced the same defect: elsewhere in the diff, the codebase, the documents, and earlier rounds of this work. Write the search commands or queries and their results, so the absence of other places is shown, not claimed.
+
+Completion check: every finding has a chain ending at a named node or a stated `원인 없음`, every chain names the procedural error or says why there was none, unchecked links are marked, and every root cause has its same-cause search with results.
+
+### 3. Decide (대응 결정)
+
+For each finding, decide 수용, 부분 수용, 기각, 질문, or 범위 밖, with grounds checked against the primary sources of stage 1, and for 부분 수용 say which part. For each accepted root cause, name the node to fix and how the fix propagates down to every node under it and to every same-cause place found in stage 2; a fix only at the leaf the finding pointed to is not a fix of the root cause. Then place each fix:
+
+1. Within the promise of the issue and PR: decide the change.
+2. Outside that promise: draft the issue that would promise it and bring it to the user; do not slip it into the current change.
+3. A public contract change (REST and MCP responses, DB schema, config keys) or a structural change: ask the user, or, inside a procedure that owns redesign, go back to its design stage.
+4. A procedural error whose cause lies in my-harness or my-workflow: hand it to a modification session as the `harness` skill describes; one that lies in the project's rules: propose the rule change within that repository's procedure.
+
+Completion check: every finding has a decision with grounds, every accepted root cause has a fix node and its propagation, every same-cause place has a disposition, and every fix is placed by the list above.
+
+### 4. Act (대응 실행)
+
+Carry out the decisions and record, per finding, what was actually done: the commits (short SHA, linked when pushed), the files and documents changed, the root-node edits, the same-cause places fixed, the issue drafts and handoff ids, and the verification run with its command and the last line of its output. Write what was not done and why, and verification not run as not run. Before leaving the stage, check that the diff covers every accepted decision and every same-cause place, mapping each to its commit.
+
+Completion check: every accepted decision maps to a change that exists and was verified, every not-done item says why, and no claim lacks its evidence path.
+
+### 5. Reply (답변 작성)
+
+Write the reply only from the records of stages 1 to 4, in the form and place the `pr` skill's review-response section sets: a formal review answered in the repository's response form, a colleague's prose answered in prose, the whole round delivered as one review. Per finding, say what was accepted and changed with its commit, the root cause when it changed more than the line pointed to, including the same-cause places fixed, the grounds of a rejection, and the question of a 불명 finding. Apply `sucks` to Korean prose. Do not link or name the stage records in the reply; they are local working files, and the reply carries their content in plain words. After posting, write the review link in the round index.
+
+Completion check: every finding is answered, every statement in the reply traces to a stage record, and the posted review link is recorded.
+
+## Records
+
+Keep a round's records in one directory:
+
+1. Inside a procedure that keeps its own run directory, such as a my-workflow run, under that run's artifacts as `<run root>/artifacts/<PHASE>-response-<round>/`, where `<PHASE>` is the run's artifact prefix of the current stage and `<round>` counts the rounds of that PR or gate from 1. The procedure's own response artifact, such as a review-response JSON, keeps its schema and points its evidence at these records.
+2. Otherwise under `~/.agents/responses/<session>/<NNN>-<target>/`, where `<session>` is the first eight characters of the session's own Paseo agent id (confirm it is your own, because `PASEO_AGENT_ID` can name the session that launched you) or of the agent product's session id outside Paseo, `<NNN>` is the next three-digit number in that directory, and `<target>` is a short ASCII name such as `pr1412-r1`.
+
+The directory holds `0-index.md`, `1-understand.md`, `2-cause.md`, `3-decide.md`, `4-act.md`, and `5-reply.md`. Each stage record starts with `## 완료 확인`, a table of the stage's criteria with 충족 or 미충족 and the evidence, then one `## <finding id> <short title>` section per finding. `0-index.md` names the target (repository, PR or gate, the round's source link, the head the findings were made on), lists the root causes of stage 2 in one line each, and holds one table with a row per finding and the columns 지적, 1 이해, 2 원인, 3 결정, 4 실행, 5 답변, each cell 완료, 진행, or 대기 with the reason.
+
+These records are the context of this activity: a context note written at a switch into or out of a stage points to the round index instead of copying it. After a compaction or a resume, read `0-index.md` and the record of the stage in progress, and continue from what they hold, not from the conversation summary. Do not redo a stage whose completion check holds unless new evidence contradicts it.
+
+## Answering whether it was done properly
+
+When the user asks whether a round, a stage, or a finding was handled properly, as in "똑바로 했어?" or "근본 원인을 전부 분석했어?", read `0-index.md` and the stage record asked about before answering, then answer from them with the link to the record: which stages are complete for which findings, and what is missing. If a stage is incomplete or was skipped, say so first, then complete it.
+
+## Cleanup
+
+The records are working files. At cleanup, the `cleanup` skill decides each round directory: preserve it when it holds context that outlives the session and that the PR, its reviews, the commits, or the issue do not already carry, such as an unresolved root cause awaiting a follow-up issue; delete it otherwise. Records inside a run directory follow that procedure's finishing rules.

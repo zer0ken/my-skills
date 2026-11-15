@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.19.1"
+  version: "2.20.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -313,7 +313,7 @@ A follow-up review preserves existing IDs and opinions, records responses as `A-
 
 ## Criticism of the review
 
-When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), confirm the code and records the criticism relies on from primary sources, then accept it or reject it with grounds, and if accepted, correct that review and reply. If the cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
+When you receive a criticism of the review output itself (verdict errors, format, insufficient evidence, etc.), handle it as a round of findings with the `respond-to-findings` skill: understand it against the code and records it relies on, trace its root cause, accept it or reject it with grounds, correct that review, and reply. If the root cause lies in rv's procedure or format, fix rv so the same defect does not recur. Fixing rv follows the my-harness modification procedure of the `harness` skill and the propagation of my-skills.
 
 ## Posting and per-agent execution
 
