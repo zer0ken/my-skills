@@ -1,9 +1,9 @@
 ---
 name: response-rv
-description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review, a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
+description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.1.0"
+  version: "0.2.0"
   domain: workflow
   triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인
   dependencies:
@@ -17,7 +17,7 @@ The user's words (2026-11-16), after a lead answered "아니오" to "각 지적�
 
 ## Concepts
 
-A finding is one claim, made by someone other than the producer at that moment (a person's or agent's review, a review comment, a gate verdict, the user's criticism of a delivered artifact), that something in the work is wrong and asks for a change. A question that only asks why you did something is not a finding: answer it first as the instructions require, and if the answer shows a change is needed, that change becomes a finding here. A round is the set of findings that arrived together, such as one submitted review or one gate verdict, and is answered together. A stage record is the file a stage leaves for the whole round: one section per finding, and a completion check that says which of the stage's criteria hold, with evidence. The round index is the one file that shows, per finding, which stages are complete, and is the first thing to show when asked whether the response was done properly.
+A finding is one claim, made by someone other than the producer at that moment (a person's or agent's review, including an rv finding, an srv or prv cluster, a review comment, a gate verdict, the user's criticism of a delivered artifact), that something in the work is wrong and asks for a change. A question that only asks why you did something is not a finding: answer it first as the instructions require, and if the answer shows a change is needed, that change becomes a finding here. A round is the set of findings that arrived together, such as one submitted review or one gate verdict, and is answered together. A stage record is the file a stage leaves for the whole round: one section per finding, and a completion check that says which of the stage's criteria hold, with evidence. The round index is the one file that shows, per finding, which stages are complete, and is the first thing to show when asked whether the response was done properly.
 
 ## Stages
 
