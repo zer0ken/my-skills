@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.21.0"
+  version: "2.22.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -307,7 +307,7 @@ Identifiers (commits, issues, PRs, files) are written for a person to read easil
 
 7. `## 검증 범위`: the last section. Write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope. Only HTML comment lines, such as a machine-read verdict marker, may follow it.
 
-Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. The review proceeds while CI fails, but a head whose required checks fail or are still pending is not approved; a CI pass is a precondition of approval, never its ground, and a change that works or passes CI is not approved when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
+Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. The review proceeds while CI fails or is pending, and a head whose required checks fail is not approved; pending checks do not withhold the verdict, because the review loop does not wait for CI and the author waits for it only in the merge check (the user's words, 2026-11-16: "리뷰 루프는 ci를 기다리지 않는다. Ci는 병합에서만 기다린다."); a CI pass is a precondition of approval, never its ground, and a change that works or passes CI is not approved when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
 
 A follow-up review preserves existing IDs and opinions, records responses as `A-001` and rechecks as `R-001-C`. Statuses are OPEN, ANSWERED, RECHECK, RESOLVED, SKIP, and a status changes to RESOLVED only after the fix and evidence are confirmed. Write the reason on SKIP.
 
