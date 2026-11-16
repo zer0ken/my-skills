@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.23.0"
+  version: "2.23.1"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -14,7 +14,7 @@ metadata:
 
 # rv
 
-Apply this procedure when the user asks for a review or calls `/rv` or `$rv`. The agent first reads all project rules closely and consults the project review rules, `osiri`, and `refactor` together. Consulting `osiri` happens inside this review procedure that the user allowed, and `teqr` is not applied without a direct call. The result format prefers the project rules.
+Apply this procedure when the user asks for a review or calls `/rv` or `$rv`. The agent first reads all project rules closely and consults the project review rules, `osiri` (`~/.agents/skills/osiri/SKILL.md`), and `refactor` (`~/.agents/skills/refactor/SKILL.md`) together. Consulting `osiri` happens inside this review procedure that the user allowed, and `teqr` is not applied without a direct call. The result format prefers the project rules.
 
 Assume defects exist and find every defect in the review scope. Look for inputs and execution orders that refute the behavior and completion claims, and when you find a defect, trace the paths along which the same cause propagates. Prove each finding with its occurrence condition and a reachable execution path.
 
@@ -66,7 +66,7 @@ One row is one finding.
 | propagation | List of file paths or "확인 완료" | Locations where the same cause propagates |
 | verdict | CONFIRMED, PLAUSIBLE, REJECTED | U4 verification result (BLOCKER and MAJOR only) |
 
-Severities have these meanings, after the severity mapping of osiri `TECHNICAL_REVIEW_GUIDE.md`. BLOCKER and MAJOR block approval; MINOR and NIT do not.
+Severities have these meanings, after the severity mapping of osiri `~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md`. BLOCKER and MAJOR block approval; MINOR and NIT do not.
 
 1. BLOCKER: a supported path returns a wrong result, loses or corrupts data, fails to terminate or recover, or breaks a public contract; or a reachable security defect (U3).
 2. MAJOR: a reachable correctness defect; a structure worse than a feasible alternative (U2); or a code-health defect the change introduces or grows: growth the problem does not require, a duplicate of an existing implementation in the repository, a hand-written version of what a known implementation already provides (U3), an unnecessary layer, wrapper, branch, or abstraction, a unit whose meaning cannot be stated in one sentence (a catch-all module, a field or status with no defined values, a function doing several undefined jobs), a naive implementation where a known method does better, code without callers, an old path left unretired, error handling that hides a failure or leaves its cause untraceable, or changed behavior with no test that fails on the defect.
@@ -101,7 +101,7 @@ U1 and U2 can run in parallel. U3 can be split per changed area and run in paral
 
 ## U0 Prepare
 
-Check the target head, the comparison base, and uncommitted changes. Read all project rules and reference rules closely and match their application paths. Consult the relevant osiri guide and refactor together.
+Check the target head, the comparison base, and uncommitted changes. Read all project rules and reference rules closely and match their application paths. Consult the relevant osiri guide (`~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md`) and refactor (`~/.agents/skills/refactor/SKILL.md`) together.
 
 Compare existing reviews, responses, and user decisions and verification results against the current code. Recheck each finding in prior_ids down to its occurrence condition and related call paths, and when a verdict changes, leave the new evidence and reason. Confirm that a user decision used as grounds for a finding has not been cancelled or replaced by later instructions.
 

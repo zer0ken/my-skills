@@ -2,7 +2,7 @@
 
 Updated: 2026-10-19.
 
-Scope: code, design, and pull request reviews, including long-running implementation reviews between two agents ([Long-Running Implementation Review](#long-running-implementation-review)). This file is sufficient for GitHub comments and short review runbooks. Read [TECHNICAL_REPORT_GUIDE.md](TECHNICAL_REPORT_GUIDE.md) only when the review also needs report-level experiment, table, or figure rules.
+Scope: code, design, and pull request reviews, including long-running implementation reviews between two agents ([Long-Running Implementation Review](#long-running-implementation-review)). This file is sufficient for GitHub comments and short review runbooks. Read [TECHNICAL_REPORT_GUIDE.md](~/.agents/skills/teqr/TECHNICAL_REPORT_GUIDE.md) only when the review also needs report-level experiment, table, or figure rules.
 
 ## Choose the Review Surface
 

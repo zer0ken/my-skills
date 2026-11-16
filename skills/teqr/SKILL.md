@@ -2,7 +2,7 @@
 name: teqr
 description: "Write or revise evidence-based technical reports, runbooks, experiment records, and test and benchmark plans, only when the user calls /teqr or $teqr directly. Do not apply automatically on a request for a review or for document writing, or on a reference from another skill alone."
 metadata:
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # teqr - technical report guide
@@ -15,7 +15,7 @@ Read [Technical Report Guide](TECHNICAL_REPORT_GUIDE.md) before writing or revis
 
 The supplied report guide references workspace documents that are not bundled here: `TECHNICAL_RETROSPECTIVE_GUIDE.md`, `SYSTEM_ANALYSIS_REPORT_GUIDE.md`, `REVISION_GUIDE.md`, `references/README.md`, and `references/charts/README.md`. Locate and read applicable resources in the target workspace when needed. Do not invent their contents or copy historical measurements from examples. If a resource is unavailable, continue with the supplied guide and disclose the limitation only when it affects the document or verification.
 
-For code, design, and pull request review policy, use the `osiri` skill and its bundled `TECHNICAL_REVIEW_GUIDE.md` when available. Use this skill for the report-level evidence and presentation rules in a mixed task.
+For code, design, and pull request review policy, use the `osiri` skill and its bundled `~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md`. Use this skill for the report-level evidence and presentation rules in a mixed task.
 
 ## Scope and Verification
 

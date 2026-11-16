@@ -3,7 +3,7 @@ name: osiri
 description: "Review code, designs, PRs, and evidence-bearing technical reports, only when the user calls /osiri or $osiri directly. It may be referenced inside an rv review procedure the user has allowed. Do not apply automatically on any other review request or on a reference from another skill."
 metadata:
   author: 오세연
-  version: "1.1.2"
+  version: "1.1.3"
   domain: review
   triggers: technical review, code review, design review, pull request review, peer review, osiri, claim audit, evidence check, reviewer, author response, benchmark report, provenance, recheck
   role: guardian
@@ -23,7 +23,7 @@ Review guidance shared by 오세연 for code, design, pull requests, and evidenc
 - For document, report, claim, benchmark, figure, or provenance audits between agents, use the report peer-review protocol below. One agent reviews, another answers as the author, and the findings file holds their shared review state.
 - For mixed reviews, apply each workflow to its own review surface. Do not impose report-specific templates on a code review or discussion draft. Keep one finding-ID scheme within each review record; continue existing IDs in follow-ups.
 
-The technical guide names additional workspace guides, including `TECHNICAL_REPORT_GUIDE.md`, `PERFORMANCE_MEASUREMENT_GUIDE.md`, `SYSTEM_ANALYSIS_REPORT_GUIDE.md`, `PEER_REVIEW_GUIDE.md`, `DOCUMENT_REORGANIZATION_GUIDE.md`, and `STORAGE_GUIDE.md`. These are external workspace documents, not bundled skill files. Locate applicable guides in the review workspace when needed. If unavailable, state the limitation when it affects the decision and use the bundled report protocol for evidence audits. Do not invent their contents.
+The technical guide names additional workspace guides, including the report guide teqr bundles at `~/.agents/skills/teqr/TECHNICAL_REPORT_GUIDE.md`, `PERFORMANCE_MEASUREMENT_GUIDE.md`, `SYSTEM_ANALYSIS_REPORT_GUIDE.md`, `PEER_REVIEW_GUIDE.md`, `DOCUMENT_REORGANIZATION_GUIDE.md`, and `STORAGE_GUIDE.md`. The others are external workspace documents, not bundled skill files. Locate applicable guides in the review workspace when needed. If unavailable, state the limitation when it affects the decision and use the bundled report protocol for evidence audits. Do not invent their contents.
 
 ## Report Peer-Review Protocol
 

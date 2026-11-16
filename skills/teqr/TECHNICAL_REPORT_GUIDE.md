@@ -2,7 +2,7 @@
 
 Updated: 2026-09-22.
 
-Scope: applies to technical reports, runbooks, reviews, and test plans. Use [TECHNICAL_REVIEW_GUIDE.md](TECHNICAL_REVIEW_GUIDE.md) for code, design, and pull request review policy.
+Scope: applies to technical reports, runbooks, reviews, and test plans. Use [TECHNICAL_REVIEW_GUIDE.md](~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md) for code, design, and pull request review policy.
 
 ## Guide Selection
 
