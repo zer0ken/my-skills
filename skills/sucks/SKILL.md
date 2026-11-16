@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.10.3"
+  version: "2.10.4"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -351,7 +351,7 @@ Introduction comes with three conditions.
 - 나쁜 예: `슬라이드를 렌더한 이미지를 저장합니다` (매번 전체를 렌더한다는 뜻)
 - 좋은 예: `변경된 슬라이드를 렌더한 이미지를 저장합니다`
 
-**A limitation item states all four things.** Stating only the symptom leaves the reader unable to judge.
+**A limitation item states all four things.** Stating only the symptom leaves the reader unable to judge. A limitation item is written only for an external constraint the work cannot remove, with its source; a shortcoming the work could fix is fixed, or carried by an issue the text points to, and is not written up as a limitation, because such an item reads as an excuse that keeps the gap and teaches the next writer it is accepted.
 
 - What it is
 - When it occurs
