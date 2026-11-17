@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.23.2"
+  version: "2.23.3"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -179,7 +179,7 @@ Separately from the defect search, the review answers the following three questi
 
 2. Has it reached the highest quality possible within that structure?
   2.1 Find where the implementation, prompts, queries, tests, and documents lose relative to the ceiling the structure allows.
-  2.2 If there are measurements, compare every metric against the baseline (main etc.), and flag worsened metrics with their causes. If there are none, record it as a measurement gap.
+  2.2 If there are measurements, compare every metric against the baseline (main etc.), and flag worsened metrics with their causes. A performance claim proved from the code and the documented semantics of the system, with its premises and their sources, stands on that proof and needs no measurement; check the proof's premises instead. Record a measurement gap only for a performance claim no such proof settles.
   2.3 Distinguish whether the remaining gap is a limit of the structure or a shortfall of the implementation. Record a structural limit under verdict 1, and an implementation shortfall as a defect.
 
 A quality gap the user explicitly agreed to as follow-up scope is classified as follow-up scope, not a defect, but both verdicts are still performed and recorded.

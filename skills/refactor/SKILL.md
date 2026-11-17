@@ -3,7 +3,7 @@ name: refactor
 description: "Refactoring procedure that reduces a codebase to a manageable size while preserving function and performance. Use for planning and executing refactors, destructive refactors, cleaning up excessive splitting of code, files, and layers, and auditing a repository's safeguards against refactoring requirements; also use when writing or fixing repository checkers and safeguards. Do not apply to simple feature additions or to investigating bugs whose cause is not confirmed."
 metadata:
   author: hrlee
-  version: "1.1.2"
+  version: "1.1.3"
   domain: engineering
 ---
 
@@ -87,7 +87,7 @@ For each core feature, confirm a request path that actually passes. Do not repor
 
 In before/after comparisons, use the same data and settings. If the randomness of model responses obscures the product comparison, control the variable by fixing responses and embeddings, record and replay, or similar. Do not judge preservation of search and loading by model answer quality. Separate tests where backends produce the same result from tests that preserve the previous version's product contract. Even if both backends change wrongly together, the comparison between them can pass.
 
-Check performance separately from result equivalence. Match the inputs and execution environment of baseline and target, and keep the measurements, repetition count, variance, and tolerance. Writing latency to a log is different from a check that judges performance regression. A query round-trip assertion verifies the structural cost of that path but does not replace overall loading performance.
+Check performance separately from result equivalence. A performance claim proved from the code and the documented semantics of the system, such as fewer round trips or a lower complexity, is accepted on that proof with its premises and sources and is not also measured. For what no proof settles, match the inputs and execution environment of baseline and target, and keep the measurements, repetition count, variance, and tolerance. Writing latency to a log is different from a check that judges performance regression. A query round-trip assertion verifies the structural cost of that path but does not replace overall loading performance.
 
 Run tests grouped by the scope of the change. Do not repeat the full test suite for every small fix. Use the repository's standard runner and isolation, and serialize runs that share DB and model resources under one runner and a lock. Reuse prepared environments safely and clean up only resources the worker owns.
 
