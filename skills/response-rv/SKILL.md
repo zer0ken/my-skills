@@ -3,9 +3,9 @@ name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.3.1"
+  version: "0.4.0"
   domain: workflow
-  triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인
+  triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인, 스펙 수정
   dependencies:
     - pr
     - sucks
@@ -31,15 +31,25 @@ Completion check: every finding has the verbatim text, the restatement, the sour
 
 ### 2. Root cause (근본 원인)
 
-For each finding classified 사실 or 부분 사실, write the whole causal chain in one place, as the instructions define it for "문제가 뭐냐": the symptom, each cause of the cause in turn, up to the root cause, the highest node whose content caused it (the reading of the goal, a completion condition, a component's design, a plan or spec node, a procedure), then your own procedural error that let it through (which step or check should have caught it, and why it did not), and the links you did not check, each marked 미확인. A chain that stops at the line the finding points to is not a root cause. For a finding classified 사실 아님, write what led the reader to the claim, such as a misleading name, document, or PR text; when that is on your side it is the cause to fix, and otherwise write `원인 없음` with the evidence.
+For each finding classified 사실 or 부분 사실, write the whole causal chain in one place, as the instructions define it for "문제가 뭐냐": the symptom, each cause of the cause in turn, up to the root cause, the highest node whose content caused it (the reading of the goal, a completion condition, a component's design, a plan or spec node, a procedure), then your own procedural error that let it through (which step or check should have caught it, and why it did not), and the links you did not check, each marked 미확인. A chain that stops at the line the finding points to is not a root cause.
+
+Then name the one layer the root cause sits in, because the fix belongs in that layer and nowhere else:
+
+1. 명세: the specification the work implements, meaning the document or contract that states what the code must do, such as the issue's completion conditions, a design document, or a section like `tests/TESTING.md`, states the wrong behavior, or is silent where the finding's condition needs a rule.
+2. 구현: the specification states the right behavior and the code departs from it.
+3. 시험: the specification and the code are right, and the test or check fails to pin that behavior or pins a wrong one.
+
+Decide it by comparing the finding's expected behavior with the specification first: quote the sentence that governs the condition with its path and lines, or show its absence with the search that found nothing, then compare the code and the test against that sentence. Then write the smallest region whose change removes the root cause, by section and lines of that layer, and the layers below it the change must reach (a 명세 change reaches the implementation and the test that follow it, a 구현 change reaches the test). A region larger than the cause, such as a redesign around it, and a region in a lower layer than the cause, such as code changed to cover a specification that still permits the defect, are both wrong; the second is a symptom fix, because the next implementer reads the unchanged specification and reproduces the defect. The user's words (2026-11-17), before a lead answered seven independent-review findings on a test-runner PR, two of which it traced to the test-run lifecycle rules in `tests/TESTING.md` rather than to the code (typos corrected): "리뷰 지적에 대해서 대응 할 때는 단순히 대증치료가 아니라 원인을 찾아서 필요하면 코드가 아니라 '스펙'을 고쳐야 될수도 있어.", and, on making this a skill rule: "스펙을 수정해야될수도 있다고" and "그리고 애초부터 분석할 때 스펙이 문제인지, 그에대한 구현이 문제인지, 그에 대한 테스트가 문제인지, 뭐가 문제인지 딱 짚어서, 수정 가능한 최소 영역을 찾으란말이야."
+
+For a finding classified 사실 아님, write what led the reader to the claim, such as a misleading name, document, or PR text; when that is on your side it is the cause to fix, and otherwise write `원인 없음` with the evidence.
 
 Then group the findings by shared root cause, and for each root cause search for the other places it produced the same defect: elsewhere in the diff, the codebase, the documents, and earlier rounds of this work. Write the search commands or queries and their results, so the absence of other places is shown, not claimed.
 
-Completion check: every finding has a chain ending at a named node or a stated `원인 없음`, every chain names the procedural error or says why there was none, unchecked links are marked, and every root cause has its same-cause search with results.
+Completion check: every finding has a chain ending at a named node or a stated `원인 없음`, every root cause names its layer (명세, 구현, or 시험) with the governing specification sentence or the search showing its absence, and the smallest region to change with the layers it reaches, every chain names the procedural error or says why there was none, unchecked links are marked, and every root cause has its same-cause search with results.
 
 ### 3. Decide (대응 결정)
 
-For each finding, decide 수용, 부분 수용, 기각, 질문, or 범위 밖, with grounds checked against the primary sources of stage 1, and for 부분 수용 say which part. For each accepted root cause, name the node to fix and how the fix propagates down to every node under it and to every same-cause place found in stage 2; a fix only at the leaf the finding pointed to is not a fix of the root cause.
+For each finding, decide 수용, 부분 수용, 기각, 질문, or 범위 밖, with grounds checked against the primary sources of stage 1, and for 부분 수용 say which part. For each accepted root cause, the fix lands on the smallest region stage 2 named in the layer stage 2 named, and propagates down to every node under it and to every same-cause place found in stage 2; a fix only at the leaf the finding pointed to is not a fix of the root cause. A 명세 cause is fixed in the specification first, then the implementation and the test are changed to follow the new text; a code-only change for it is the symptom fix stage 2 describes.
 
 Before choosing how to fix, ask of each accepted finding whether the code or artifact it points at needs to exist at all, as the instructions' rule on solving a problem by removal before addition requires, and write the answer: the requirement, contract, or caller that depends on it with the path or record that shows it, or that nothing does. When nothing does, the fix is to delete it and what exists only to support it. A fix that adds code, a guard, a check, a branch, an option, a test, or a rule is chosen only after removal or simplification is shown not to solve the root cause, and the record says why. The user's words (2026-11-17), as a general instruction on handling findings: "지적을 받으면, 지적을 받은 코드가 정말 꼭 필요한 것인지 확인해. 없애버리면 지적받을 일도 없어." and "모든 것을 추가해서 해결하려고 하지마".
 
@@ -50,17 +60,17 @@ Then place each fix:
 3. A public contract change (REST and MCP responses, DB schema, config keys) or a structural change: ask the user, or, inside a procedure that owns redesign, go back to its design stage.
 4. A procedural error whose cause lies in my-harness or my-workflow: hand it to a modification session as the `harness` skill describes; one that lies in the project's rules: propose the rule change within that repository's procedure.
 
-Completion check: every finding has a decision with grounds, every accepted finding records whether the thing it points at needs to exist, every fix that adds something records why removal does not solve it, every accepted root cause has a fix node and its propagation, every same-cause place has a disposition, and every fix is placed by the list above.
+Completion check: every finding has a decision with grounds, every accepted finding records whether the thing it points at needs to exist, every fix that adds something records why removal does not solve it, every accepted root cause has its fix region in the layer stage 2 named and its propagation, every 명세 cause has a specification change, every same-cause place has a disposition, and every fix is placed by the list above.
 
 ### 4. Act (대응 실행)
 
-Carry out the decisions and record, per finding, what was actually done: the commits (short SHA, linked when pushed), the files and documents changed, the root-node edits, the same-cause places fixed, the issue drafts and handoff ids, and the verification run with its command and the last line of its output. Write what was not done and why, and verification not run as not run. Before leaving the stage, check that the diff covers every accepted decision and every same-cause place, mapping each to its commit.
+Carry out the decisions and record, per finding, what was actually done: the commits (short SHA, linked when pushed), the files and documents changed, the specification sections changed with their new text, the root-node edits, the same-cause places fixed, the issue drafts and handoff ids, and the verification run with its command and the last line of its output. Write what was not done and why, and verification not run as not run. Before leaving the stage, check that the diff covers every accepted decision and every same-cause place, mapping each to its commit.
 
 Completion check: every accepted decision maps to a change that exists and was verified, every not-done item says why, and no claim lacks its evidence path.
 
 ### 5. Reply (답변 작성)
 
-Write the reply only from the records of stages 1 to 4, in the form and place the `pr` skill's review-response section sets: a formal review answered in the repository's response form, a colleague's prose answered in prose, the whole round delivered as one review. Per finding, say what was accepted and changed with its commit, the root cause when it changed more than the line pointed to, including the same-cause places fixed, the grounds of a rejection, and the question of a 불명 finding. Apply `sucks` to Korean prose. Do not link or name the stage records in the reply; they are local working files, and the reply carries their content in plain words. After posting, write the review link in the round index.
+Write the reply only from the records of stages 1 to 4, in the form and place the `pr` skill's review-response section sets: a formal review answered in the repository's response form, a colleague's prose answered in prose, the whole round delivered as one review. Per finding, say what was accepted and changed with its commit, the layer the cause sat in, and when it was the specification, the specification change and the implementation and test that followed it, the root cause when it changed more than the line pointed to, including the same-cause places fixed, the grounds of a rejection, and the question of a 불명 finding. Apply `sucks` to Korean prose. Do not link or name the stage records in the reply; they are local working files, and the reply carries their content in plain words. After posting, write the review link in the round index.
 
 Completion check: every finding is answered, every statement in the reply traces to a stage record, and the posted review link is recorded.
 
