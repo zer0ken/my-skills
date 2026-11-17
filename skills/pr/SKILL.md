@@ -1,9 +1,9 @@
 ---
 name: pr
-description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), when stacking PRs with the GitHub stacked PR feature (PR 을 스택하라고 지시할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
+description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as a change visual at the very top (one image showing as-is and to-be on real data), then an issue reference line, then a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), when stacking PRs with the GitHub stacked PR feature (PR 을 스택하라고 지시할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.26.0"
+  version: "1.27.0"
   domain: workflow
   triggers: PR, pull request, PR 스택, stacked PR, gh stack, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -56,8 +56,6 @@ When no person approved the PR, so that the merge rests on the self-review loop 
 After creation, the author checks `closingIssuesReferences` again. The success output of the merge command is not grounds that the merge is complete, so after the merge confirm the merge commit with `gh pr view <number> --json state,mergedAt,mergeCommit` and also look up the actual issue state. If the automatic closing failed, close it within the approved scope together with the PR and SHA, and if it goes beyond the approved scope, report the remaining state. Do not treat the work as complete by narrowing the scope needed to close the core issue or by splitting that scope into a separate issue.
 
 The author uses honorific speech (존댓말) in the Korean body to be posted and explains with reasons, measurements, and sources instead of the user's name. Distinguish a proposal before the merge from a confirmed user decision. Refer to a review by date and time (KST) and target SHA, like "10-28 15:30 리뷰(대상 [`e61006b`](commit link))", where the target is a commit link whose text is the 7-character short SHA and the 40-character SHA does not appear in the prose, and do not use a model or agent name, an internal file name, or a round suffix letter. Write GitHub prose with one line per paragraph. Check the title, body, and current commits with anti-slop before posting, as the global instructions require of every text posted on GitHub, and confirm the actual result after posting. The check target is not only the body but also the commit messages and the added lines of the diff (comments and docstrings), and if the checker reports only some of the findings, repeat until it reaches 0 locally and then push. Follow `references/anti-slop-preflight.md` for the procedure and for how to rewrite commit messages. Do not add traces of AI use.
-
-For diagrams in a large PR, follow `visuals`. Do not use a raw image URL of a private repository without verifying it on screen. If an attachment is needed, deliver the PNG and confirm the posted result with the GitHub attachment URL generated in a logged-in browser.
 
 ## Stacked PRs
 
@@ -121,7 +119,7 @@ The reader is a developer who works together in this repository. Write in the vo
 
 The reader is not the user, not the user's agent, and not the session that is writing. A fellow developer who has not seen this conversation or the work record reads only the PR title and body and understands it. Do not use names that only the author, the user, or the agent session knows. Examples are the output file names of an experiment run, evaluation set labels (like `A 6,211쌍`), configuration labels (like `route-1500`), ledger seq, session ids, internal file names, and round names. Every proper noun, abbreviation, named number, metric, threshold, and method in the body must satisfy one of two conditions. One is that it already exists where a fellow developer can see it (the code and documents of this repository, a linked issue, a linked public source). The other is that the body explains it in plain words and states its source. The sentence above that says not to explain domain terms that already exist in this repository applies only to names that satisfy this condition.
 
-Write in the order of title, issue reference, summary, and details, and finish with the pre-posting check.
+Write in the order of title, change visual, issue reference, summary, and details, and finish with the pre-posting check.
 
 ## Title
 
@@ -139,11 +137,21 @@ When turning a sentence into a noun phrase, keep the object and change the predi
 
 If the repository requires a prefix such as `fix(#12):` or a suffix such as `(#12)`, keep that format and write the rest as a noun phrase. A title that ends in only `관련 수정`, `개선`, or `정리` cannot be distinguished from other PRs, so put in the name of the target that changes. Do not translate code identifiers.
 
+## Change visual
+
+The body opens with one image that shows at a glance what the PR changes, before any prose. The user's words (2026-11-17), given as a general instruction for every future PR: "앞으로 PR을 작성할때, 그 PR이 무엇을 바꾸는지, 힐끗 봐도 바로 알 수 있는 html 아티팩트를 작성해서 pr에 삽입하거나, 이미지로 만들어서 PR 본문 맨위에 넣을거야. 예를 들어서, emem에서 정보 추출 방식을 변경하는 PR이 있다고 하면, AS-is와, to-be를 바로 이해할 수 있어야돼. 설명만 있는게 아니라, 실제 데이터를 가지고 보여줘야돼. 특정 기사 본문을 표시하고, 원래는 정보가 이렇게 뽑혔는데, 지금은 이렇게 뽑힌다고 딱 그림으로 표시하는식."
+
+The image puts as-is and to-be side by side on one real input the change acts on, and marks what differs. As-is is what the base commit produces for that input and to-be is what the PR head produces, both obtained by running that code or reading that file, not described or invented; for the user's example, one real article body with the information the old extraction and the new extraction pull from it marked on the text. A change to text, such as a document, a rule, or a prompt, shows the real passage before and after; a change whose base has no such behavior shows what the base does with the same input, such as an error or an empty result. Draw it as `~/.agents/skills/visuals/SKILL.md` describes under "PR change visual": an HTML source rendered to PNG with `~/.agents/skills/browser-render/SKILL.md` and inspected at the body width.
+
+The image goes in the body as a PNG uploaded to GitHub, not as HTML. GitHub embeds images in a PR body ("GitHub supports embedding images into your issues, pull requests, discussions, comments and `.md` files.", https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax), and GitHub CLI uploads it: "You can attach a local image or video from the command line with GitHub CLI using the `--attach` flag." and "The GitHub CLI only supports uploading image and media files." (https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli). The first line of the body file is `![<what the image compares, in Korean>](<local path of the PNG>)`, followed by a blank line, and the PR is posted with the same path passed to the flag: `gh pr create --title "<명사구 제목>" --body-file body.md --attach <local path of the PNG>`, or `gh pr edit <number> --body-file body.md --attach <local path of the PNG>`. The same page states: "If your Markdown text already references a local file, and you attach that same file with `--attach`, GitHub CLI rewrites the reference in place to point at the uploaded file, rather than appending a second copy at the end." The flag needs GitHub CLI 2.99.0 or later ("You just need to update `gh` to v2.99.0.", https://github.blog/changelog/2026-09-01-github-cli-media-in-issues-pull-requests-and-comments/) and write access to the repository; in a private repository "only people with access to the repository can view the uploaded files" (https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files). When `gh --version` is older, stop and report the version instead of committing the image to a branch or linking a raw file URL: a committed image enters the merged tree or needs a push to a branch other than the PR branch.
+
+After posting, read the body back with `gh pr view <number> --json body` and keep its first line, now the uploaded URL, in the body file, so a later `gh pr edit --body-file` keeps the image without uploading it again. When a push changes what the image shows, rebuild it from the new head and attach it again with the local path on the first line. The image line sits under no heading, so the folding rule for long GitHub texts leaves it open like the summary, and its alt text is Korean prose that the anti-slop check reads with the rest of the body.
+
 ## Issue reference
 
 Check for each PR whether a corresponding issue exists. First check the numbers left in the branch name and commit messages, and if there are none, find an issue that matches the change with `gh issue list`. If there is no corresponding issue, do not put in a reference line, and do not invent a nonexistent number.
 
-If you found an issue, put the reference line at the very top of the body, leave a blank line, and then write the summary. The reader confirms from the first line of the body which issue this PR resolves. Decide the keyword by whether the issue may be closed after this PR is merged.
+If you found an issue, put the reference line right below the change visual, leave a blank line, and then write the summary. The reader confirms from the first line under the image which issue this PR resolves. Decide the keyword by whether the issue may be closed after this PR is merged.
 
 - `Closes #12` : This PR resolves the core problem of the issue. GitHub closes the issue at merge time.
 - `Refs #12` : It handles only part of the issue, or the issue is a parent tracking issue, or it is linked only as background. The issue stays open.
@@ -164,6 +172,8 @@ Write the summary as about three `-` bullets. The count follows the number of ch
 4. Do not put a `#` heading line, bold text, or a checkbox (`- [ ]`) in the summary. The body describes the change to be merged and does not track progress.
 
 ```
+![BM25 키워드 검색 추가 전과 후의 같은 질의 결과](./change.png)
+
 Closes #12. Closes #15.
 Refs #1111, #1112.
 
@@ -213,10 +223,10 @@ Read only the title and body and check the following. If any one is off, write i
 3. The body alone can answer how the behavior of the user or the system differs when this PR is applied.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
 5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
-6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the reference lines, the summary of at most 10 lines, that everything after the summary is a `<details>` section written in HTML and opens with `<summary><h3>`, and that consecutive sections are separated by one blank line with no `---`, so a bare `## 제목` section, a plain-text `<summary>`, a `---` line, or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
+6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the change visual on the first line (an image line whose local target exists from the directory you run it in, so run it where `gh` will run), the reference lines, the summary of at most 10 lines, that everything after the summary is a `<details>` section written in HTML and opens with `<summary><h3>`, and that consecutive sections are separated by one blank line with no `---`, so a missing or HTML change visual, a bare `## 제목` section, a plain-text `<summary>`, a `---` line, or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
 
 ```bash
-gh pr create --title "<명사구 제목>" --body-file body.md
+gh pr create --title "<명사구 제목>" --body-file body.md --attach ./change.png
 ```
 
 Pass the body as a file. An inline string breaks across multiple lines. After posting, reread the title with `gh pr view --json title` to confirm, and if it is a sentence, fix it with `gh pr edit --title`.

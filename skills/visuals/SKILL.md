@@ -2,7 +2,7 @@
 name: visuals
 description: Apply the user's visual preferences to HTML, UI, data charts, diagrams, slides, and other visual materials; read it before making any data chart. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Visual materials
@@ -50,9 +50,15 @@ Explain structures and flows with figures; show the frame first for large visual
 
 When explaining a processing unit, first show a data structure with actual values and its reference rules. Separate a pipeline's stage graph from the timeline of actual execution records. In a timeline, give each document a horizontal lane with a light background, show stages as rectangles with distinct colors, and represent concurrent execution in subrows within the lane. Stage colors match the structural figure.
 
-For a large PR, distinguish an abstract introductory figure before the body from conceptual diagrams beside their related paragraphs. Explain behavior through concrete example data instead of module/function lists.
+Every PR body opens with the change visual described in the next section; conceptual diagrams of a large PR go beside their related paragraphs. Explain behavior through concrete example data instead of module/function lists.
 
 For an as-is structure, first inspect the code that computes each element's position, such as rectangle calculations and layout branches, and check every sketch element against that code. For a to-be structure, compare each confirmed decision with the figure and follow the decision wherever the two disagree. Independent surfaces such as popups and borders remain separate even when touching.
+
+## PR change visual
+
+The change visual is the one image at the top of a PR body that shows what the PR changes at a glance; the `pr` skill (`~/.agents/skills/pr/SKILL.md`, "Change visual") holds the requirement and how it is posted. Draw it as two panels side by side, as-is on the left and to-be on the right, labeled with those words, over the same real input shown once or repeated identically in both panels. Each panel shows the output its code produced for that input, read from an actual run of the base commit and of the PR head, or the actual text of the file before and after. Mark only what differs: in the user's example, the article body with the spans each version extracted highlighted, and the extracted items listed under it, with items present on one side only in the accent color and unchanged items in grayscale. Pick the input that shows the difference most plainly, cut it to the part where the difference lies, and say where it came from in a small source line under the panels (the file, record, or URL). No title or explanatory sentence goes inside the image; the PR summary below it explains.
+
+Write it as an HTML file with the theme tokens above, keep that source in the work's artifact directory, and render it to PNG with `~/.agents/skills/browser-render/SKILL.md` with `--viewport 900x100 --fullpage`, which keeps the page 900px wide and grows its height to the content, since GitHub shows the body at about that width. Inspect the PNG before posting: Korean text renders, nothing overlaps or is clipped, and the difference is visible without zooming.
 
 ## Render verification
 
