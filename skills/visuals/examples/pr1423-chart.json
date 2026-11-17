@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/ztd-charts/schema/chart-spec.schema.json",
+  "type": "bar",
+  "data": [
+    { "case": "5건 적재 뒤 OS thread", "main": 1063, "이 PR": 141 },
+    { "case": "재실행 thread 증가 (작업 16개)", "main": 1840, "이 PR": 24 },
+    { "case": "재실행 thread 증가 (작업 1개)", "main": 115, "이 PR": 9 }
+  ],
+  "encoding": { "x": "case", "y": ["main", "이 PR"] },
+  "options": { "layout": "grouped", "orientation": "horizontal", "format": "integer", "unit": "개", "highlight": "이 PR", "locale": "ko-KR", "width": 860, "showLabels": true },
+  "card": { "title": "적재 앱 thread 수", "subtitle": "main 대비 이 PR, 64코어 서버", "takeaway": "적재 뒤 thread 1,063 → 141개", "level": "basic", "legend": "auto" }
+}

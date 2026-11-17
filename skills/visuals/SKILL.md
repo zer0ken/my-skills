@@ -2,7 +2,7 @@
 name: visuals
 description: Apply the user's visual preferences to HTML, UI, data charts, diagrams, slides, and other visual materials; read it before making any data chart. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Visual materials
@@ -30,7 +30,7 @@ Use `ztd-charts` for data charts. Read the installed `~/.agents/skills/ztd-chart
 
 Flows run left to right and top to bottom. Draw arrows as smooth curves without crossings. Show only one unavoidable return path, with a dashed line. ERDs also follow the latest curved-line instruction: connect relationships at the referenced column's row and show multiplicity as `1` and `N`, never `0..*`.
 
-Use short labels to identify what shapes, colors, bars, and points represent; do not convey meaning through color alone. Do not put titles, subtitles, explanatory sentences, or annotation boxes inside a figure. Put numbering, captions, and explanations in the surrounding prose. Diagram-label rules do not apply to decorative abstract graphics.
+Use short labels to identify what shapes, colors, bars, and points represent; do not convey meaning through color alone. Do not put titles, subtitles, explanatory sentences, or annotation boxes inside a figure; the PR change visual below is the one exception. Put numbering, captions, and explanations in the surrounding prose. Diagram-label rules do not apply to decorative abstract graphics.
 
 ## Structural visualization
 
@@ -56,9 +56,15 @@ For an as-is structure, first inspect the code that computes each element's posi
 
 ## PR change visual
 
-The change visual is the one image at the top of a PR body that shows what the PR changes at a glance; the `pr` skill (`~/.agents/skills/pr/SKILL.md`, "Change visual") holds the requirement and how it is posted. Draw it as two panels side by side, `AS-IS · main` on the left and `TO-BE · 이 PR` on the right, over the same real input shown in both panels. Each panel shows the output its code produced for that input, read from an actual run of the base commit and of the PR head, or the actual text of the file before and after. Mark only what differs: items the change removes or alters are red in the as-is panel (`#e05252` on `#fde8e8`), items it adds or alters are blue in the to-be panel (the accent `#2f5bd3`), and unchanged items stay gray; an item the change drops stays in place in the to-be panel, gray and struck through, so the two panels line up. End each panel with one line of numbers that measures the difference, such as the count of extracted items or rows scored, and put a small source line under the panels naming the input (the file, record, or URL). Pick the input that shows the difference most plainly and cut it to the part where the difference lies. Three approved examples of this form, drawn on placeholder data for shape only, are in `examples/`: `pr1415` (extraction, dropped lines struck through), `pr1437` (prompt rule, a fragment node merged through `refers_to`), and `pr1460` (query, rows scored by a full scan against top-k pages), each as its HTML source and rendered PNG; a real PR uses real data. No title or explanatory sentence goes inside the image; the PR summary below it explains.
+The change visual is the one image at the top of a PR body that shows what the PR changes at a glance; the `pr` skill (`~/.agents/skills/pr/SKILL.md`, "Change visual") holds the requirement and how it is posted. It takes one of two forms by the kind of change. The user's words (2026-11-17), after approving three as-is/to-be examples: "기능 변경의 경우 이런 시각화가 유용하고, 성능 개선의 경우는 chart 시각화를 넣어라."
 
-Write it as an HTML file with the theme tokens above, keep that source in the work's artifact directory, and render it to PNG with `~/.agents/skills/browser-render/SKILL.md` with `--viewport 900x100 --fullpage`, which keeps the page 900px wide and grows its height to the content, since GitHub shows the body at about that width. Inspect the PNG before posting: Korean text renders, nothing overlaps or is clipped, and the difference is visible without zooming.
+A change of behaviour or output uses the as-is/to-be card: two columns, `AS-IS · main` and `TO-BE · 이 PR`, over the same real input shown in both. Each column shows the output its code produced for that input, read from an actual run of the base commit and of the PR head, or the actual text of the file before and after. What the change touches is in the accent color, an item the change drops stays in place gray and struck through so the columns line up, and unchanged items stay neutral gray. Each column ends with one line of numbers that measures the difference, such as the count of extracted items. Pick the input that shows the difference most plainly and cut it to the part where the difference lies.
+
+A performance change uses a `ztd-charts` chart of the measured or proved numbers, main against this PR for each case, such as a grouped bar of the two values per case or a bar of the speedup per path. Write the spec and render it as the "Charts and diagrams" section says.
+
+Both forms share one card style, the `ztd-charts` light theme card: a title, a one-line subtitle naming what is compared, the body, a bold one-line takeaway at the bottom, one accent color for what changed and neutral gray for the rest, and a small source line naming the input or the measurement. The user's words (2026-11-17), asking for this while the examples were made: "디자인 스타일을 좀 통일해주면 좋겠어", and, told that the card puts a title inside the figure against the rule above: "좋아. 일단 이렇게 하자". So the rule against titles and explanatory sentences inside a figure does not apply to the change visual. For the as-is/to-be card, write HTML on `examples/card.css`, which holds the theme tokens and the card classes, with a `fonts/` directory beside it holding the Pretendard files copied from `~/.local/share/ztd-charts-runtime/node_modules/ztd-charts-cli/fonts`, and render it to PNG with `~/.agents/skills/browser-render/SKILL.md` using `--viewport 900x100 --fullpage`, which keeps the page 900px wide, about the width GitHub shows a body at, and grows its height to the content. Inspect the PNG before posting: Korean text renders in Pretendard, nothing overlaps or is clipped, and the difference is visible without zooming.
+
+The approved examples in `examples/` are drawn on placeholder data for shape only; a real PR uses real data. `pr1415` (extraction: lines without facts dropped and struck through) and `pr1437` (prompt rule: a fragment node merged through `refers_to`) are as-is/to-be cards, each as its HTML source and PNG. `pr1460-chart` (keyword search: p50 speedup per path) and `pr1423-chart` (thread count, main against this PR per case) are performance charts, each as its `ztd-charts` spec and PNG.
 
 ## Render verification
 

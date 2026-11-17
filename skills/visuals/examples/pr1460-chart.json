@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/ztd-charts/schema/chart-spec.schema.json",
+  "type": "bar",
+  "data": [
+    { "path": "AkasicDB 범위 없음 (547→145 ms)", "speedup": 3.8 },
+    { "path": "AkasicDB 기간 창 (497→328 ms)", "speedup": 1.5 },
+    { "path": "AkasicDB 발행일 창 (774→70 ms)", "speedup": 11.1 },
+    { "path": "AkasicDB 허용 id (502→70 ms)", "speedup": 7.2 },
+    { "path": "Neo4j 엣지 후보 (215→14 ms)", "speedup": 15.4 },
+    { "path": "Neo4j 질의 시점 seed (163→13 ms)", "speedup": 12.5 }
+  ],
+  "encoding": { "x": "path", "y": "speedup" },
+  "options": { "orientation": "horizontal", "unit": "배", "format": "number", "highlight": "max", "locale": "ko-KR", "width": 860, "showLabels": true },
+  "card": { "title": "키워드 검색 p50 지연 감소 배수", "subtitle": "경로별 main ÷ 이 PR (3회 중앙값)", "takeaway": "6개 경로 모두 빨라짐, 최대 15배", "level": "basic" }
+}
