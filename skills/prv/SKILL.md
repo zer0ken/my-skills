@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document. The session that owns the plan does not run it: it starts one operator session that runs every step and returns one consolidated file."
 metadata:
   author: hrlee
-  version: "1.8.0"
+  version: "1.8.1"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -41,7 +41,7 @@ The plan's owner holds the plan's context and must not spend it on raw reviews, 
 2. The caller's step, outside the Procedure. Start exactly one operator, in Paseo with `create_agent` and no `workspaceId`, so the operator is a subagent in the caller's own workspace. The agent and mode follow the caller's role rules; prv names none. The brief gives the operator the paths of the plan and the requirement copies, the review base (or the target branch to take it from), the perspectives to run beyond `trace` when the caller names them, the claim ledger and prior reviews when there are any, and the path of the consolidated file. It states that the operator ends its turn with the closing reply of Procedure step 5 and reports only when the run ends, when it reaches a question point, or when it is certain to exceed a time box the caller gave.
 3. Who receives what. "Workspaces decide where work happens; agent parentage decides who owns the work" and "Paseo agents receive finish, error, and permission notifications by default" (https://paseo.sh/docs/mcp, checked 2026-11-17). The operator launches every reviewer and the consolidator, so their notifications and questions reach the operator, and the caller receives only the operator's. The caller does not create a reviewer or the consolidator, read a reviewer file, or take a finding from any source but the consolidated file.
 4. Reviewers the caller already started. The caller gives the operator their session ids and output files with the brief. The operator launches no reviewer for a perspective they cover, waits for each with `paseo wait <id>` ("Block until an agent finishes its current task", https://paseo.sh/docs/cli, checked 2026-11-17), and continues at step 4 of the Procedure with their files; it does not restart or reread them.
-5. After the operator reports. The caller reads the closing reply and the consolidated file's top table, answers a question the operator ended its turn with, archives the operator once its report is read in full, and handles the confirmed and PLAUSIBLE clusters with the `response-rv` skill. Fixing a verified finding is the caller's; verifying one is the consolidator's.
+5. After the operator reports. A finish notification whose reply starts with `최종 보고가 아님` is not the result, and the caller does not act on it. The caller reads the closing reply and the consolidated file's top table, answers a question the operator ended its turn with, archives the operator once its report is read in full, and handles the confirmed and PLAUSIBLE clusters with the `response-rv` skill. Fixing a verified finding is the caller's; verifying one is the consolidator's.
 
 ## Inputs
 
@@ -81,7 +81,7 @@ Outside Paseo there is no workspace to create; launch the sessions as the harnes
 
 ## Procedure
 
-The operator runs every step.
+The operator runs every step and waits inside its turn. Each end of an operator turn sends the caller a finish notification (the first smoke run ended a turn after every launch, and the caller was woken for each), so the operator ends its turn only with the closing reply of step 5 or with a question. While a reviewer or the consolidator runs, it waits with `paseo wait <id> --timeout <seconds>` ("Block until an agent finishes its current task", https://paseo.sh/docs/cli, checked 2026-11-17), one session after another and repeating the call when it returns on the timeout, with the timeout inside its shell tool's limit. A turn it must end before the run is over starts with `최종 보고가 아님` and says what remains.
 
 1. Prepare the review directory: the two copies, the review-base worktree, the review workspace on it, and one brief from `references/brief.md` with its placeholders filled. Check the brief for unfilled `<...>` before launching.
 2. Check the local model server before loading it: no measurement is running on it (no open `run-*` terminal of another session that calls it, as the harness instructions require), and it answers (`curl -sS -m 5 <server>/v1/models`). When a measurement is running or the server does not answer, the operator launches nothing, does not stop or restart the server, and ends its turn with that as the question to the caller.
