@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document."
 metadata:
   author: hrlee
-  version: "1.6.2"
+  version: "1.7.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -35,8 +35,9 @@ prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document b
 2. What the plan answers (requirements, issue body and decisive comments), copied the same way.
 3. A detached worktree of the repository at the review base. When the plan cites lines of uncommitted or later work, name that commit so reviewers read it with `git show <commit>:<path>`.
 4. The perspective method files, by absolute path.
+5. The plan owner's claim ledger, when there is one: each claim the plan rests on, the observation that would show it wrong, and where the owner checked it, as a my-workflow `dev-plan` record holds in its `## 주장` section. It goes to the consolidator only, which checks every cited location and names, per confirmed cluster, the ledger line it refutes or the claim the ledger missed, so the owner learns which of its checks failed instead of having the review do them.
 
-Reviewers get nothing else: no producer conversation, no earlier review, no gate verdict. An earlier review is given only to the consolidator, to mark what is new.
+Reviewers get nothing else: no producer conversation, no earlier review, no gate verdict, no claim ledger, which would point them at the claims the owner chose. An earlier review is given only to the consolidator, to mark what is new.
 
 ## Perspectives
 
@@ -69,7 +70,7 @@ Outside Paseo there is no workspace to create; launch the sessions as the harnes
 1. Prepare the review directory: the two copies, the review-base worktree, the review workspace on it, and one brief from `references/brief.md` with its placeholders filled. Check the brief for unfilled `<...>` before launching.
 2. Check the local model server before loading it: no measurement is running on it (no open `run-*` terminal of another session that calls it, as the harness instructions require), and it answers (`curl -sS -m 5 <server>/v1/models`).
 3. Launch three reviewers per perspective as Paseo pi sessions in the review workspace (`create_agent`, provider pi, the local model, thinking high), with the brief path, the perspective's method file, and its own output file `P<n>-<a|b|c>.md`. The three sessions of a perspective get the same brief and do not see each other's output. The user's words (2026-11-14): "그냥 관점을 나열하고 입력을 주면 각 관점 별로 3 세션 씩 생성하게 해보면?" Reviewers on the self-hosted server are exempt from the four-session cap, which exists for paid-provider cost (harness Delegation practice; the user's words, 2026-11-14: "동시 규칙은 비용문제때문에 있는거야"), so launch them all at once after the load check of step 2. Three is the default because the third trial measured it (Limits); raise it only with a measurement that the next session still adds confirmed clusters. Each reviewer ends its turn with its counts and output path; do not read the review bodies.
-4. When every reviewer has finished, launch one consolidator in the review workspace (it also merges the duplicates the three sessions of a perspective produce) of another family, a Codex session (reviews go to Codex; the user's words, 2026-11-16: "리뷰는 코덱스라고") with `references/consolidate.md` filled. It verifies, clusters, and writes the consolidated file. Read only its top table `## 현재 계획에 남은 확정 결함` and its closing reply.
+4. When every reviewer has finished, launch one consolidator in the review workspace (it also merges the duplicates the three sessions of a perspective produce) of another family, a Codex session (reviews go to Codex; the user's words, 2026-11-16: "리뷰는 코덱스라고") with `references/consolidate.md` filled, `<CLAIM_LEDGER>` included when the plan owner gave one. It verifies, clusters, and writes the consolidated file. Read only its top table `## 현재 계획에 남은 확정 결함` and its closing reply.
 5. Hand the confirmed clusters to whoever owns the plan as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line. The plan owner handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill, so each fix lands on the plan node that caused it. A criticism of the consolidated file itself is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix prv so the same defect does not recur.
 6. Archive the review workspace and remove the review-base worktree, as step 4 of the review workspace section says.
 
