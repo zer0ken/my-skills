@@ -10,7 +10,7 @@ written in HTML with no Markdown syntax, and two consecutive sections separated 
 with no `---` line. Anything else outside `<details>`, such as a bare `## heading`, is a violation,
 because every detail section is folded.
 
-Usage: check_pr_body.py BODY.md [--json RECEIPT.json]   (run from the directory gh runs in)
+Usage: check_pr_body.py BODY.md [--json RECEIPT.json]
 Prints one `path:line: RULE message` per violation and exits 1 when there is any, 0 otherwise. The receipt
 records the body's sha256 so a gate can tell that the check read the body it is about to post.
 """
@@ -45,8 +45,10 @@ MARKDOWN_IN_HTML = [
 ]
 
 
-def check_visual(lines: Sequence[str], root: Path) -> list[tuple[int, str, str]]:
-    """Violations of the change visual on the first line; local targets resolve against `root`."""
+def check_visual(lines: Sequence[str], roots: Sequence[Path]) -> list[tuple[int, str, str]]:
+    """Violations of the change visual on the first line. A local target resolves as `gh pr create --help` 2.104.0
+    states: "Paths in a `--body-file` are relative to its directory, falling back to the working directory."
+    So `roots` is the body file's directory, then the working directory."""
     match = VISUAL.match(lines[0]) if lines else None
     if not match:
         return [(1, "VISUAL", "the body opens with the change visual, `![<what it compares>](<image>)`: a reader "
@@ -58,18 +60,18 @@ def check_visual(lines: Sequence[str], root: Path) -> list[tuple[int, str, str]]
         if PurePosixPath(target).suffix.lower() not in VISUAL_SUFFIXES:
             violations.append((1, "VISUAL", f"{target} is not an image `gh --attach` uploads; render the HTML "
                                "source to PNG and reference the PNG, do not link the HTML file"))
-        elif not (root / target).is_file():
-            violations.append((1, "VISUAL", f"{target} does not exist from {root}; run this check from the "
-                               "directory where `gh pr create --attach` will run, with the same path in the body "
-                               "and the flag, so gh rewrites this line to the uploaded URL"))
+        elif not any((root / target).is_file() for root in roots):
+            violations.append((1, "VISUAL", f"{target} is not a file relative to the body file's directory or the "
+                               "working directory, where gh looks for it; render the PNG there and pass the same "
+                               "path to `--attach`, so gh rewrites this line to the uploaded URL"))
     if len(lines) < 2 or lines[1].strip():
         violations.append((2, "VISUAL", "leave a blank line after the change visual"))
     return violations
 
 
-def check(lines: Sequence[str], root: Path = Path(".")) -> list[tuple[int, str, str]]:
+def check(lines: Sequence[str], roots: Sequence[Path] = (Path("."),)) -> list[tuple[int, str, str]]:
     """Violations of the body format as (1-based line, rule, message)."""
-    violations = check_visual(lines, root)
+    violations = check_visual(lines, roots)
     at = 2 if lines and VISUAL.match(lines[0]) else 0
     references = 0
     while at < len(lines) and REFERENCE.match(lines[at]):
@@ -153,7 +155,7 @@ def main() -> int:
     parser.add_argument("--json", type=Path, help="write {body, sha256, violations} to this receipt")
     arguments = parser.parse_args()
     data = arguments.body.read_bytes()
-    violations = check(data.decode("utf-8").splitlines())
+    violations = check(data.decode("utf-8").splitlines(), (arguments.body.parent, Path(".")))
     for line, rule, message in violations:
         print(f"{arguments.body}:{line}: {rule} {message}")
     if arguments.json:

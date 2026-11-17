@@ -77,15 +77,15 @@ class CheckPrBodyTests(unittest.TestCase):
     def test_html_visual_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             (Path(root) / "change.html").write_text("<p>x</p>")
-            self.assertEqual([r for _, r, _ in check(["![변경 전과 후](change.html)"] + GOOD[1:], Path(root))],
+            self.assertEqual([r for _, r, _ in check(["![변경 전과 후](change.html)"] + GOOD[1:], [Path(root)])],
                              ["VISUAL"])
 
     def test_local_visual_must_exist_and_passes_when_it_does(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             body = ["![변경 전과 후](./change.png)"] + GOOD[1:]
-            self.assertEqual([r for _, r, _ in check(body, Path(root))], ["VISUAL"])
+            self.assertEqual([r for _, r, _ in check(body, [Path(root)])], ["VISUAL"])
             (Path(root) / "change.png").write_bytes(b"\x89PNG")
-            self.assertEqual(check(body, Path(root)), [])
+            self.assertEqual(check(body, [Path(root)]), [])
 
 
 if __name__ == "__main__":
