@@ -3,7 +3,7 @@ name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.3.0"
+  version: "0.3.1"
   domain: workflow
   triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인
   dependencies:
@@ -68,7 +68,7 @@ Completion check: every finding is answered, every statement in the reply traces
 
 Keep a round's records in one directory:
 
-1. Inside a procedure that keeps its own run directory, such as a my-workflow run, under that run's artifacts as `<run root>/artifacts/<PHASE>-response-<round>/`, where `<PHASE>` is the run's artifact prefix of the current stage and `<round>` counts the rounds of that PR or gate from 1. The procedure's own response artifact, such as a review-response JSON, keeps its schema and points its evidence at these records.
+1. Inside a procedure that keeps its own run directory, such as a my-workflow run, under that run's artifacts as `<run root>/artifacts/<PHASE>-response-<round>/`, where `<PHASE>` names the step the findings belong to, such as the task id `T4` or `GATE`, and `<round>` counts the rounds of that PR or gate from 1. The procedure's own response artifact, such as a review-response JSON, keeps its schema and points its evidence at these records.
 2. Otherwise under `~/.agents/responses/<session>/<NNN>-<target>/`, where `<session>` is the first eight characters of the session's own Paseo agent id (confirm it is your own, because `PASEO_AGENT_ID` can name the session that launched you) or of the agent product's session id outside Paseo, `<NNN>` is the next three-digit number in that directory, and `<target>` is a short ASCII name such as `pr1412-r1`.
 
 The directory holds `0-index.md`, `1-understand.md`, `2-cause.md`, `3-decide.md`, `4-act.md`, and `5-reply.md`. Each stage record starts with `## 완료 확인`, a table of the stage's criteria with 충족 or 미충족 and the evidence, then one `## <finding id> <short title>` section per finding. `0-index.md` names the target (repository, PR or gate, the round's source link, the head the findings were made on), lists the root causes of stage 2 in one line each, and holds one table with a row per finding and the columns 지적, 1 이해, 2 원인, 3 결정, 4 실행, 5 답변, each cell 완료, 진행, or 대기 with the reason.

@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document."
 metadata:
   author: hrlee
-  version: "1.6.0"
+  version: "1.6.1"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -15,14 +15,14 @@ metadata:
 
 prv reviews a plan before any code exists. Several reviewer sessions each read only the plan, what it answers, and the code at the review base, and each applies one perspective's checklist. One session of another model family then verifies every finding against the code, clusters them, and writes one table that the caller reads. The user's words (2026-11-14): "이 리뷰 방식을 plan review, 줄여서 prv 라는 이름의 스킬로 만들어줘", and on the method: "아무것도 모르고 계획 문서랑 코드만 가지고", "파이 에이전트로만 여러 개를 띄우는데 ... 다양한 관점을 프롬프트 주입해가지고 그 관점에 대해 리뷰하라고 하면 되지 않을까", "니 컨텍스트 낭비하지 말고, 블라인드 리뷰 끝나면 한 명이 정리하게 시켜".
 
-prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document by a strong model; prv is a cheap, wide, blind sweep of a plan whose findings count only after verification. In a my-workflow design stage both run: prv first, so the design the `rv` design review reads already has prv's confirmed defects fixed.
+prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document by a strong model; prv is a cheap, wide, blind sweep of a plan whose findings count only after verification. In a my-workflow run, prv is the gate of a `dev-plan` task.
 
 ## Concepts
 
 | Name | Definition |
 | --- | --- |
 | plan | The document under review: a design, implementation plan, or migration plan that decides structure before code changes |
-| review base | The commit the plan applies to: the merge base of the working branch with the branch it targets (`git merge-base HEAD origin/HEAD`; in my-workflow, `review_base` of `wf stage --json`). Not the commit the work started on, which a rebase leaves behind |
+| review base | The commit the plan applies to: the merge base of the working branch with the branch it targets (`git merge-base HEAD origin/HEAD`). Not the commit the work started on, which a rebase leaves behind |
 | perspective | One review dimension defined by a method checklist file under `references/perspectives/`; a reviewer reports only defects inside it |
 | reviewer | A local-model session that applies one perspective to the plan, blind to everything but its inputs |
 | consolidator | One session of another model family that verifies every finding and writes the consolidated table |
@@ -73,7 +73,7 @@ Outside Paseo there is no workspace to create; launch the sessions as the harnes
 5. Hand the confirmed clusters to whoever owns the plan as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line. The plan owner handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill, so each fix lands on the plan node that caused it. A criticism of the consolidated file itself is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix prv so the same defect does not recur.
 6. Archive the review workspace and remove the review-base worktree, as step 4 of the review workspace section says.
 
-In a my-workflow run, the review directory is `<root>/artifacts/<P>-prv/` and the consolidated file is `<root>/artifacts/<P>-prv.md`, where `<P>` is the stage's artifact prefix (`N1` for feature-1-design).
+In a my-workflow run, the review directory is `<run root>/artifacts/<task id>-prv/` and the consolidated file is `<run root>/artifacts/<task id>-prv.md`, where `<task id>` is the `dev-plan` task the gate judges, such as `T2`.
 
 ## Limits
 
