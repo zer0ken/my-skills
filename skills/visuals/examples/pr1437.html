@@ -1,21 +1,26 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="card.css"></head><body><div class="card">
-<div class="title">생략된 주어 문장의 정보 노드</div><div class="sub">기사 두 문장과 정보 노드, main 대비 이 PR</div>
-<div class="cols"><div class="col"><h4><b>AS-IS</b> · main</h4>
-<div class="cap">기사 본문</div>
-<div class="row"><span class="t">문장 1</span>A전자가 23일 새 폴더블폰을 공개했다.</div>
-<div class="row"><span class="t">문장 2</span>이어 하반기 유럽 출시 계획도 밝혔다.</div>
-<div class="cap">정보 노드</div>
-<div class="row"><span class="t">노드</span>A전자가 23일 새 폴더블폰을 공개했다.</div>
-<div class="row hit"><span class="t">노드</span>이어 하반기 유럽 출시 계획도 밝혔다.</div>
-<div class="num">누가 밝혔는지 없는 조각 <b>1</b>개</div></div>
-<div class="col"><h4><b>TO-BE</b> · 이 PR</h4>
-<div class="cap">기사 본문</div>
-<div class="row"><span class="t">문장 1</span>A전자가 23일 새 폴더블폰을 공개했다.</div>
-<div class="row"><span class="t">문장 2</span>이어 하반기 유럽 출시 계획도 밝혔다.</div>
-<div class="ref">↳ (생략된 주어) refers_to 문장 1</div>
-<div class="cap">정보 노드</div>
-<div class="row hit"><span class="t">노드</span>A전자가 23일 새 폴더블폰을 공개했다. 이어 하반기 유럽 출시 계획도 밝혔다.</div>
-<div class="num">조각 <b>0</b>개</div></div></div>
-<div class="foot"><div class="take">조각 해소 48 → 58 / 80 (뉴스 29건)</div></div>
+<div class="title">생략된 주어 문장의 정보 노드</div><div class="sub">기사 두 문장이 정보 노드가 되는 길, main 대비 이 PR</div>
+<svg class="fig" viewBox="0 0 794 206"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9AA3AD"/></marker><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0B8FD8"/></marker></defs>
+<text x="0" y="14" class="head"><tspan class="b">AS-IS</tspan> · main</text>
+<text x="24" y="40" class="small">기사 본문</text><text x="276" y="40" class="small">정보 노드</text>
+<rect x="24" y="52" width="220" height="30" rx="4" class="box"/><text x="34" y="72">A전자가 새 폴더블폰을 공개했다.</text>
+<rect x="24" y="122" width="220" height="30" rx="4" class="box"/><text x="34" y="142">이어 유럽 출시 계획도 밝혔다.</text>
+<path d="M248 67H272" class="edge" marker-end="url(#a)"/>
+<rect x="276" y="52" width="100" height="30" rx="15" class="node"/><text x="326" y="72" text-anchor="middle" style="font-size:12px">A전자 · 공개</text>
+<path d="M248 137H272" class="edge hit" marker-end="url(#h)"/>
+<rect x="276" y="122" width="100" height="30" rx="15" class="hit" stroke-dasharray="4 3"/><text x="326" y="142" text-anchor="middle" class="acc" style="font-size:12px">? · 유럽 출시</text>
+<text x="24" y="196" class="count">누가 밝혔는지 없는 조각 <tspan class="n">1</tspan>개</text>
+<path d="M397 30V200" class="axis"/>
+<text x="418" y="14" class="head"><tspan class="b">TO-BE</tspan> · 이 PR</text>
+<text x="442" y="40" class="small">기사 본문</text><text x="694" y="40" class="small">정보 노드</text>
+<rect x="442" y="52" width="220" height="30" rx="4" class="box"/><text x="452" y="72">A전자가 새 폴더블폰을 공개했다.</text>
+<rect x="442" y="122" width="220" height="30" rx="4" class="box"/><text x="452" y="142">이어 유럽 출시 계획도 밝혔다.</text>
+<path d="M442 137C416 137 416 67 438 67" class="edge hit" marker-end="url(#h)"/>
+<text x="448" y="106" class="acc" style="font-size:12px">refers_to 문장 1</text>
+<path d="M666 67C680 67 680 102 690 102" class="edge" marker-end="url(#a)"/>
+<path d="M666 137C680 137 680 102 690 102" class="edge hit" marker-end="url(#h)"/>
+<rect x="694" y="80" width="100" height="44" rx="12" class="hit"/><text x="744" y="98" text-anchor="middle" style="font-size:12px">A전자 · 공개</text><text x="744" y="115" text-anchor="middle" class="acc" style="font-size:12px">+ 유럽 출시</text>
+<text x="442" y="196" class="count">조각 <tspan class="n">0</tspan>개</text></svg>
+<div class="take">조각 해소 48 → 58 / 80 (뉴스 29건)</div>
 <div class="src">입력: 가짜 기사 두 문장(모양 예시). 해소 수치는 PR #1437 측정값.</div>
 </div></body></html>

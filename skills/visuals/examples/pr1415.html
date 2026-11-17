@@ -1,23 +1,83 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="card.css"></head><body><div class="card">
-<div class="title">뉴스 적재의 정보 노드</div><div class="sub">기사 한 건의 줄과 정보 노드, main 대비 이 PR</div>
-<div class="cols"><div class="col"><h4><b>AS-IS</b> · main</h4>
-<div class="row hit"><span class="t">노드</span>[앵커]</div>
-<div class="row hit"><span class="t">노드</span>2026.06.05.</div>
-<div class="row"><span class="t">노드</span>A전자가 2분기 영업이익 3조 원을 기록했다.</div>
-<div class="row"><span class="t">노드</span>전년 같은 기간보다 42% 늘어난 수치다.</div>
-<div class="row"><span class="t">노드</span>회사는 하반기 반도체 투자를 확대하겠다고 밝혔다.</div>
-<div class="row hit"><span class="t">노드</span>홍길동 기자 hong@example.com</div>
-<div class="row hit"><span class="t">노드</span>ⓒ 가나다뉴스</div>
-<div class="num">정보 노드 <b>7</b>개</div></div>
-<div class="col"><h4><b>TO-BE</b> · 이 PR</h4>
-<div class="row gone"><span class="t">no_fact</span><s>[앵커]</s></div>
-<div class="row gone"><span class="t">no_fact</span><s>2026.06.05.</s></div>
-<div class="row"><span class="t">노드</span>A전자가 2분기 영업이익 3조 원을 기록했다.</div>
-<div class="row"><span class="t">노드</span>전년 같은 기간보다 42% 늘어난 수치다.</div>
-<div class="row"><span class="t">노드</span>회사는 하반기 반도체 투자를 확대하겠다고 밝혔다.</div>
-<div class="row gone"><span class="t">no_fact</span><s>홍길동 기자 hong@example.com</s></div>
-<div class="row gone"><span class="t">no_fact</span><s>ⓒ 가나다뉴스</s></div>
-<div class="num">정보 노드 <b>3</b>개</div></div></div>
-<div class="foot"><div class="take">지식 없는 줄 제외, 뉴스 20건 노드 18.8% 감소</div></div>
+<div class="title">뉴스 적재의 정보 노드</div><div class="sub">기사 한 건의 줄이 정보 노드로 가는 길, main 대비 이 PR</div>
+<svg class="fig" viewBox="0 0 794 330"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9AA3AD"/></marker><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0B8FD8"/></marker></defs>
+<text x="0" y="14" class="head"><tspan class="b">AS-IS</tspan> · main</text>
+<text x="0" y="40" class="small">기사 본문</text><text x="300" y="40" class="small">정보 노드</text>
+<rect x="0" y="52" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="70">[앵커]</text>
+<path d="M234 65H296" class="edge hit" marker-end="url(#h)"/>
+<rect x="300" y="54" width="60" height="22" rx="11" class="hit"/>
+<text x="330" y="69" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="88" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="106">2026.06.05.</text>
+<path d="M234 101H296" class="edge hit" marker-end="url(#h)"/>
+<rect x="300" y="90" width="60" height="22" rx="11" class="hit"/>
+<text x="330" y="105" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="124" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="142">A전자 2분기 영업이익 3조 원</text>
+<path d="M234 137H296" class="edge" marker-end="url(#a)"/>
+<rect x="300" y="126" width="60" height="22" rx="11" class="node"/>
+<text x="330" y="141" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="160" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="178">전년 대비 42% 증가</text>
+<path d="M234 173H296" class="edge" marker-end="url(#a)"/>
+<rect x="300" y="162" width="60" height="22" rx="11" class="node"/>
+<text x="330" y="177" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="196" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="214">하반기 반도체 투자 확대</text>
+<path d="M234 209H296" class="edge" marker-end="url(#a)"/>
+<rect x="300" y="198" width="60" height="22" rx="11" class="node"/>
+<text x="330" y="213" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="232" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="250">홍길동 기자 hong@ex.com</text>
+<path d="M234 245H296" class="edge hit" marker-end="url(#h)"/>
+<rect x="300" y="234" width="60" height="22" rx="11" class="hit"/>
+<text x="330" y="249" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="0" y="268" width="230" height="26" rx="4" class="box"/>
+<text x="10" y="286">ⓒ 가나다뉴스</text>
+<path d="M234 281H296" class="edge hit" marker-end="url(#h)"/>
+<rect x="300" y="270" width="60" height="22" rx="11" class="hit"/>
+<text x="330" y="285" text-anchor="middle" style="font-size:11.5px">노드</text>
+<text x="0" y="326" class="count">정보 노드 <tspan class="n">7</tspan>개</text>
+<path d="M397 30V320" class="axis"/>
+<text x="420" y="14" class="head"><tspan class="b">TO-BE</tspan> · 이 PR</text>
+<text x="420" y="40" class="small">기사 본문</text><text x="720" y="40" class="small">정보 노드</text>
+<rect x="420" y="52" width="230" height="26" rx="4" fill="none" stroke="#E6E9ED"/>
+<text x="430" y="70" class="gone" text-decoration="line-through">[앵커]</text>
+<path d="M654 65H692" class="edge hit cut"/>
+<path d="M692 58l12 14M704 58l-12 14" stroke="#0B8FD8" stroke-width="2"/>
+<text x="712" y="70" class="acc" style="font-size:11.5px">no_fact</text>
+<rect x="420" y="88" width="230" height="26" rx="4" fill="none" stroke="#E6E9ED"/>
+<text x="430" y="106" class="gone" text-decoration="line-through">2026.06.05.</text>
+<path d="M654 101H692" class="edge hit cut"/>
+<path d="M692 94l12 14M704 94l-12 14" stroke="#0B8FD8" stroke-width="2"/>
+<text x="712" y="106" class="acc" style="font-size:11.5px">no_fact</text>
+<rect x="420" y="124" width="230" height="26" rx="4" class="box"/>
+<text x="430" y="142">A전자 2분기 영업이익 3조 원</text>
+<path d="M654 137H716" class="edge" marker-end="url(#a)"/>
+<rect x="720" y="126" width="60" height="22" rx="11" class="node"/>
+<text x="750" y="141" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="420" y="160" width="230" height="26" rx="4" class="box"/>
+<text x="430" y="178">전년 대비 42% 증가</text>
+<path d="M654 173H716" class="edge" marker-end="url(#a)"/>
+<rect x="720" y="162" width="60" height="22" rx="11" class="node"/>
+<text x="750" y="177" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="420" y="196" width="230" height="26" rx="4" class="box"/>
+<text x="430" y="214">하반기 반도체 투자 확대</text>
+<path d="M654 209H716" class="edge" marker-end="url(#a)"/>
+<rect x="720" y="198" width="60" height="22" rx="11" class="node"/>
+<text x="750" y="213" text-anchor="middle" style="font-size:11.5px">노드</text>
+<rect x="420" y="232" width="230" height="26" rx="4" fill="none" stroke="#E6E9ED"/>
+<text x="430" y="250" class="gone" text-decoration="line-through">홍길동 기자 hong@ex.com</text>
+<path d="M654 245H692" class="edge hit cut"/>
+<path d="M692 238l12 14M704 238l-12 14" stroke="#0B8FD8" stroke-width="2"/>
+<text x="712" y="250" class="acc" style="font-size:11.5px">no_fact</text>
+<rect x="420" y="268" width="230" height="26" rx="4" fill="none" stroke="#E6E9ED"/>
+<text x="430" y="286" class="gone" text-decoration="line-through">ⓒ 가나다뉴스</text>
+<path d="M654 281H692" class="edge hit cut"/>
+<path d="M692 274l12 14M704 274l-12 14" stroke="#0B8FD8" stroke-width="2"/>
+<text x="712" y="286" class="acc" style="font-size:11.5px">no_fact</text>
+<text x="420" y="326" class="count">정보 노드 <tspan class="n">3</tspan>개</text></svg>
+<div class="take">지식 없는 줄은 노드로 가지 않는다, 뉴스 20건 노드 18.8% 감소</div>
 <div class="src">입력: 가짜 기사 한 건(모양 예시). 감소율은 PR #1415 측정값, 판정 호출 수는 같음.</div>
 </div></body></html>
