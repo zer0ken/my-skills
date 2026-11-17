@@ -3,7 +3,7 @@ name: issue
 description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
 metadata:
   author: hrlee
-  version: "1.10.0"
+  version: "1.10.1"
   domain: workflow
   triggers: 이슈, issue, 이슈 올려, 이슈 생성, gh issue create
   role: guardian
@@ -103,7 +103,7 @@ When the cause has been confirmed:
 
 ## Details
 
-End each item of the body in one line. Put everything that does not fit in one line at the bottom of the body: reproduction steps, logs, the course of the investigation, the grounds for a presumption, causes that were examined and ruled out, and the detailed steps of the plan. Leave a blank line so it is distinct from the bullet summary, and continue writing. Do not split the details into comments; put all of them in the single body. When the whole body runs over 50 lines, fold every heading of the details into a `<details>` block whose `<summary>` is the heading, leave the item bullets at the top unfolded, and separate headings with one `---` line that has a blank line above and below it; the global instructions hold this rule and its grounds.
+End each item of the body in one line. Put everything that does not fit in one line at the bottom of the body: reproduction steps, logs, the course of the investigation, the grounds for a presumption, causes that were examined and ruled out, and the detailed steps of the plan. Leave a blank line so it is distinct from the bullet summary, and continue writing. Do not split the details into comments; put all of them in the single body. When the whole body runs over 50 lines, fold every heading of the details into a `<details>` block whose `<summary>` holds the heading as `<summary><h3>제목</h3></summary>`, never as plain text, leave the item bullets at the top unfolded, and separate consecutive `<details>` blocks with one blank line and no `---` line; the global instructions hold this rule and its grounds.
 
 ## Issues written on the user's behalf
 

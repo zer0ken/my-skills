@@ -3,7 +3,7 @@ name: pr
 description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as an issue reference line at the very top followed by a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), when stacking PRs with the GitHub stacked PR feature (PR 을 스택하라고 지시할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.24.1"
+  version: "1.25.0"
   domain: workflow
   triggers: PR, pull request, PR 스택, stacked PR, gh stack, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian
@@ -173,7 +173,7 @@ Refs #1111, #1112.
 
 ## Details
 
-Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded. Separate two consecutive `<details>` sections with one `---` line with a blank line above and below it, not with blank lines alone; without those blank lines GitHub renders a `---` right after `</details>` as literal text. The user's words (2026-11-16): "제목 사이에는 공백 줄 말고 구분선 줄 하나로만 구분해라."
+Put all the description not included in the summary at the bottom of the body: background, design rationale, verification method, the scope not resolved, and remaining work. Leave a blank line after the summary and continue writing, and do not split it into comments but put all of it in the single body. Only the issue reference and the summary are not folded; fold each section of the details with a `<details>` tag and write the section name as a noun phrase in the `<summary>`, wrapped in an `<h3>` tag as `<summary><h3>섹션 이름</h3></summary>` so the folded section shows at heading size. Markdown heading syntax (`## 제목`) inside `<summary>` does not render and stays literal, so use the `<h3>` tag, not `<h2>`, whose margins are large. Never write a detail section as a bare Markdown heading (`## 제목`) outside `<details>`; every detail section is folded. Never leave the `<summary>` as plain text: a plain-text summary renders as a small fold marker, and a section that needs a title reads as a folded piece of the paragraph above it. Separate two consecutive `<details>` sections with one blank line and no `---` line. The user's words (2026-11-17), shown a PR body whose sections had plain-text summaries with a `---` line between each: "detail 태그 사이에 --- 구분선 그냥 없애자" and "헤더 속성 없는 디테일 태그는 이상하잖아. 지금 제목이 명백히 들어가야 하는 수준의 내용이 그냥 본문 일부를 접어둔것처럼 되잖아."
 
 Write the content inside each `<details>` in HTML, not Markdown: paragraphs as `<p>`, lists as `<ol>`/`<ul>`/`<li>`, bold as `<b>`, inline code as `<code>`, code blocks as `<pre><code>`, links as `<a href>`, and tables as `<table>`. GitHub renders Markdown inside `<details>` only when a blank line follows `</summary>`, and inside an HTML block Markdown syntax (backticks, `[text](url)`, `- ` items, table pipes) is not interpreted, so mixing the two leaves parts literal. Do not mix: inside `<details>` use HTML tags only and put no Markdown syntax. The issue reference line and the `-` bullet summary at the top of the body stay Markdown.
 
@@ -196,8 +196,6 @@ Divide a large change by feature group, and for each group contrast the existing
 </ol>
 </details>
 
----
-
 <details>
 <summary><h3>배경과 범위</h3></summary>
 <p>문서 추가만 포함한다. 제품 코드와 시험은 변경하지 않는다.</p>
@@ -213,7 +211,7 @@ Read only the title and body and check the following. If any one is off, write i
 3. The body alone can answer how the behavior of the user or the system differs when this PR is applied.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
 5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
-6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the reference lines, the summary of at most 10 lines, that everything after the summary is a `<details>` section written in HTML, and that consecutive sections are separated by `---`, so a bare `## 제목` section or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
+6. `scripts/check_pr_body.py` of this skill reports no violation for the exact file passed to `--body-file`: `python3 -I ~/.agents/skills/pr/scripts/check_pr_body.py body.md`. It checks the reference lines, the summary of at most 10 lines, that everything after the summary is a `<details>` section written in HTML and opens with `<summary><h3>`, and that consecutive sections are separated by one blank line with no `---`, so a bare `## 제목` section, a plain-text `<summary>`, a `---` line, or Markdown inside `<details>` fails it. Run it again before every `gh pr create` and `gh pr edit --body-file`.
 
 ```bash
 gh pr create --title "<명사구 제목>" --body-file body.md
