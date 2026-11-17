@@ -3,7 +3,7 @@ name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.2.0"
+  version: "0.3.0"
   domain: workflow
   triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인
   dependencies:
@@ -39,14 +39,18 @@ Completion check: every finding has a chain ending at a named node or a stated `
 
 ### 3. Decide (대응 결정)
 
-For each finding, decide 수용, 부분 수용, 기각, 질문, or 범위 밖, with grounds checked against the primary sources of stage 1, and for 부분 수용 say which part. For each accepted root cause, name the node to fix and how the fix propagates down to every node under it and to every same-cause place found in stage 2; a fix only at the leaf the finding pointed to is not a fix of the root cause. Then place each fix:
+For each finding, decide 수용, 부분 수용, 기각, 질문, or 범위 밖, with grounds checked against the primary sources of stage 1, and for 부분 수용 say which part. For each accepted root cause, name the node to fix and how the fix propagates down to every node under it and to every same-cause place found in stage 2; a fix only at the leaf the finding pointed to is not a fix of the root cause.
+
+Before choosing how to fix, ask of each accepted finding whether the code or artifact it points at needs to exist at all, as the instructions' rule on solving a problem by removal before addition requires, and write the answer: the requirement, contract, or caller that depends on it with the path or record that shows it, or that nothing does. When nothing does, the fix is to delete it and what exists only to support it. A fix that adds code, a guard, a check, a branch, an option, a test, or a rule is chosen only after removal or simplification is shown not to solve the root cause, and the record says why. The user's words (2026-11-17), as a general instruction on handling findings: "지적을 받으면, 지적을 받은 코드가 정말 꼭 필요한 것인지 확인해. 없애버리면 지적받을 일도 없어." and "모든 것을 추가해서 해결하려고 하지마".
+
+Then place each fix:
 
 1. Within the promise of the issue and PR: decide the change.
 2. Outside that promise: draft the issue that would promise it and bring it to the user; do not slip it into the current change.
 3. A public contract change (REST and MCP responses, DB schema, config keys) or a structural change: ask the user, or, inside a procedure that owns redesign, go back to its design stage.
 4. A procedural error whose cause lies in my-harness or my-workflow: hand it to a modification session as the `harness` skill describes; one that lies in the project's rules: propose the rule change within that repository's procedure.
 
-Completion check: every finding has a decision with grounds, every accepted root cause has a fix node and its propagation, every same-cause place has a disposition, and every fix is placed by the list above.
+Completion check: every finding has a decision with grounds, every accepted finding records whether the thing it points at needs to exist, every fix that adds something records why removal does not solve it, every accepted root cause has a fix node and its propagation, every same-cause place has a disposition, and every fix is placed by the list above.
 
 ### 4. Act (대응 실행)
 
