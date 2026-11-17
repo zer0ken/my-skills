@@ -2,7 +2,7 @@
 name: visuals
 description: Apply the user's visual preferences to HTML, UI, data charts, diagrams, slides, and other visual materials; read it before making any data chart. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 # Visual materials
@@ -67,6 +67,7 @@ Choose the drawing by what the change acts on, and draw that thing:
 | Flow of data, such as which input becomes which output | The input pieces and the outputs as shapes joined by arrows; a dropped path ends in a cut mark where it stops |
 | Relations, such as a reference, a merge, or a split | Nodes and the edges between them, with the new or removed edge in the accent color |
 | Time, such as a lifetime, an order, a timeout, or a retry | One shared time axis with a lane per state and bars for what lives when, the event that ends each bar drawn as an arrow from its cause |
+| An amount of a resource, such as CPU cores, memory, or calls | The amount as a grid of unit cells or a bar to scale per state, filled to what each state uses |
 | Text, such as a document, a rule, or a prompt | The real passage before and after, with the changed spans marked on the text and joined to what they cause |
 
 Each state comes from the same real input, read from an actual run of the base commit and of the PR head, or the actual text of the file before and after. What the change touches is in the accent color, what the change removes stays in place in gray with its path cut, so the two states line up, and unchanged parts stay neutral gray. Each state ends with one line of numbers that measures the difference, such as the count of extracted items. Pick the input that shows the difference most plainly and cut it to the part where the difference lies.
@@ -75,7 +76,7 @@ A performance change uses a `ztd-charts` chart of the measured or proved numbers
 
 Both forms share one card style, the `ztd-charts` light theme card: a title, a one-line subtitle naming what is compared, the body, a bold one-line takeaway at the bottom, one accent color for what changed and neutral gray for the rest, and a small source line naming the input or the measurement. The user's words (2026-11-17), asking for this while the examples were made: "디자인 스타일을 좀 통일해주면 좋겠어", and, told that the card puts a title inside the figure against the rule above: "좋아. 일단 이렇게 하자". So the rule against titles and explanatory sentences inside a figure does not apply to the change visual. For the as-is/to-be drawing, write HTML on `examples/card.css`, which holds the theme tokens, the card frame, and the SVG classes, with the drawing as an inline `<svg class="fig">` between the subtitle and the takeaway, with a `fonts/` directory beside it holding the Pretendard files copied from `~/.local/share/ztd-charts-runtime/node_modules/ztd-charts-cli/fonts`, and render it to PNG with `~/.agents/skills/browser-render/SKILL.md` using `--viewport 900x100 --fullpage`, which keeps the page 900px wide, about the width GitHub shows a body at, and grows its height to the content. Inspect the PNG before posting: Korean text renders in Pretendard, nothing overlaps or is clipped, the difference is visible without zooming, and a reader who skips every label still sees what changed from the shapes and arrows.
 
-The examples in `examples/` are drawn on placeholder data for shape only; a real PR uses real data. `pr1415` (flow: lines without facts cut before they become nodes), `pr1437` (relation: a `refers_to` edge merges two nodes), and `container-cleanup` (time: a container's lifetime after its runner is killed, ended by Ryuk) are as-is/to-be drawings, each as its HTML source and PNG. `pr1460-chart` (keyword search: p50 speedup per path) and `pr1423-chart` (thread count, main against this PR per case) are performance charts, each as its `ztd-charts` spec and PNG.
+The examples in `examples/` show the shape; a real PR draws its own real data. `pr1415` (flow: lines without facts cut before they become nodes), `pr1437` (relation: a `refers_to` edge merges two nodes), are as-is/to-be drawings, each as its HTML source and PNG. `container-cleanup` (time and amount: on one time axis from the SIGKILL, each state's container lifetime bar with the 10-second observations as filled and hollow dots, the Ryuk arrow that ends the container, and a 64-cell core grid filled per state) is an SVG and PNG drawn on the real numbers of its PR; shown it beside the same PR's text-row card, the user said "이게 더 낫다" (2026-11-17). `pr1460-chart` (keyword search: p50 speedup per path) and `pr1423-chart` (thread count, main against this PR per case) are performance charts, each as its `ztd-charts` spec and PNG.
 
 ## Render verification
 
