@@ -8,8 +8,7 @@ columns id, depth, parents, node, check, code, status (see ../SKILL.md). The che
 enforces the structure of top-down refinement: every node descends exactly one
 depth from its parents, a depth is settled before the next is written, and every
 branch ends in a leaf that names a real code change. On success it prints one
-`approved: <absolute path>` line per leaf and `my-code-plan: plan OK`, which the
-Claude Code hook code-plan-gate.py reads to allow edits of those files.
+`approved: <absolute path>` line per leaf and `my-code-plan: plan OK`.
 """
 
 import argparse

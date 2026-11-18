@@ -3,7 +3,7 @@ name: my-code-plan
 description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before editing. Use before every code modification, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation, a harness rule or skill edit. 코드를 수정하기 전에는 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 반드시 사용한다."
 metadata:
   author: hrlee
-  version: "1.0.0"
+  version: "1.0.1"
   domain: planning
   triggers: 코드 계획, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
 ---
@@ -78,7 +78,7 @@ The columns are fixed: `id` is unique, `depth` an integer, `parents` the comma-s
 
 ## Checker
 
-`bin/check-plan.py` enforces the structure: unique ids, a depth-0 root, parents exactly one depth up, no draft depth above a deeper one, a check on every node, children for every inner node, no children under a leaf, leaves at depth 2 or deeper, and leaf paths that exist (or, with `new:`, do not yet exist) under `--repo`. On success it prints `approved: <absolute path>` per leaf and the line `my-code-plan: plan OK`. The checker cannot judge completeness, necessity, or grounds; step 2 does. In Claude Code, the `code-plan-gate.py` hook denies an edit to a file that no approved leaf of the current user prompt names; when it denies, extend the plan, do not edit around it.
+`bin/check-plan.py` enforces the structure: unique ids, a depth-0 root, parents exactly one depth up, no draft depth above a deeper one, a check on every node, children for every inner node, no children under a leaf, leaves at depth 2 or deeper, and leaf paths that exist (or, with `new:`, do not yet exist) under `--repo`. On success it prints `approved: <absolute path>` per leaf and the line `my-code-plan: plan OK`. The checker cannot judge completeness, necessity, or grounds; step 2 does.
 
 ## Report
 
