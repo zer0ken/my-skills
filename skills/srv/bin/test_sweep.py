@@ -111,7 +111,7 @@ class SweepTest(unittest.TestCase):
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
             "--perspectives", str(self.perspectives), "--requirements", str(self.requirement),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
-            "--model", "fake", "--max-concurrency", "4", *extra,
+            "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
         with contextlib.redirect_stderr(io.StringIO()):
             return sweep.main(argv)
@@ -129,6 +129,42 @@ class SweepTest(unittest.TestCase):
         body = FakeEndpoint.requests[0]
         self.assertEqual(body["response_format"]["type"], "json_schema")
         self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.FINDINGS_SCHEMA)
+
+    def test_samples_are_independent_calls_pooled_per_task(self) -> None:
+        def respond(body: dict) -> str:
+            finding = {"id": "F-1", "severity": "NIT", "file": "pkg/store.py", "line": 2,
+                       "anchor": "query = 'SELECT 1'", "condition": "c", "evidence": "e", "fix": "f"}
+            return answer([finding]) if task_of(body) == "U-2__db" else answer()
+
+        FakeEndpoint.respond = staticmethod(respond)
+        self.assertEqual(self.run_sweep("--samples", "3"), 0)
+        self.assertEqual(sorted(task_of(b) for b in FakeEndpoint.requests).count("U-2__db"), 3, "each sample is its own call")
+        result = self.read("U-2__db.json")
+        self.assertEqual(result["samples"], 3)
+        self.assertEqual([f["sample"] for f in result["findings"]], [1, 2, 3],
+                         "pooled findings keep their sample number, because ids from two samples collide")
+        self.assertEqual([row["sample"] for row in result["checked"]], [1, 2, 3])
+        self.assertEqual(self.read("summary.json")["samples"], 3)
+
+    def test_task_with_a_failed_sample_is_not_valid(self) -> None:
+        calls: dict[str, int] = {}
+        lock = threading.Lock()
+
+        def respond(body: dict) -> str:
+            task = task_of(body)
+            with lock:
+                calls[task] = calls.get(task, 0) + 1
+                # Of a task's four calls, the first three always hold both attempts of one sample.
+                first = calls[task] <= 3
+            return "{}" if task == "U-1__trace" and first else answer()
+
+        FakeEndpoint.respond = staticmethod(respond)
+        self.assertEqual(self.run_sweep("--samples", "2"), 1)
+        result = self.read("U-1__trace.json")
+        self.assertFalse(result["ok"], "one unreviewed sample leaves the task's pooled review incomplete")
+        self.assertNotIn("findings", result)
+        self.assertTrue(any(error.startswith("sample ") for error in result["errors"]))
+        self.assertEqual(self.read("summary.json")["failed"], ["U-1__trace"])
 
     def test_request_carries_numbered_head_lines_and_callers(self) -> None:
         self.run_sweep()
@@ -159,7 +195,7 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(self.run_sweep(), 0)
         result = self.read("U-1__trace.json")
         self.assertEqual(result["attempts"], 2)
-        self.assertTrue(result["errors"][0].startswith("attempt 1: content is not JSON"))
+        self.assertTrue(result["errors"][0].startswith("sample 1: attempt 1: content is not JSON"))
 
     def test_enclosing_names_walk_out_to_the_top_level(self) -> None:
         lines = ["class Store:", "    x = 1", "", "    def load(self):", "        if True:", "            return 1", "def other():", "    pass"]
@@ -177,7 +213,7 @@ class SweepTest(unittest.TestCase):
             result["errors"],
             [
                 (
-                    "attempt 1: the answer stopped at --max-tokens 100 (finish_reason length); "
+                    "sample 1: attempt 1: the answer stopped at --max-tokens 100 (finish_reason length); "
                     "reasoning tokens count toward it, so rerun the task with a larger --max-tokens"
                 )
             ],

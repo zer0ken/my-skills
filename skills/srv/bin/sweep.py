@@ -3,11 +3,13 @@
 # requires-python = ">=3.11"
 # dependencies = ["tqdm"]
 # ///
-"""srv round 1: review every (unit, perspective) task with one structured-output model call.
+"""srv round 1: review every (unit, perspective) task with independent structured-output model calls.
 
 A task is one review unit of `rv/bin/plan-units.py` and one perspective the unit
-plan matched to it. Each task is one request to an OpenAI-compatible endpoint;
-all tasks run in parallel, so the round takes about as long as its slowest call.
+plan matched to it. Each task is `--samples` independent requests (samples) to an
+OpenAI-compatible endpoint, whose findings are pooled, because one call misses
+causes another finds; all samples of all tasks run in parallel, so the round
+takes about as long as its slowest call.
 The request carries everything the reviewer needs: the brief
 (`references/brief.md`), the perspective method, the requirement copies, the
 unit's hunks, the unit's files at the head with line numbers, and the lines
@@ -373,7 +375,7 @@ def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, 
 
 
 def run_task(task: Task, context: dict, options: argparse.Namespace) -> dict:
-    """Review one task; one retry when the call fails or the answer is invalid."""
+    """Review one task once (one sample); one retry when the call fails or the answer is invalid."""
     messages = build_messages(task, context)
     attempts, errors, usage_total = 0, [], {"prompt_tokens": 0, "completion_tokens": 0}
     started = time.monotonic()
@@ -474,8 +476,28 @@ def read_result(out: Path, task: Task, diff_sha256: str) -> dict | None:
     return result if result.get("diff_sha256") == diff_sha256 else None
 
 
+def merge_samples(task: Task, samples: list[dict]) -> dict:
+    """One task output from its independent samples, in sample order.
+
+    The task is valid only when every sample is; each finding and checked row
+    keeps the number of the sample that wrote it, because two samples' ids collide.
+    """
+    merged = {
+        "task": task.name, "unit": task.unit["id"], "perspective": task.perspective,
+        "ok": all(sample["ok"] for sample in samples), "samples": len(samples),
+        "attempts": sum(sample["attempts"] for sample in samples),
+        "errors": [f"sample {n}: {error}" for n, sample in enumerate(samples, 1) for error in sample["errors"]],
+        "seconds": max(sample["seconds"] for sample in samples),
+        "usage": {key: sum(sample["usage"][key] for sample in samples) for key in ("prompt_tokens", "completion_tokens")},
+    }
+    if merged["ok"]:
+        merged["findings"] = [{**finding, "sample": n} for n, sample in enumerate(samples, 1) for finding in sample["findings"]]
+        merged["checked"] = [{**row, "sample": n} for n, sample in enumerate(samples, 1) for row in sample["checked"]]
+    return merged
+
+
 def failed_result(task: Task, error: BaseException) -> dict:
-    """A task that raised: kept as a failed output so the round still reports every task."""
+    """A sample that raised: kept as a failed output so the round still reports every task."""
     return {
         "task": task.name, "unit": task.unit["id"], "perspective": task.perspective, "ok": False, "attempts": 0,
         "errors": [f"the task raised {type(error).__name__}: {error}"], "seconds": 0.0,
@@ -518,13 +540,22 @@ def run_sweep(options: argparse.Namespace) -> int:
         print(f"sweep: no method file for perspectives {missing_methods} in {options.perspectives}", file=sys.stderr)
         return 2
     progress = Progress(len(tasks), out)
+    done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
-        futures = {pool.submit(run_task, task, context, options): task for task in tasks}
+        futures = {
+            pool.submit(run_task, task, context, options): (task, number)
+            for task in tasks
+            for number in range(1, options.samples + 1)
+        }
         for future in concurrent.futures.as_completed(futures):
+            task, number = futures[future]
             try:
-                result = future.result()
-            except Exception as error:  # noqa: BLE001 - recorded as the task's failure; the round must still report every task
-                result = failed_result(futures[future], error)
+                done[task.name][number] = future.result()
+            except Exception as error:  # noqa: BLE001 - recorded as the sample's failure; the round must still report every task
+                done[task.name][number] = failed_result(task, error)
+            if len(done[task.name]) < options.samples:
+                continue
+            result = merge_samples(task, [done[task.name][n] for n in range(1, options.samples + 1)])
             result["diff_sha256"] = diff_sha256
             (out / f"{result['task']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance(result)
@@ -543,6 +574,7 @@ def run_sweep(options: argparse.Namespace) -> int:
         "wall_s": round(time.monotonic() - started, 1),
         "slowest_s": max((r["seconds"] for r in results), default=0),
         "this_run_tasks": len(tasks),
+        "samples": options.samples,
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in results),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in results),
         "findings_by_severity": severities,
@@ -573,12 +605,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
     parser.add_argument("--model", required=True)
     parser.add_argument("--api-key-env", help="environment variable holding the API key")
+    parser.add_argument(
+        "--samples", type=int, default=3,
+        help="independent calls per task, run at once; their findings are pooled, because one call misses causes another finds",
+    )
     parser.add_argument("--max-concurrency", type=int, default=32)
     parser.add_argument("--max-tokens", type=int, default=65536, help="covers reasoning and answer tokens")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
     parser.add_argument("--only", nargs="+", help="task names `<unit>__<perspective>` to run, for a rerun of failed tasks")
-    return parser.parse_args(argv)
+    options = parser.parse_args(argv)
+    if options.samples < 1:
+        parser.error("--samples must be 1 or more: a task with no sample is a unit perspective nobody reviewed")
+    return options
 
 
 def main(argv: list[str]) -> int:
