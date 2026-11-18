@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document. The session that owns the plan does not run it: it starts one operator session that runs every step and returns one consolidated file."
 metadata:
   author: hrlee
-  version: "1.8.2"
+  version: "1.9.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -59,7 +59,7 @@ Choose the perspectives the plan touches; `trace` always runs.
 
 | Id | File | Covers |
 | --- | --- | --- |
-| P1 | `references/perspectives/trace.md` | Requirement-plan traceability, concept definitions and identity, claims about existing code, repository rules |
+| P1 | `references/perspectives/trace.md` | Requirement-plan traceability, the solution the requirements state and the smallest mechanism, concept definitions and identity, claims about existing code, repository rules |
 | P2 | `references/perspectives/query.md` | Queries, indexes, readers and writers of changed stored units (`sql-expert` DM-Querying, DM-Processing) |
 | P3 | `references/perspectives/concurrency.md` | Transactions, concurrency, failure and recovery (`parallel-expert`, `sql-expert` DM-Internals) |
 | P4 | `references/perspectives/backends.md` | Equivalence across storage backends and test fakes |
