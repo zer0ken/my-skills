@@ -11,6 +11,7 @@ Do not read any other path under ~/.agents except the method file and the skill 
 
 Rules:
 - Report only defects inside your perspective. Skip anything outside it, even if you notice it.
+- Report only defects inside the scope of what the plan answers: what the requirement copy asks for, and what the planned change itself would introduce, grow, or newly make reachable. A problem that exists the same at the review base and that the requirement copy does not ask the plan to fix is outside the scope; do not report it.
 - Apply the checklist item by item. For each item, decide whether the plan satisfies it, using the code to check the plan's claims.
 - Every finding needs evidence you checked yourself: the plan line AND a code or rule location (file:line at the review base). A finding without a checked location is not reported.
 - Severity: BLOCKER (the plan cannot work as written), MAJOR (a wrong or missing contract that would produce a defect), MINOR, NIT. Do not inflate.

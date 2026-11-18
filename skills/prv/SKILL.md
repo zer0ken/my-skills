@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with several blind local-model reviewers, one perspective each with a method checklist, then have one session of another model family verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document. The session that owns the plan does not run it: it starts one operator session that runs every step and returns one consolidated file."
 metadata:
   author: hrlee
-  version: "1.9.0"
+  version: "1.10.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -32,6 +32,7 @@ prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document b
 | consolidator | One session of another model family, launched by the operator, that verifies every finding and writes the consolidated table; verification is only its work |
 | review workspace | The Paseo workspace one prv run creates in the operator's own project, whose directory is the review-base worktree; every reviewer and the consolidator run in it, and the operator archives it when the run ends |
 | confirmed cluster | A group of duplicate findings that the consolidator verified against the cited lines (CONFIRMED) |
+| scope | The promise the plan answers, as rv's `## Scope of a finding` (`~/.agents/skills/rv/SKILL.md`) defines it for a change; a finding outside it is not a finding (verdict OUT-OF-SCOPE) |
 
 ## Caller and operator
 
@@ -89,7 +90,7 @@ The operator runs every step and waits inside its turn. Each end of an operator 
 4. When every reviewer has finished, launch one consolidator in the review workspace (it also merges the duplicates the three sessions of a perspective produce) of another family, a Claude session on opus at high thinking (reviews go to Claude; the user's words, 2026-11-18: "모두 코덱스를 클로드로 전환해라") with `references/consolidate.md` filled, `<CLAIM_LEDGER>` included when the plan owner gave one. It verifies, clusters, and writes the consolidated file. The operator checks only that the consolidated file exists with the top section `## 현재 계획에 남은 확정 결함` (and `## 주장 원장 점검` when a ledger was given) and takes the counts from the consolidator's closing reply; it does not read, re-grade, drop, or add a cluster. A consolidator that fails twice at the same point is reported as failed, with no consolidated file; the operator passes no reviewer finding to the caller in its place.
 5. Archive the review workspace and remove the review-base worktree, as step 4 of the review workspace section says, then end the turn with the closing reply, under 4,000 characters: the path of the consolidated file, the counts of confirmed clusters from the consolidator's reply, the sessions launched and failed per perspective, the model-server state, and the archive result. The reply is the turn's last response; the operator sends the caller no other message.
 
-The caller takes the confirmed clusters as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line. The caller handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill, so each fix lands on the plan node that caused it. A criticism of the consolidated file itself is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix prv so the same defect does not recur.
+The caller takes the confirmed clusters as findings to fix. PLAUSIBLE clusters are questions for the plan owner, not defects. REJECTED findings are dropped with the consolidator's cited line, and OUT-OF-SCOPE findings with the open issue or the review-base line it cited; neither is a finding to fix. The caller handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill, so each fix lands on the plan node that caused it. A criticism of the consolidated file itself is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix prv so the same defect does not recur.
 
 In a my-workflow run, the gate's judge session is the operator, the review directory is `<run root>/artifacts/<task id>-prv/` and the consolidated file is `<run root>/artifacts/<task id>-prv.md`, where `<task id>` is the `dev-plan` task the gate judges, such as `T2`.
 

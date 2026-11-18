@@ -11,6 +11,7 @@ Do not read any other path under ~/.agents, other worktrees, PR pages, or sessio
 
 Rules:
 - Report only defects inside your perspective. Skip anything outside it, even if you notice it.
+- Report only defects inside the scope of the change: what the requirement copies ask for, and what the change itself introduces, grows, or newly makes reachable. A problem that exists the same at the merge base and that the requirement copies do not ask to fix is outside the scope; do not report it.
 - Find definitions, callers, and references with LSP or Serena first; text search supplements them for strings, config keys, SQL, and documents.
 - Read; do not run tests, scripts, or the product. The operator runs the checks that decide a verdict.
 - Apply the checklist item by item. For each item, decide whether the change satisfies it, reading the changed lines together with their callers, tests and fakes.

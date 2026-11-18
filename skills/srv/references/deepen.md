@@ -11,4 +11,4 @@ Write a question for each of these:
 
 A question may name the counter-argument the reviewer must also weigh (example: "check whether the exception is intended"), but it does not carry the operator's verdict, the cluster text, or other reviewers' suggestions. Each question file holds the question, the round-1 brief path, the perspective method file, the output path `round-<k>/Q<n>-result.md`, and a length limit for the output (140 lines in the first run). The reviewer reads only what the question needs and does not repeat the perspective sweep.
 
-One session per question, launched together. In the first run the seven round-2 questions, one session each, reached 77.8% precision against 34.1% for the perspective sweep. A question whose answer repeats a REJECTED suggestion is closed with the line that rejects it.
+One session per question, launched together. In the first run the seven round-2 questions, one session each, reached 77.8% precision against 34.1% for the perspective sweep. A question whose answer repeats a REJECTED suggestion is closed with the line that rejects it. No question is written about an OUT-OF-SCOPE suggestion.

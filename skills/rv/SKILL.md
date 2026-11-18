@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.24.0"
+  version: "2.25.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -77,6 +77,12 @@ Use the project's classification for evidence_class if it has one. Otherwise use
 
 For MINOR and NIT findings, the agent that produced them sets the verdict to CONFIRMED or PLAUSIBLE by self-verification.
 
+## Scope of a finding
+
+The scope of a review is the promise of the change: the completion conditions and stated scope of the issue the change resolves, the changes the PR states, and the user's decisions recorded on them. A finding is inside the scope when it points at something the change does or fails to do against that promise: a defect the change introduces, a problem it grows or newly makes reachable, or a completion condition or claim of the issue or PR that it does not meet. A finding is outside the scope when it points at a problem that exists the same at the merge base and that the promise does not ask to fix, or at a problem another open issue of the repository already describes, meaning one that issue's completion conditions would fix, wherever the change touches it; the issue the change resolves is not another issue. Before reporting a finding on a problem the change did not write, search the repository's open issues for it (`gh issue list --state open --search "<terms>"`) and read the candidates.
+
+A problem outside the scope is not a finding: the review does not report it, gives it no R-ID or severity, and does not weigh it in the verdict. One that a unit or a verifier raises anyway is dropped at assembly (U6) as outside the scope, with the open issue or the merge-base line that places it there. The user's words (2026-11-18), while a lead answered a design gate of PR #1386 of graphai-repository/enterprise-memory whose findings included one the lead matched to the open issue #1484 (per-row calls of the group visibility functions): "이미 열린 이슈가 있는거면 억지로 해결하지 말것", "이미 열린 이슈가 있는 문제라면 이 PR에 대한 지적으로 삼지 말것", and right after: "즉, 범위를 벗어난 지적을 내지 않아야 하며, 그것이 나오더라도 범위를 벗어났으면 지적으로 인정하지 말아야 한다."
+
 ## Unit structure
 
 ```
@@ -101,7 +107,7 @@ U1 and U2 can run in parallel. U3 can be split per changed area and run in paral
 
 ## U0 Prepare
 
-Check the target head, the comparison base, and uncommitted changes. Read all project rules and reference rules closely and match their application paths. Consult the relevant osiri guide (`~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md`) and refactor (`~/.agents/skills/refactor/SKILL.md`) together.
+Check the target head, the comparison base, and uncommitted changes. Fix the review's scope from the issue and the PR as `## Scope of a finding` defines it. Read all project rules and reference rules closely and match their application paths. Consult the relevant osiri guide (`~/.agents/skills/osiri/TECHNICAL_REVIEW_GUIDE.md`) and refactor (`~/.agents/skills/refactor/SKILL.md`) together.
 
 Compare existing reviews, responses, and user decisions and verification results against the current code. Recheck each finding in prior_ids down to its occurrence condition and related call paths, and when a verdict changes, leave the new evidence and reason. Confirm that a user decision used as grounds for a finding has not been cancelled or replaced by later instructions.
 
@@ -121,7 +127,7 @@ Identify the change's entry points, public interfaces, and data models. Check th
 
 This step ends with structural information only, before reading file bodies. Confirm lists, names, import relationships, and size with tool output (`git diff --stat`, `git ls-files`, search, import contracts, LSP references), and open only suspicious files.
 
-Separately from code content, review the shape of the codebase the change leaves behind. The scope is not the diff lines but the packages the change touched and their neighbors, and even problems that existed before the change are flagged if the change relies on or grows them. The types below are flagged as defects regardless of behavior and whether checks pass, and each finding states the responsibility placement that causes it and the location to move to or the name to change.
+Separately from code content, review the shape of the codebase the change leaves behind. The scope is not the diff lines but the packages the change touched and their neighbors, and even problems that existed before the change are flagged if the change relies on or grows them, unless another open issue already describes them (`## Scope of a finding`). The types below are flagged as defects regardless of behavior and whether checks pass, and each finding states the responsibility placement that causes it and the location to move to or the name to change.
 
 1. Import relationships and `__init__.py`
   1.1 Layer inversion: a lower layer imports an upper layer (by the project's layer rules and import contracts).
@@ -265,7 +271,7 @@ If the same wrong pattern repeats across several locations or changes, write the
 
 ## U6 Assemble and post
 
-Merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
+Drop every finding outside the scope (`## Scope of a finding`), then merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
 
 Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md> --ledger <ledger.md>` and fix the document and the ledger until it prints `rv review format: review and item ledger passed (<n> items)`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. It rejects a ledger that misses an item of the catalog (per area for the per-area items), puts two items in one turn, leaves a cell empty, gives no `file:line`, backtick command, or URL as evidence, omits a sub-check from `확인한 범위`, has a verdict that is not R-IDs, `배제: <이유>`, or `해당 없음: <이유>`, or names an R-ID the review document does not contain. A fix the check forces goes back to the item's turn: rerun the item, do not edit the row alone. Exit code 1 is a format violation and 2 is a read failure.
 

@@ -3,7 +3,7 @@ name: swarm-review
 description: "Swarm review (srv) of a code change: many blind local-model reviewer sessions each apply one perspective built from rv's review items to the diff, one operator session verifies every suggestion against the code, sends narrow follow-up questions to new reviewers for further rounds, and returns one review document. Use when the user calls /srv, /swarm-review, $srv, or $swarm-review, or asks for a swarm review of a PR, branch, or commit range (코드 변경을 여러 리뷰어 세션으로 훑어 리뷰할 때)."
 metadata:
   author: hrlee
-  version: "0.3.0"
+  version: "0.4.0"
   domain: workflow
   triggers: srv, swarm-review, swarm review, 스웜 리뷰
   dependencies:
@@ -34,6 +34,7 @@ prv reviews a plan before code exists; srv reviews a code change (a PR, a branch
 | reviewer | A self-hosted-model session that applies one perspective (round 1) or answers one follow-up question (later rounds), blind to everything but its inputs |
 | operator | The session that runs srv: prepares inputs, launches reviewers, verifies and clusters every suggestion, writes follow-up questions, and writes the review document |
 | suggestion | One finding a reviewer reports; it is not a defect until the operator verifies it |
+| scope | The promise of the change, as rv's `## Scope of a finding` (`~/.agents/skills/rv/SKILL.md`) defines it; a suggestion outside it is not a finding (verdict OUT-OF-SCOPE) |
 | cluster | A group of suggestions the operator judged to describe the same defect, with one verdict: CONFIRMED, PLAUSIBLE, or REJECTED |
 | round | One launch of reviewers followed by the operator's verification of their output; round 1 is the perspective sweep, later rounds answer follow-up questions |
 | follow-up question | A narrow question the operator writes from a verified round, sent to new reviewers to dig into one place |
@@ -80,7 +81,7 @@ A perspective is a checklist, not a persona. The user's words (2026-11-12): "전
 7. Stop when a round adds no new CONFIRMED cluster, or after round 3, whichever comes first.
 8. Write the review document `REVIEW.md` in the review directory, in the format of `references/consolidate.md`, and `procedure-log.md` beside it: steps, sessions per round with launch and finish times, server state, blockers and what was changed. A time box given to a reviewer is recorded against its actual finish time; it is not a stop, and an overrun is written, not hidden.
 9. Confirm that no session in the review workspace has a running turn (an idle or closed session has none), archive the workspace, and remove the head worktree with `git worktree remove`, as prv's review workspace section says.
-10. End the operator's turn with the counts of confirmed clusters per severity, the count of new confirmed clusters per round, the precision per round, and the path of `REVIEW.md`, under 4,000 characters. The caller reads `REVIEW.md`; accepting, rejecting, posting, and fixing are the caller's, and the caller handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill. A criticism of `REVIEW.md` itself (a wrong verdict, a missed cluster, weak evidence) is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix srv so the same defect does not recur.
+10. End the operator's turn with the counts of confirmed clusters per severity, the count of new confirmed clusters per round, the precision per round, and the path of `REVIEW.md`, under 4,000 characters. An OUT-OF-SCOPE suggestion reaches the caller only as a count. The caller reads `REVIEW.md`; accepting, rejecting, posting, and fixing are the caller's, and the caller handles the confirmed and PLAUSIBLE clusters as one round of findings with the `response-rv` skill. A criticism of `REVIEW.md` itself (a wrong verdict, a missed cluster, weak evidence) is also handled with `response-rv`, and when its root cause lies in this procedure or its references, fix srv so the same defect does not recur.
 
 The operator edits nothing but the review directory and the ignored analysis configs of the head worktree it created: no tracked-file edits, commits, pushes, PR or issue comments, posted reviews, or messages to people. Reviewers do not start other sessions; the brief says so. The operator does not stop or restart a model server.
 
