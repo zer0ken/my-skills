@@ -6,7 +6,7 @@ This presents how each agent maps rv's unit structure. rv does not force an exec
 
 ## Reviewer assignment
 
-A review presumes that one does not judge one's own work, so reviewers and verifiers are sessions separated from the producer, given only the target and criteria. Codex takes every review role, independent and perspective-specific alike (a perspective-specific reviewer loads the area's `-expert` skill). The user's words (2026-11-16), after a lead launched an independent code review as a Claude session: "내가 언제 리뷰를 클로드로 하랬냐", "리뷰는 코덱스라고", and "아니 리뷰는 시켜야돼". So Claude's, pi's, and Hermes's work is reviewed by Codex, a different family, and Codex's work by an empty Codex session separated from the producer. pi and Hermes have no review role (pi takes narrow edits whose location and method are fixed, Hermes takes research, documents, and operations). If Codex cannot be launched because of limits or outages, write that fact and the remaining verification gap in the result document, and replace it with a Claude worker under the same conditions or ask the caller. Do not fill the review count by sending in agents outside their role.
+A review presumes that one does not judge one's own work, so reviewers and verifiers are sessions separated from the producer, given only the target and criteria. Claude takes every review role, independent and perspective-specific alike (a perspective-specific reviewer loads the area's `-expert` skill), in a new session that holds none of the producer's history; that separation carries the independence, whoever the producer is. The user's words (2026-11-18): "이제 나는 codex 시트가 없다. 내 하네스, 워크플로우, 스킬, 기타 등등에서 모두 코덱스를 클로드로 전환해라." These moved to Claude the review roles the user had given Codex on 2026-11-16 ("리뷰는 코덱스라고"), and what still holds of that answer is that review is delegated, never skipped: "아니 리뷰는 시켜야돼". Pick the reviewer's model by the situation, as the harness model-tier table says ("모델 수준을 잘 고려해야된다", "상황에 따라", 2026-11-18): an independent review of a PR, design, or plan and a perspective-specific expert review run on opus at high thinking, xhigh when the change spans several layers; a recheck of a small fix commit against one finding may run on sonnet. pi and Hermes have no review role (pi takes narrow edits whose location and method are fixed, Hermes takes research, documents, and operations). If no Claude account can launch a reviewer because every account is at its limit, write that fact and the remaining verification gap in the result document and ask the caller. Do not fill the review count by sending in agents outside their role.
 
 Submit APPROVE, REQUEST_CHANGES, or COMMENT according to the verdict, but GitHub does not let a PR author approve their own PR, so on your own PR post a verdict equivalent to APPROVE as COMMENT. This record does not meet the approval requirement, and the merge state stays `REVIEW_REQUIRED`. If approval is needed, report that another person's approval or the repository admin's ruleset judgment is needed, and do not create an approval with another account.
 
@@ -27,9 +27,9 @@ The coordinator starts subagents with the Agent tool. Whether the coordinator ed
 | U5 | Agent |
 | U6 | The coordinator assembles the markdown document |
 
-## Codex
+## Claude reviewer
 
-Codex runs the review units assigned to it. When split execution is needed, the coordinator starts workers with Paseo `create_agent` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated Codex worker does not re-delegate without explicit permission.
+The Claude reviewer session runs the review units assigned to it. When split execution is needed, the coordinator starts workers with Paseo `create_agent` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated worker does not re-delegate without explicit permission.
 
 | Unit | Execution |
 |---|---|

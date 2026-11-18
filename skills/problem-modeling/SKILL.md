@@ -3,7 +3,7 @@ name: problem-modeling
 description: "Define the problem mathematically before choosing a solution. Name it with a known problem type, fix inputs and outputs as symbols, and document the core subproblems with their boundary cases, constraints, evaluation metrics, and out-of-scope items. Use when the user calls /problem-modeling, asks for a problem's definition, input, or output, or when two or more fix attempts on the same defect have failed and the problem must be redefined."
 metadata:
   author: hrlee
-  version: "1.2.0"
+  version: "1.2.1"
   domain: workflow
   triggers: 문제 정의, 입력 출력, problem modeling, 수학적 정의, 문제를 정의해
 ---
@@ -64,7 +64,7 @@ Define metrics computable from the output and the answer key alone. Include accu
 2. Split development cases from evaluation cases and report them separately. Do not put evaluation-case sentences or answers into prompts or product code.
 3. If the answer criterion is close to the solution's rules, write that limitation.
 4. Set the number of repetitions for elements that make measurement fluctuate (model judgments).
-5. Name what, other than the producer of the solution and its own report, shows that the result is right: an answer key made independently, a downstream consumer's check, a reviewer from another model family, or a measurement on real data.
+5. Name what, other than the producer of the solution and its own report, shows that the result is right: an answer key made independently, a downstream consumer's check, an independent reviewer session that holds none of the producer's history, or a measurement on real data.
 
 ### 8. Out of scope
 
