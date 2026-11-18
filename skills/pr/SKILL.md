@@ -3,7 +3,7 @@ name: pr
 description: "Open a PR, take it through the CI gate, and finish it through merging. Write the title as a noun phrase, and write the body as a change visual at the very top (one image drawing as-is and to-be on the same real input with the PR's observable result, for code hygiene, behaviour, and performance changes alike), then an issue reference line, then a short `-` bullet summary of about three bullets (10 lines or fewer including sub-bullets), with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /pr or instructs to open a PR (PR 을 올리라고 지시할 때), when merging or finishing a PR (PR 을 병합하거나 마무리할 때), when stacking PRs with the GitHub stacked PR feature (PR 을 스택하라고 지시할 때), and when CI fails on code that was just pushed or merged (방금 push 하거나 병합한 코드의 CI 가 실패했을 때)."
 metadata:
   author: hrlee
-  version: "1.31.1"
+  version: "1.31.2"
   domain: workflow
   triggers: PR, pull request, PR 스택, stacked PR, gh stack, PR 올려, PR 생성, gh pr create, PR 병합, CI 실패
   role: guardian

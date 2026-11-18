@@ -1,9 +1,9 @@
 ---
 name: issue
-description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Before writing, investigate whether it duplicates, conflicts with, or is a parent or sub-issue of other issues and the work on them, and write the relations found. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
+description: "Post an issue. Write the title as a noun phrase that names the problem the body's `문제` item states, not its cause or solution, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Before writing, investigate whether it duplicates, conflicts with, or is a parent or sub-issue of other issues and the work on them, and write the relations found. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
 metadata:
   author: hrlee
-  version: "1.11.0"
+  version: "1.12.0"
   domain: workflow
   triggers: 이슈, issue, 이슈 올려, 이슈 생성, gh issue create
   role: guardian
@@ -71,7 +71,22 @@ Write in the order of title, body, and details, and finish with the pre-posting 
 
 ## Title
 
-The title is the name of the observed phenomenon or the requirement. Write it as a noun phrase whose last word is a noun. Do not put in a sentence-final ending (`~다`, `~습니다`), a nominalizing ending (`~함`, `~음`, `~하기`), or punctuation. Keep an identifier that distinguishes it from other issues in the same repository (an error name, an exit code, the target module).
+The title is the name of the problem that the body's `문제` item states: the observed phenomenon, or the requirement for a request. It is not the cause and not the solution; those are the `원인` or `추정` and the `계획` items. So write the `문제` line first and derive the title from it: turn that line into a noun phrase, keeping what it says. A title that joins the symptom and the cause into one phrase, or that names only the cause or the fix, names something other than the problem, and a collaborator who meets the symptom cannot find the issue by it.
+
+When the title must change, after the user's or a reviewer's criticism or an anti-slop finding, start again from the `문제` line, not from the previous title: reread that line, check it still states the problem, and derive the title from it again. Rewording the previous title, or swapping only the word a checker flagged, keeps the wrong focus.
+
+The case (2026-11-18, enterprise-memory #1518), whose `문제` line said that the quality traversal verdict differs between runs of the same code:
+
+| Title | What went wrong |
+| --- | --- |
+| `같은 코드에서 갈리는 quality traversal 판정과 검색 최종 순위의 동점` | joined the symptom and the cause with `과` |
+| `검색 순위의 동점을 적재 순서에 따라 달라지는 id 로 가르는 문제` | named only the cause, and wrongly: the ranking sorts by score and the id only orders ties |
+| `검색 순위의 동점을 적재 순서에 따라 달라지는 id 로 정렬하는 문제` | swapped only the word anti-slop flagged |
+| `같은 코드에서 달라지는 quality traversal 판정` | the `문제` line as a noun phrase; the user accepted it |
+
+The user's words on the way: "제목 다시써라", "똑바로 안하냐?", "제목이 저게 맞냐고", "왜 자꾸 초점을 못 맞추지?", and then "이슈 스킬 및 훅에 이거 막으라고 해라. 너 이슈 스킬 썼어?"
+
+Write the title as a noun phrase whose last word is a noun. Do not put in a sentence-final ending (`~다`, `~습니다`), a nominalizing ending (`~함`, `~음`, `~하기`), or punctuation. Keep an identifier that distinguishes it from other issues in the same repository (an error name, an exit code, the target module).
 
 When turning a sentence into a noun phrase, keep the object and change the predicate into the noun of that action.
 
@@ -144,13 +159,13 @@ When the user decides a design or scope, do not leave the decision only in the c
 
 Read only the title and body and check the following. If any one is off, write it again.
 
-1. The last word of the title is a noun, and the title is distinct from other issues.
+1. The last word of the title is a noun, the title names the problem the `문제` item states (not its cause or solution), and it is distinct from other issues.
 2. Each item is one bullet line and one sentence, and the same statement is not split across two items.
 3. The `문제` item describes the observed phenomenon, not a solution or a cause.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
 5. Every relation the relation investigation found is in the reference line with its relation word, a duplicate was not drafted as a new issue, and a conflict was brought to the user before creating.
 6. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
-7. anti-slop finds nothing in the title and body: read the latest `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and compare, or run the checker as the `pr` skill's `references/anti-slop-preflight.md` describes. Where the repository runs the anti-slop workflow, also read its bot result after posting.
+7. anti-slop finds nothing in the title and body: read the latest `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and compare, or run the checker as `~/.agents/skills/pr/references/anti-slop-preflight.md` describes. The checker exits 0 even when it reports findings, so judge by its output being empty, and run it as its own step before the post, never chained to it with `&&`. Where the repository runs the anti-slop workflow, also read its bot result after posting.
 
 ```bash
 gh issue create --title "<명사구 제목>" --body-file body.md

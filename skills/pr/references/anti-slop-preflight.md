@@ -34,7 +34,7 @@ for c in $(git rev-list origin/main..HEAD); do
 done
 ```
 
-The checker sometimes reports only the top 10 or so findings. If you do not get 0 in one run, fix and run again. From the replacement candidates in the output, choose the one that fits the meaning of that sentence, and if none of the candidates fits, change it to wording that describes the action that sentence actually performs.
+The checker exits 0 even when it reports findings, so a finding is its output being non-empty, not its exit code: run each check as its own step and read the output before posting or pushing, never chain the check to the post with `&&` (2026-11-18, enterprise-memory #1518: a flagged issue title was posted that way). The checker sometimes reports only the top 10 or so findings. If you do not get 0 in one run, fix and run again. From the replacement candidates in the output, choose the one that fits the meaning of that sentence, and if none of the candidates fits, change it to wording that describes the action that sentence actually performs.
 
 ## Commit message rewriting that preserves the tree
 
