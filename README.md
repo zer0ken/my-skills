@@ -12,6 +12,7 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 | [handoff](skills/handoff/SKILL.md) | 대화를 핸드오프 문서로 압축해 다른 에이전트가 이어받게 한다. |
 | [issue](skills/issue/SKILL.md) | 이슈를 올린다. 본문은 항목 이름을 붙인 불릿 한 줄씩, 상세는 코멘트로. |
 | [openai-cookbook](skills/openai-cookbook/SKILL.md) | Find OpenAI Cookbook examples for a topic. |
+| [my-code-plan](skills/my-code-plan/SKILL.md) | 모든 코드 수정 전에 맥락 깊이 0(요구사항)부터 N(코드 변경)까지 한 깊이씩 탑다운으로 계획하고 검사기로 확인한다. |
 | [osiri](skills/osiri/SKILL.md) | Technical reviews of code, designs, and PRs, plus peer audits of reports, claims, evidence, and figures. |
 | [pov](skills/pov/SKILL.md) | 제품과 관련 기술을 조사하고 일곱 전문가 관점의 의견, 근거와 이견을 종합한다. |
 | [pr](skills/pr/SKILL.md) | PR 을 올린다. 불릿 3줄 요약과 이슈 참조, 상세는 코멘트로. |
