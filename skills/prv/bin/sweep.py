@@ -42,8 +42,8 @@ from pathlib import Path
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "call-brief.md"
 CITE_RE = re.compile(
-    r"(?<![\w./-])((?:[\w.-]+/)*[\w.-]+\.(?:py|sql|cypher|md|toml|ya?ml|json|ts|tsx|js|go|rs|sh))"
-    r"(?::(\d+)(?:-(\d+))?)?(?![\w/])"
+    r"(?<![\w./-])(/?(?:[\w.-]+/)*[\w.-]+\.(?:py|sql|cypher|md|toml|ya?ml|json|ts|tsx|js|go|rs|sh))"
+    r"(?::(\d+)(?:-(\d+))?|#L(\d+)(?:-L(\d+))?)?(?![\w/])"
 )
 CITE_RADIUS = 20
 SHORT_FILE_CHARS = 12_000
@@ -65,9 +65,10 @@ srv = load_module("srv_sweep", SKILLS / "srv" / "bin" / "sweep.py")
 def resolve_cited_path(repo: Path, cited: str) -> str | None:
     """The repository path a citation names, dropping leading directories the repository does not have.
 
-    Plans often cite through a worktree or checkout name (`merge/emem/x.py` for `emem/x.py`).
+    Plans often cite through a worktree or checkout name (`merge/emem/x.py` for `emem/x.py`) or by absolute path,
+    as file links in reports are written (`/home/u/repo/emem/x.py`).
     """
-    parts = cited.split("/")
+    parts = cited.lstrip("/").split("/")
     for start in range(len(parts)):
         candidate = "/".join(parts[start:])
         path = (repo / candidate).resolve()
@@ -76,37 +77,22 @@ def resolve_cited_path(repo: Path, cited: str) -> str | None:
     return None
 
 
-def find_citations(plan_text: str, repo: Path, skip: set[str]) -> dict[str, list[tuple[int, int]]]:
-    """Cited repository files in order of first citation, each with its cited line ranges."""
+def find_citations(plan_text: str, repo: Path) -> dict[str, list[tuple[int, int]]]:
+    """Cited repository files in order of first citation, each with its cited line ranges.
+
+    A citation is a file path the review base has, written relative, through a checkout name, or absolute,
+    with an optional `:a-b` or `#La-Lb` line range.
+    """
     cited: dict[str, list[tuple[int, int]]] = {}
     for match in CITE_RE.finditer(plan_text):
-        if posixpath.basename(match.group(1)) in skip:
-            continue
         path = resolve_cited_path(repo, match.group(1))
         if path is None:
             continue
         ranges = cited.setdefault(path, [])
-        if match.group(2):
-            first = int(match.group(2))
-            ranges.append((first, max(first, int(match.group(3) or first))))
+        first, last = match.group(2) or match.group(4), match.group(3) or match.group(5)
+        if first:
+            ranges.append((int(first), max(int(first), int(last or first))))
     return cited
-
-
-def merge_ranges(ranges: list[tuple[int, int]], radius: int, length: int) -> list[tuple[int, int]]:
-    """Cited ranges widened by `radius` lines, clipped to 1..length, overlapping ones merged."""
-    merged: list[list[int]] = []
-    for first, last in sorted((max(1, a - radius), min(length, b + radius)) for a, b in ranges if a <= length):
-        if merged and first <= merged[-1][1] + 1:
-            merged[-1][1] = max(merged[-1][1], last)
-        else:
-            merged.append([first, last])
-    return [(a, b) for a, b in merged]
-
-
-def numbered(lines: list[str], spans: list[tuple[int, int]]) -> str:
-    return "\n  ...\n".join(
-        "\n".join(f"{n:>5}| {lines[n - 1]}" for n in range(first, last + 1)) for first, last in spans
-    )
 
 
 def cited_code(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
@@ -119,11 +105,16 @@ def cited_code(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
             title, spans = f"### {path}", [(1, len(lines))] if lines else []
         elif ranges:
             title = f"### {path} (the lines around the plan's citations; the file has {len(lines)} lines)"
-            spans = merge_ranges(ranges, CITE_RADIUS, len(lines))
+            spans = srv.line_windows(ranges, len(lines), CITE_RADIUS)
         else:
             left_out.append(f"{path} (cited without a line; {len(lines)} lines)")
             continue
-        block = title + "\n" + numbered(lines, spans)
+        past_end = sorted({f"{a}-{b}" if b != a else f"{a}" for a, b in ranges if a > len(lines)})
+        if past_end:
+            left_out.append(f"{path}: cited lines {', '.join(past_end)} are past its {len(lines)} lines at the review base")
+        if not spans:
+            continue
+        block = title + "\n" + srv.numbered_lines(lines, spans)
         if used + len(block) > CITED_CHARS_TOTAL:
             left_out.append(f"{path} (over the request budget)")
             continue
@@ -184,11 +175,11 @@ def run(options: argparse.Namespace) -> int:
         return 2
     plan_text = plan.read_text(encoding="utf-8")
     requirements = "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements)
-    citations = find_citations(plan_text, repo, {plan.name, *(Path(p).name for p in options.requirements)})
+    citations = find_citations(plan_text, repo)
     shared = "\n\n".join(
         [
             "# Requirement copies (what the plan answers)\n\n" + requirements,
-            f"# The plan: {plan.name} (line number, `|`, then the line)\n\n" + numbered(plan_text.splitlines(), [(1, len(plan_text.splitlines()))]),
+            f"# The plan: {plan.name} (line number, `|`, then the line)\n\n" + srv.numbered_lines(plan_text.splitlines(), [(1, len(plan_text.splitlines()))]),
             "# Code the plan cites, at the review base\n\n" + cited_code(repo, citations),
             "# Repository rules on the cited paths\n\n" + repository_rules(repo, citations),
         ]
@@ -197,8 +188,12 @@ def run(options: argparse.Namespace) -> int:
     tasks = [srv.Task({"id": "plan"}, pid) for pid in ids]
     out.mkdir(parents=True, exist_ok=True)
     source = hashlib.sha256((plan_text + "\0" + requirements).encode("utf-8")).hexdigest()
+    # The round is every perspective with an output for this plan, so a rerun with --only reports the whole round.
+    earlier = {path.stem.removeprefix("plan__") for path in out.glob("plan__*.json")}
+    round_tasks = [srv.Task({"id": "plan"}, pid) for pid in sorted(set(ids) | earlier)]
     return srv.run_round(
-        tasks, tasks, lambda task: build_messages(task, context), anchor_against(plan, repo), options, out, source, started
+        round_tasks, tasks, lambda task: build_messages(task, context), anchor_against(plan, repo), options, out, source,
+        started, "prv reviewers", lambda task: task.perspective,
     )
 
 
@@ -214,7 +209,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--api-key-env", help="environment variable holding the API key")
     parser.add_argument("--samples", type=int, default=3, help="independent calls per perspective, pooled")
-    parser.add_argument("--max-concurrency", type=int, default=32)
+    parser.add_argument("--max-concurrency", type=int, default=128, help="requests in flight; one per perspective and sample")
     parser.add_argument("--max-tokens", type=int, default=131072, help="covers reasoning and answer tokens; 65,536 cut the trace answer on #1303 r2")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")

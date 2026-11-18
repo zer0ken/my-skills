@@ -284,7 +284,7 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(FakeEndpoint.requests, [], "a unit no task reviews must stop the round before any call")
 
     def test_line_windows_merge_when_they_touch(self) -> None:
-        self.assertEqual(sweep.line_windows([100, 150, 400], 420), [(40, 210), (340, 420)])
+        self.assertEqual(sweep.line_windows([(100, 100), (150, 150), (400, 400)], 420), [(40, 210), (340, 420)])
 
     def test_empty_checked_list_is_invalid(self) -> None:
         self.assertEqual(sweep.validate_answer(json.loads(answer(checked=[]))),

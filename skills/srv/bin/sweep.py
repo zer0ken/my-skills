@@ -23,7 +23,7 @@ because a task without output is a unit the swarm did not review.
 Usage:
   uv run sweep.py --units units.json --diff diff.patch --repo HEAD_WORKTREE \
       --perspectives DIR --requirements FILE [FILE ...] --out round-1 \
-      --base-url URL --model MODEL [--api-key-env NAME] [--max-concurrency 32]
+      --base-url URL --model MODEL [--api-key-env NAME] [--max-concurrency 128]
 Exit codes: 0 every task has a valid output, 1 some task failed, 2 bad input.
 """
 
@@ -183,21 +183,29 @@ def numbered_head_files(repo: Path, changes: dict, unit: dict) -> str:
             shown = [(1, len(lines))]
             title = f"### {file['path']}"
         else:
-            shown = line_windows(changed_line_numbers(changes[file["path"]]), len(lines))
+            shown = line_windows([(n, n) for n in changed_line_numbers(changes[file["path"]])], len(lines))
             title = f"### {file['path']} (only the lines around its changes; the file has {len(lines)} lines)"
-        blocks = [
-            "\n".join(f"{number:>5}| {lines[number - 1]}" for number in range(first, last + 1))
-            for first, last in shown
-        ]
-        parts.append(title + "\n" + "\n  ...\n".join(blocks))
+        parts.append(title + "\n" + numbered_lines(lines, shown))
     return "\n\n".join(parts)
 
 
-def line_windows(line_numbers: list[int], length: int) -> list[tuple[int, int]]:
-    """Merged ranges of `WINDOW_LINES` lines around each line number, within 1..length."""
+def numbered_lines(lines: list[str], spans: list[tuple[int, int]]) -> str:
+    """The 1-based line spans of `lines` as `number| text`, spans joined by an elision line (prv uses it too)."""
+    return "\n  ...\n".join(
+        "\n".join(f"{number:>5}| {lines[number - 1]}" for number in range(first, last + 1)) for first, last in spans
+    )
+
+
+def line_windows(ranges: list[tuple[int, int]], length: int, radius: int = WINDOW_LINES) -> list[tuple[int, int]]:
+    """Line ranges widened by `radius` on each side, clipped to 1..length, touching ones merged (prv uses it too).
+
+    A range whose widened start is past the end yields nothing; the caller decides how to show that.
+    """
     windows: list[tuple[int, int]] = []
-    for number in sorted(set(line_numbers)):
-        first, last = max(1, number - WINDOW_LINES), min(length, number + WINDOW_LINES)
+    for start, end in sorted(set(ranges)):
+        first, last = max(1, start - radius), min(length, end + radius)
+        if first > last:
+            continue
         if windows and first <= windows[-1][1] + 1:
             windows[-1] = (windows[-1][0], max(windows[-1][1], last))
         else:
@@ -434,7 +442,8 @@ def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], li
 class Progress:
     """A tqdm bar for the person watching and `progress.json` for the record."""
 
-    def __init__(self, total: int, out: Path) -> None:
+    def __init__(self, total: int, out: Path, label: str) -> None:
+        self.label = label
         self.total, self.done, self.failed = total, 0, 0
         self.path = out / "progress.json"
         self.started = time.monotonic()
@@ -442,7 +451,7 @@ class Progress:
         try:
             from tqdm import tqdm
 
-            self.bar = tqdm(total=total, desc="srv round 1", unit="task")
+            self.bar = tqdm(total=total, desc=label, unit="task")
         except ImportError:
             self.bar = None
         self.write()
@@ -455,7 +464,7 @@ class Progress:
                 self.bar.set_postfix(failed=self.failed)
                 self.bar.update(1)
             else:
-                print(f"srv round 1: {self.done}/{self.total} ({result['task']}, failed {self.failed})", file=sys.stderr)
+                print(f"{self.label}: {self.done}/{self.total} ({result['task']}, failed {self.failed})", file=sys.stderr)
             self.write()
 
     def write(self) -> None:
@@ -546,22 +555,24 @@ def run_sweep(options: argparse.Namespace) -> int:
         all_tasks, tasks,
         lambda task: build_messages(task, context),
         lambda findings: anchor_findings.anchor_findings(findings, repo),
-        options, out, diff_sha256, started,
+        options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
     )
 
 
 def run_round(
     all_tasks: list[Task], tasks: list[Task], build: Callable[[Task], list[dict]],
     anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
+    label: str, only_arg: Callable[[Task], str],
 ) -> int:
     """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
 
     Shared by srv round 1 and prv (`~/.agents/skills/prv/bin/sweep.py`); the caller decides the tasks, how a
-    task's messages are built, how its findings are anchored, and which input `source_sha256` names.
+    task's messages are built, how its findings are anchored, which input `source_sha256` names, the round's `label`
+    for progress and messages, and `only_arg`, the `--only` value that reruns a task in the caller's command.
     Exit 0 when every task of `all_tasks` has a valid output for this input, 1 otherwise.
     """
     messages = {task.name: build(task) for task in tasks}
-    progress = Progress(len(tasks), out)
+    progress = Progress(len(tasks), out, label)
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {
@@ -583,7 +594,8 @@ def run_round(
             progress.advance(result)
     progress.close()
     results = [read_result(out, task, source_sha256) for task in all_tasks]
-    failed = sorted(task.name for task, result in zip(all_tasks, results) if not (result and result["ok"]))
+    failed_tasks = [task for task, result in zip(all_tasks, results) if not (result and result["ok"])]
+    failed = sorted(task.name for task in failed_tasks)
     results = [result for result in results if result]
     severities = {s: 0 for s in SEVERITIES}
     for result in results:
@@ -607,9 +619,10 @@ def run_round(
     print(json.dumps(summary), file=sys.stderr)
     if failed:
         print(
-            f"sweep: {len(failed)} tasks have no valid output ({', '.join(failed)}). What they cover is unreviewed "
+            f"{label}: {len(failed)} tasks have no valid output ({', '.join(failed)}). What they cover is unreviewed "
             "from their perspective: read each task file's `errors`, fix the cause (endpoint, token limit, schema), "
-            "and rerun those tasks with --only; do not drop them from the review or mark them reviewed.",
+            f"and rerun them with --only {' '.join(sorted(only_arg(task) for task in failed_tasks))}; "
+            "do not drop them from the review or mark them reviewed.",
             file=sys.stderr,
         )
         return 1
@@ -617,7 +630,7 @@ def run_round(
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="srv round 1: one structured-output call per (unit, perspective).")
+    parser = argparse.ArgumentParser(description="srv round 1: --samples structured-output calls per (unit, perspective), pooled.")
     parser.add_argument("--units", required=True, help="unit plan from rv/bin/plan-units.py with --perspectives")
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
@@ -631,7 +644,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--samples", type=int, default=3,
         help="independent calls per task, run at once; their findings are pooled, because one call misses causes another finds",
     )
-    parser.add_argument("--max-concurrency", type=int, default=32)
+    parser.add_argument(
+        "--max-concurrency", type=int, default=128,
+        help="requests in flight; round 1 on #1415 sent 117 at once at 128, so the round took its slowest call",
+    )
     parser.add_argument("--max-tokens", type=int, default=65536, help="covers reasoning and answer tokens")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")

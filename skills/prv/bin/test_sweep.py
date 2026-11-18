@@ -76,9 +76,28 @@ class PrvSweepTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_citations_resolve_through_checkout_prefixes_and_keep_their_lines(self) -> None:
-        cited = prv.find_citations(PLAN, self.repo, {"plan.md"})
+        cited = prv.find_citations(PLAN, self.repo)
         self.assertEqual(cited, {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": []},
                          "a citation through a checkout name (`merge/`) still names the repository file")
+
+    def test_absolute_paths_and_file_links_are_citations(self) -> None:
+        plan = (f"See {self.repo}/emem/store.py:150 and [store.py]({self.repo}/emem/store.py#L10-L12), "
+                f"and [small.py](/elsewhere/worktree/emem/small.py#L1).\n")
+        self.assertEqual(prv.find_citations(plan, self.repo), {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": [(1, 1)]},
+                         "plans cite by absolute path and as Paseo file links (`path#La-Lb`), as reports are written; "
+                         "a request without that code is reviewed blind, so extend CITE_RE instead of rewriting the plan")
+
+    def test_a_repository_file_named_like_the_plan_is_still_cited(self) -> None:
+        (self.repo / "docs").mkdir()
+        (self.repo / "docs" / "plan.md").write_text("old design\n", encoding="utf-8")
+        self.assertEqual(prv.find_citations("Follow `docs/plan.md:1`.\n", self.repo), {"docs/plan.md": [(1, 1)]},
+                         "only files of the review base are cited, so a name shared with the plan copy is no reason to drop one")
+
+    def test_cited_lines_past_the_end_are_named(self) -> None:
+        text = prv.cited_code(self.repo, {"emem/store.py": [(500, 502)]})
+        self.assertIn("- emem/store.py: cited lines 500-502 are past its 300 lines at the review base", text,
+                      "a citation of lines the base does not have is the stale claim trace must see; do not drop it silently")
+        self.assertNotIn("### emem/store.py (", text, "no empty block for a file with nothing to show")
 
     def test_cited_code_shows_windows_of_long_files_and_short_files_whole(self) -> None:
         text = prv.cited_code(self.repo, {"emem/store.py": [(150, 150)], "emem/small.py": []})
@@ -109,6 +128,11 @@ class PrvSweepTest(unittest.TestCase):
         result = json.loads((Path(self.tmp.name) / "out" / "plan__trace.json").read_text(encoding="utf-8"))
         self.assertEqual([(f["anchor_status"], f["line"], f["sample"]) for f in result["findings"]], [("moved", 3, 1), ("moved", 3, 2)],
                          "a finding on the plan is anchored in the plan copy")
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(prv.main([*argv, "--only", "trace"]), 0)
+        summary = json.loads((Path(self.tmp.name) / "out" / "summary.json").read_text(encoding="utf-8"))
+        self.assertEqual((summary["tasks"], summary["this_run_tasks"]), (2, 1),
+                         "a rerun of one perspective still reports the whole round; do not summarize only the rerun")
 
 
 if __name__ == "__main__":
