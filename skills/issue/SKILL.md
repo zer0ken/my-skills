@@ -1,9 +1,9 @@
 ---
 name: issue
-description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
+description: "Post an issue. Write the title as a noun phrase, and write the body as one bullet line per item, each labeled with its item name like `- **문제:**`, holding only those of the problem, the cause or presumption, the goal, and the plan that are needed, with the detailed explanation placed at the bottom of the body. Before writing, investigate whether it duplicates, conflicts with, or is a parent or sub-issue of other issues and the work on them, and write the relations found. Always apply the sucks skill to Korean prose. Use when the user calls /issue or instructs to post an issue (이슈를 올리라고 지시할 때)."
 metadata:
   author: hrlee
-  version: "1.10.1"
+  version: "1.11.0"
   domain: workflow
   triggers: 이슈, issue, 이슈 올려, 이슈 생성, gh issue create
   role: guardian
@@ -18,6 +18,29 @@ The author rereads the relevant global rules and project rules and confirms the 
 ## Prerequisite
 
 Call `sucks` first with the Skill tool. Apply its rules to all Korean prose in the body.
+
+## Relation to other work
+
+Before writing the body, investigate how the new issue relates to the work already promised in the repository, and write the result into the issue. An issue that duplicates, overlaps, or contradicts promised work splits one problem across two promises or makes two promises that cannot both be kept, and the collaborators who pick them up do the same work twice or undo each other's changes. The user's words (2026-11-18), given as a general instruction for writing issues: "저장소에 이슈를 쓸 때, 그 이슈가 다른 이슈에 대한 작업과 충돌하는지, 중복인지, 하위인지, 상위인지 똑바로 조사하고 적도록 해줘".
+
+Promised work is every issue of the repository, open and closed, and the work on them: open PRs, and the branches those PRs come from. Search it as follows, and keep the queries and the numbers you read for the record below.
+
+1. Collect search terms from the draft itself: the error name, the module, function, table, or config key it touches, the symptom words, and the terms of its goal. One term is not a search; use each.
+2. Search issues with `gh issue list --state all --limit 100 --search "<term>"` and open PRs with `gh pr list --state open --search "<term>"`, for each term. For an open PR, also read the paths it changes with `gh pr diff <number> --name-only`, because a PR whose title shares no word with the draft can still change the same code.
+3. Read the body and the comments of every candidate with `gh issue view <number> --comments`, not only its title, and read the parent and sub-issues it already has. A title match decides nothing, and a later comment often narrows or widens the scope the body states.
+
+Judge each candidate as exactly one of the relations below, by comparing its problem, goal, and scope with the draft's. When a candidate fits none, it is unrelated and is left out.
+
+| Relation | Definition | What to do |
+| --- | --- | --- |
+| 중복 (duplicate) | The candidate already promises to solve the same problem with a goal that covers the draft's goal. | Do not create the issue. Report the existing issue to the user, and when the investigation found evidence that issue lacks, draft a comment for it instead; a comment is posted only within the approval for the work, as any remote action. |
+| 상위 (parent) | The draft's goal is part of the candidate's goal, so solving the draft solves a part of the candidate. | Create the draft as a sub-issue with `gh issue create --parent <number>`. |
+| 하위 (sub-issue) | The candidate's goal is part of the draft's goal. | Create the draft, then attach the candidate with `gh issue edit <new number> --add-sub-issue <number>`. When the candidate already has another parent, report it to the user instead of moving it. |
+| 충돌 (conflict) | The draft and the candidate, or the work on it, cannot both be carried out as written: they set the same contract, behavior, or code to incompatible states, or one's goal undoes the other's. | Write the conflict into the body and bring it to the user before creating, because which promise holds is the user's decision; when the conflict is only an order of work, where one must land before the other, mark it with `gh issue create --blocked-by <number>` or `--blocking <number>` instead. |
+
+Write the result into the issue. Every relation found goes into the reference line at the top of the body, one reference per issue or PR with its relation in Korean, such as `상위: #12`, `충돌: #34 (같은 설정 키를 다른 의미로 바꾼다)`, and the native relationship is set too, as the table says; a reference line alone does not show in the parent's sub-issue list or in the blocked icon. When no relation is found, the body says nothing about it. Report to the user, in one line per candidate read, the relation judged and the grounds in the candidate's own words; when nothing is related, report the search terms and the number of issues and PRs read, so the user can see how wide the search was. Right after creating, reread the native relationships with `gh issue view <new number> --json parent,subIssues,blockedBy,blocking` and set any that is missing.
+
+The GitHub sources of these features, checked 2026-11-18: sub-issues, "You can add sub-issues to an issue to break down larger pieces of work into tasks" (https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues); dependencies, "Issue dependencies let you define issues that are blocked by, or blocking, other work" and "use the `--blocked-by` and `--blocking` flags on `gh issue create`" (https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-issue-dependencies); and the `--parent`, `--add-sub-issue`, `--add-blocked-by`, and `--add-blocking` flags of `gh issue create` and `gh issue edit` in their `--help` (gh 2.104.0). Check the installed `gh` with `--help` before using a flag.
 
 ## Metadata
 
@@ -73,7 +96,7 @@ Fill in the template below. One item is one bullet line, and that line ends in o
 
 Keep only the needed items, in this order, and delete the other lines. Do not repeat in the sentence what the item name already says. Do not end the `추정` item with `추정한다`, nor the `목표` item with `목표로 한다`. Do not split one content across two items. Do not stretch one item into two lines.
 
-If you reference another issue or PR (`Refs #12`, a parent issue, a related PR, and so on), put that reference line at the very top of the body, leave a blank line, and then write the items.
+If you reference another issue or PR (`Refs #12`, the relations the relation investigation found, a related PR, and so on), put that reference line at the very top of the body, leave a blank line, and then write the items.
 
 | Item | What to write | When to use |
 | --- | --- | --- |
@@ -125,8 +148,9 @@ Read only the title and body and check the following. If any one is off, write i
 2. Each item is one bullet line and one sentence, and the same statement is not split across two items.
 3. The `문제` item describes the observed phenomenon, not a solution or a cause.
 4. There is no AI signature, no Generated with phrase, and no agent session URL.
-5. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
-6. anti-slop finds nothing in the title and body: read the latest `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and compare, or run the checker as the `pr` skill's `references/anti-slop-preflight.md` describes. Where the repository runs the anti-slop workflow, also read its bot result after posting.
+5. Every relation the relation investigation found is in the reference line with its relation word, a duplicate was not drafted as a new issue, and a conflict was brought to the user before creating.
+6. List every proper noun, abbreviation, and named number, metric, threshold, and method in the body, and look each one up with `git grep` in this repository and in the bodies of the linked issues. For a name that is not found, explain it in plain words in the body and state its source, or replace it with the explained wording. If you cannot tell whether a name is one I attached in this work or one a fellow developer can see, treat it as a name I attached.
+7. anti-slop finds nothing in the title and body: read the latest `rules/rules.yaml` and `rules/vocabulary/ko.yaml` of `graphai-repository/anti-slop` with `gh api` and compare, or run the checker as the `pr` skill's `references/anti-slop-preflight.md` describes. Where the repository runs the anti-slop workflow, also read its bot result after posting.
 
 ```bash
 gh issue create --title "<명사구 제목>" --body-file body.md
