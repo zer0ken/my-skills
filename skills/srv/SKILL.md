@@ -3,7 +3,7 @@ name: swarm-review
 description: "Swarm review (srv) of a code change: the change is split into review units by a script, independent structured-output calls to the self-hosted model (three samples by default) review each unit from each perspective built from rv's review items, one operator session verifies every suggestion against the code, sends narrow follow-up questions to new reviewer sessions for further rounds, and returns one review document. Use when the user calls /srv, /swarm-review, $srv, or $swarm-review, or asks for a swarm review of a PR, branch, or commit range (코드 변경을 여러 리뷰어 세션으로 훑어 리뷰할 때)."
 metadata:
   author: hrlee
-  version: "0.6.1"
+  version: "0.6.2"
   domain: workflow
   triggers: srv, swarm-review, swarm review, 스웜 리뷰
   dependencies:

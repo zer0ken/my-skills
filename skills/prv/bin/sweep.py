@@ -35,6 +35,7 @@ import importlib.util
 import json
 import posixpath
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -66,8 +67,11 @@ def resolve_cited_path(repo: Path, cited: str) -> str | None:
     """The repository path a citation names, dropping leading directories the repository does not have.
 
     Plans often cite through a worktree or checkout name (`merge/emem/x.py` for `emem/x.py`) or by absolute path,
-    as file links in reports are written (`/home/u/repo/emem/x.py`).
+    as file links in reports are written (`/home/u/repo/emem/x.py`). An absolute path to a file that exists outside
+    a checkout of this repository names another project's file, not the review base's file of the same name.
     """
+    if cited.startswith("/") and Path(cited).is_file() and git_common_dir(Path(cited).parent) != git_common_dir(repo):
+        return None
     parts = cited.lstrip("/").split("/")
     for start in range(len(parts)):
         candidate = "/".join(parts[start:])
@@ -75,6 +79,15 @@ def resolve_cited_path(repo: Path, cited: str) -> str | None:
         if path.is_relative_to(repo.resolve()) and path.is_file():
             return candidate
     return None
+
+
+def git_common_dir(directory: Path) -> str | None:
+    """The repository a directory belongs to (shared by all its worktrees), or None outside any repository."""
+    result = subprocess.run(
+        ["git", "-C", str(directory), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True, text=True, check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def find_citations(plan_text: str, repo: Path) -> dict[str, list[tuple[int, int]]]:
@@ -101,8 +114,11 @@ def cited_code(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
     for path, ranges in citations.items():
         lines = (repo / path).read_text(encoding="utf-8", errors="replace").splitlines()
         size = sum(len(line) + 1 for line in lines)
+        if not lines:
+            parts.append(f"### {path} (empty at the review base)")
+            continue
         if size <= SHORT_FILE_CHARS:
-            title, spans = f"### {path}", [(1, len(lines))] if lines else []
+            title, spans = f"### {path}", [(1, len(lines))]
         elif ranges:
             title = f"### {path} (the lines around the plan's citations; the file has {len(lines)} lines)"
             spans = srv.line_windows(ranges, len(lines), CITE_RADIUS)

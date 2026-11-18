@@ -87,11 +87,32 @@ class PrvSweepTest(unittest.TestCase):
                          "plans cite by absolute path and as Paseo file links (`path#La-Lb`), as reports are written; "
                          "a request without that code is reviewed blind, so extend CITE_RE instead of rewriting the plan")
 
+    def test_an_existing_file_of_another_project_is_not_read_as_the_base_file(self) -> None:
+        other = Path(self.tmp.name) / "other-project" / "emem"
+        other.mkdir(parents=True)
+        (other / "small.py").write_text("y = 2\n", encoding="utf-8")
+        self.assertEqual(prv.find_citations(f"Compare {other}/small.py:1.\n", self.repo), {},
+                         "a claim about another project's file must not be checked against the review base's file of the same name")
+
     def test_a_repository_file_named_like_the_plan_is_still_cited(self) -> None:
         (self.repo / "docs").mkdir()
         (self.repo / "docs" / "plan.md").write_text("old design\n", encoding="utf-8")
         self.assertEqual(prv.find_citations("Follow `docs/plan.md:1`.\n", self.repo), {"docs/plan.md": [(1, 1)]},
                          "only files of the review base are cited, so a name shared with the plan copy is no reason to drop one")
+
+    def test_empty_files_long_files_without_lines_and_the_budget_are_named(self) -> None:
+        (self.repo / "emem" / "__init__.py").write_text("", encoding="utf-8")
+        text = prv.cited_code(self.repo, {"emem/__init__.py": [], "emem/store.py": []})
+        self.assertIn("### emem/__init__.py (empty at the review base)", text, "an empty cited file is a fact the reviewer needs")
+        self.assertIn("- emem/store.py (cited without a line; 300 lines)", text)
+        original = prv.CITED_CHARS_TOTAL
+        prv.CITED_CHARS_TOTAL = 100
+        try:
+            text = prv.cited_code(self.repo, {"emem/store.py": [(150, 150)]})
+        finally:
+            prv.CITED_CHARS_TOTAL = original
+        self.assertIn("- emem/store.py (over the request budget)", text,
+                      "code left out of the request is named, so a reviewer does not take silence for absence")
 
     def test_cited_lines_past_the_end_are_named(self) -> None:
         text = prv.cited_code(self.repo, {"emem/store.py": [(500, 502)]})

@@ -113,8 +113,11 @@ class SweepTest(unittest.TestCase):
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
             "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
-        with contextlib.redirect_stderr(io.StringIO()):
-            return sweep.main(argv)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = sweep.main(argv)
+        self.stderr = stderr.getvalue()
+        return code
 
     def read(self, name: str) -> dict:
         return json.loads((self.out / name).read_text(encoding="utf-8"))
@@ -165,6 +168,8 @@ class SweepTest(unittest.TestCase):
         self.assertNotIn("findings", result)
         self.assertTrue(any(error.startswith("sample ") for error in result["errors"]))
         self.assertEqual(self.read("summary.json")["failed"], ["U-1__trace"])
+        self.assertIn("and rerun them with --only U-1__trace;", self.stderr,
+                      "the recovery command the operator follows must name the value this script's --only accepts")
 
     def test_request_carries_numbered_head_lines_and_callers(self) -> None:
         self.run_sweep()
