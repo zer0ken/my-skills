@@ -1,16 +1,16 @@
 ---
 name: my-code-plan
-description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before editing. Use before every code modification, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation, a harness rule or skill edit. 코드를 수정하기 전에는 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 반드시 사용한다."
+description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before the first code edit. Use once per task whose purpose is to modify code, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation. Not for writing documents, notes, plans, or rules, and not per file write. 코드 수정이 목적인 작업이면 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 그 작업을 시작할 때 한 번 사용한다."
 metadata:
   author: hrlee
-  version: "1.0.1"
+  version: "1.0.2"
   domain: planning
   triggers: 코드 계획, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
 ---
 
 # my-code-plan
 
-Plan a code change the way the user (이현령) plans it: start at context depth 0 and descend one depth at a time until every branch ends in a concrete code change. The user's words (2026-11-18): "이현령은 맥락 깊이 0부터 시작해서 탑다운으로 기획을 시작한다. 중요한 점은 0: 최상위 요구사항, N: 실제 코드 변경, 그리고 그 사이에 트리(그래프)처럼 내려가면서 한 깊이씩 계획을 구체화하는 것이다." and "맥락 깊이 0(최상위 유저스토리/요구사항) > 1 > 2 > ... > N. (충분히 구체화됨) 이 순서다." On when it applies (same day): "코드를 짜기 전에 반드시!!!! 이 스킬을 읽고 실행해야돼. 모든 코드 수정 전에는.", "단위가 크든 작든.", "리뷰 지적에 대한 수정이든", "이슈 해결이든", "조사이든.", "뭐든".
+Plan a code change the way the user (이현령) plans it: start at context depth 0 and descend one depth at a time until every branch ends in a concrete code change. The user's words (2026-11-18): "이현령은 맥락 깊이 0부터 시작해서 탑다운으로 기획을 시작한다. 중요한 점은 0: 최상위 요구사항, N: 실제 코드 변경, 그리고 그 사이에 트리(그래프)처럼 내려가면서 한 깊이씩 계획을 구체화하는 것이다." and "맥락 깊이 0(최상위 유저스토리/요구사항) > 1 > 2 > ... > N. (충분히 구체화됨) 이 순서다." On when it applies (same day): "코드를 짜기 전에 반드시!!!! 이 스킬을 읽고 실행해야돼. 모든 코드 수정 전에는.", "단위가 크든 작든.", "리뷰 지적에 대한 수정이든", "이슈 해결이든", "조사이든.", "뭐든". The user's words on its scope (2026-11-18), after a hook had blocked every file write, documents included: "코드 수정이 목적일 때에 쓰라고" and "실제로 파일에 뭔가 쓸 때마다 하는게 아니라고".
 
 Address the user in Korean with the neutral technical written-style rule (`~/.agents/skills/sucks/SKILL.md`).
 
@@ -28,7 +28,7 @@ The method connects two known techniques. Stepwise refinement decomposes a task 
 
 ## When
 
-Run this skill before the first edit of any code change, including a one-line change, a review finding, a CI failure, a script for an investigation, and a change to rules or skills. A change whose plan already exists extends that plan with the new requirement at depth 0 instead of editing outside it. Small changes produce small trees, not no tree: a one-line review fix is still depth 0 (the finding in the reviewer's words), depth 1 (the condition that must hold afterwards), and depth 2 (the edit and its test).
+Run this skill once per task whose purpose is to modify code, before its first code edit: a one-line change, a review finding, a CI failure, an issue, a script for an investigation. It is a planning step of the task, not a step before each file write, and writing documents, notes, plans, or rules is not code modification. A change whose plan already exists extends that plan with the new requirement at depth 0 instead of editing outside it. Small changes produce small trees, not no tree: a one-line review fix is still depth 0 (the finding in the reviewer's words), depth 1 (the condition that must hold afterwards), and depth 2 (the edit and its test).
 
 Inside a staged workflow such as my-workflow, the stage order belongs to the workflow; this skill is how the code of a stage is planned before it is edited. Scheduling the leaves over several turns uses `~/.agents/skills/task-graph/SKILL.md`, whose nodes are this tree's leaves.
 
