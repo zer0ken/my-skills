@@ -1,3 +1,10 @@
+---
+match-status: added
+match-status: renamed
+match-status: deleted
+match-line: ^\s*(from\s+\S+\s+)?import\s
+match-line: ^\s*(export\s+)?(class|def|function|fn|func|interface|type)\s
+---
 # Method: imports, placement, and names
 Apply rv `~/.agents/skills/rv/SKILL.md` U1 items 1, 2, 3, 4.5-4.6, and 5.
 1. No layer inversion, bypass of a package's public path, private-name import, or import moved into a function to dodge a cycle.

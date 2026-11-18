@@ -1,3 +1,7 @@
+---
+match-line: (?i)\b(execute|executemany|session\.run|completions?|embed\w*|rerank\w*|requests\.|httpx\.|urlopen|batch\w*|bulk)\b
+match-line: ^\s*for\s.+\sin\s.+:\s*$
+---
 # Method: implementation cost
 Apply rv `~/.agents/skills/rv/SKILL.md` U3's paragraph on implementation cost and `~/.agents/skills/prv/references/perspectives/perf.md` items 1 and 3-4, read for the code instead of a plan.
 1. List each hot path the change adds or changes (per request, document, candidate, row) with its DB round trips, model calls, and network calls per unit.

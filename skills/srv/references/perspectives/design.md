@@ -1,3 +1,6 @@
+---
+match: always
+---
 # Method: concepts, structure, and quality ceiling
 Apply rv `~/.agents/skills/rv/SKILL.md` U2 questions 0, 1, and 2, and the Software Design sections of `~/.agents/skills/python-expert/SKILL.md`.
 1. Every unit the change introduces or touches (module, class, function, field, status value, prompt, stage) has one sentence that decides membership, found in code, a type, a schema, or a document; list each unit without one.

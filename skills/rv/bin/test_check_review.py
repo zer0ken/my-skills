@@ -203,6 +203,57 @@ class CheckLedgerTest(unittest.TestCase):
             ],
         )
 
+    def test_units_covered_by_per_area_rows_pass(self):
+        text = build_ledger(areas=("U-1", "U-2"), verdicts={"U1-size": "R-001"})
+        self.assertEqual(check_review.check_units(text, CATALOG, ["U-1", "U-2"]), [])
+
+    def test_unit_without_rows_fails(self):
+        text = build_ledger(areas=("U-1",), verdicts={"U1-size": "R-001"})
+        self.assertEqual(
+            check_review.check_units(text, CATALOG, ["U-1", "U-2"]),
+            [
+                (
+                    "항목 원장에 단위 `U-2` 의 영역별 항목 행이 없다: 이 단위의 hunk 를 아무도 리뷰하지 않았다. "
+                    "행만 채우지 말고 `U-2` 의 hunk 를 영역별 항목마다 리뷰한 뒤 그 턴에서 행을 쓴다."
+                )
+            ],
+        )
+
+    def test_area_outside_the_unit_plan_fails(self):
+        text = build_ledger(areas=("U-1", "DB"), verdicts={"U1-size": "R-001"})
+        self.assertEqual(
+            check_review.check_units(text, CATALOG, ["U-1"]),
+            [
+                (
+                    "항목 원장의 영역 `DB` 은 단위 계획에 없는 단위다: 영역은 `units.json` 의 단위 id 로 나눈다. "
+                    "영역 이름을 바꿔 맞추지 말고 그 행이 리뷰한 hunk 가 속한 단위 id 를 적는다."
+                )
+            ],
+        )
+
+    def test_main_checks_units_when_given(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            review, ledger, units = Path(tmp, "review.md"), Path(tmp, "ledger.md"), Path(tmp, "units.json")
+            review.write_text(COMPLETE, encoding="utf-8")
+            ledger.write_text(build_ledger(areas=("U-1",), verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다"}), encoding="utf-8")
+            units.write_text('{"units": [{"id": "U-1"}, {"id": "U-2"}]}', encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(check_review.main([str(review), "--ledger", str(ledger), "--units", str(units)]), 1)
+            self.assertIn("단위 `U-2`", out.getvalue())
+
+    def test_unit_plan_of_the_wrong_shape_is_a_read_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            review, ledger, units = Path(tmp, "review.md"), Path(tmp, "ledger.md"), Path(tmp, "units.json")
+            review.write_text(COMPLETE, encoding="utf-8")
+            ledger.write_text(LEDGER, encoding="utf-8")
+            for content in ("[1, 2]", '{"units": ["U-1"]}', '{"units": [{"name": "U-1"}]}'):
+                units.write_text(content, encoding="utf-8")
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(check_review.main([str(review), "--ledger", str(ledger), "--units", str(units)]), 2, content)
+                self.assertIn("plan-units.py 로 다시 만든다", err.getvalue())
+
     def test_main_requires_ledger(self):
         with tempfile.TemporaryDirectory() as tmp:
             review, ledger = Path(tmp, "review.md"), Path(tmp, "ledger.md")

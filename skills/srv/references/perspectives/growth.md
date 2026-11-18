@@ -1,3 +1,13 @@
+---
+match-status: added
+match-path: pyproject.toml
+match-path: requirements*.txt
+match-path: package.json
+match-path: Cargo.toml
+match-path: go.mod
+match-path: Gemfile
+match-line: ^\s*(async\s+)?(def|class|function|fn|func)\s
+---
 # Method: size, splitting, and reuse
 Apply rv `~/.agents/skills/rv/SKILL.md` U1 items 4.1-4.4 and U3's paragraph on reuse and known implementations.
 1. Count what the change adds (files, functions, public names, config keys, tests) from `git diff --stat` and the diff; report growth the requirement does not need.

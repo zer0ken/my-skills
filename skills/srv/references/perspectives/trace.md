@@ -1,3 +1,6 @@
+---
+match: always
+---
 # Method: requirement-change traceability
 Apply rv `~/.agents/skills/rv/SKILL.md`: U0's problem-modeling paragraph and the U3 paragraph on claims against results.
 1. Every completion condition and user decision in the requirement copies maps to changed code or a test; list the ones nothing in the diff produces.

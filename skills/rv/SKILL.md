@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.26.0"
+  version: "2.27.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -91,13 +91,13 @@ U0 prepare ─→ U1 codebase review ─→ U3 detailed review ─→ U4 verify 
               U2 structure and quality judgment
 ```
 
-U1 and U2 can run in parallel. U3 can be split per changed area and run in parallel. U4 is performed by an agent other than the one that produced the finding.
+U1 and U2 can run in parallel. U3 can be split per review unit and run in parallel. U4 is performed by an agent other than the one that produced the finding.
 
 ### Inputs and outputs between units
 
 | Unit | Input | Output |
 |---|---|---|
-| U0 | The whole input contract | Review scope, recheck results, reference rules, identification of entry points, public interfaces, and data models, proposed split per area |
+| U0 | The whole input contract | Review scope, recheck results, reference rules, identification of entry points, public interfaces, and data models, unit plan `units.json` with the `-expert` skill of each unit |
 | U1 | U0's review scope and reference rules | findings, target file paths for U3 |
 | U2 | U0's review scope, entry points, public interfaces and data models | Structure verdict, quality verdict, findings |
 | U3 | U0's review scope and rules, U1's target file paths, U2's structure verdict | findings |
@@ -121,7 +121,7 @@ Review from the ds perspective: confirm that responsibilities, state ownership, 
 
 If only a review was requested, do not make a new problem definition or design document, code edits, or test runs preconditions. Do not conclude a bug from a difference with a pattern or a lack of measurement alone.
 
-Identify the change's entry points, public interfaces, and data models. Check the list of changed files with `git diff --stat`, and split areas by the nature of the change (DB, prompts, concurrency, Python structure, etc.). Propose a mapping of areas to `-expert` skills.
+Identify the change's entry points, public interfaces, and data models. For a target with a diff, split it into review units with `python3 -I ~/.agents/skills/rv/bin/plan-units.py --diff <diff file> --repo <head worktree> --out units.json`: every hunk lands in exactly one unit by fixed rules (excluded generated, lock, and binary files with their reason; a source with its tests; locale siblings; one directory's files within a line budget), so the split is not left to judgment and no hunk goes unreviewed. A review area of this skill is a review unit, named by its id (`U-1`, ...). Name the `-expert` skill of each unit from the nature of its files (DB, prompts, concurrency, Python structure, etc.). A target without a diff, such as a document review, has the one area `전체`.
 
 ## U1 Codebase review
 
@@ -192,7 +192,7 @@ A quality gap the user explicitly agreed to as follow-up scope is classified as 
 
 ## U3 Detailed review
 
-The most expensive step, reading bodies along the file paths the previous steps narrowed down. If U2's structure verdict concluded it is worse than an alternative, focus on the parts that will not change. It can be split per changed area and run in parallel. When splitting, have each split load the `-expert` skill of its area (`sql-expert`, `llm-expert`, `parallel-expert`, `python-expert`) and judge by that field's criteria; an area with no such skill is reviewed without one, and the report proposes a new `-expert` skill for it.
+The most expensive step, reading bodies along the file paths the previous steps narrowed down. If U2's structure verdict concluded it is worse than an alternative, focus on the parts that will not change. It can be split per review unit and run in parallel. When splitting, have each split load the `-expert` skill of its unit (`sql-expert`, `llm-expert`, `parallel-expert`, `python-expert`) and judge by that field's criteria; an area with no such skill is reviewed without one, and the report proposes a new `-expert` skill for it.
 
 Read all related files with their callers, backends, and fakes, and trace input → state ownership → write → failure → recovery. Aggressively verify that contracts and resource cleanup hold under partial completion, failure during recovery, retries, and concurrent execution and cancellation. Find counterexamples that the defensive logic and tests miss.
 
@@ -273,7 +273,7 @@ If the same wrong pattern repeats across several locations or changes, write the
 
 Drop every finding outside the scope (`## Scope of a finding`), then merge the findings of all units according to the finding schema, and assemble the markdown document according to the result format. Apply the sucks skill to the document, for both terminal output and external posting; sentence endings follow the project rules or the reference format. Assembling and the format check below apply even when posting is not allowed. Post or report in the conversation according to approval_scope, following `references/posting.md` when posting.
 
-Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md> --ledger <ledger.md>` and fix the document and the ledger until it prints `rv review format: review and item ledger passed (<n> items)`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. It rejects a ledger that misses an item of the catalog (per area for the per-area items), puts two items in one turn, leaves a cell empty, gives no `file:line`, backtick command, or URL as evidence, omits a sub-check from `확인한 범위`, has a verdict that is not R-IDs, `배제: <이유>`, or `해당 없음: <이유>`, or names an R-ID the review document does not contain. A fix the check forces goes back to the item's turn: rerun the item, do not edit the row alone. Exit code 1 is a format violation and 2 is a read failure.
+Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md> --ledger <ledger.md> --units <units.json>` (without `--units` only for a target without a diff) and fix the document and the ledger until it prints `rv review format: review and item ledger passed (<n> items)`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. It rejects a ledger that misses an item of the catalog (per area for the per-area items), puts two items in one turn, leaves a cell empty, gives no `file:line`, backtick command, or URL as evidence, omits a sub-check from `확인한 범위`, has a verdict that is not R-IDs, `배제: <이유>`, or `해당 없음: <이유>`, or names an R-ID the review document does not contain; with `--units`, it also rejects a unit that no per-area row reviewed and an area that is not a unit id. A fix the check forces goes back to the item's turn: rerun the item, do not edit the row alone. Exit code 1 is a format violation and 2 is a read failure.
 
 The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
 

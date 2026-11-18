@@ -9,7 +9,9 @@ written judgment, so this check fails such a document before it is posted.
 rv also examines each review item of `references/items.md` in its own turn and
 records it in the item ledger. A ledger that misses an item, merges two items
 into one turn, leaves a cell empty, or skips a sub-check makes the thoroughness
-of the review unverifiable, so this check fails it too.
+of the review unverifiable, so this check fails it too. With `--units`, the
+areas of the per-area items must be the units of `bin/plan-units.py`, so a
+unit that no row reviewed fails as well.
 
 A review body over 50 lines is posted with each heading folded into
 `<details>` as `<summary><h3>제목</h3></summary>` (`references/posting.md`), so
@@ -17,12 +19,13 @@ that line is read as the section `## 제목`, and the `<details>` and `<summary>
 tag lines around it are not section content. A `|` inside a table cell is
 written `\\|`, as GFM tables require, and is not a cell separator.
 
-Usage: check-review.py REVIEW.md --ledger LEDGER.md
+Usage: check-review.py REVIEW.md --ledger LEDGER.md [--units units.json]
 Exit codes: 0 the review and ledger pass, 1 a format violation,
 2 a file could not be read.
 """
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -287,6 +290,43 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
     return violations
 
 
+def check_units(ledger: str, catalog: dict[str, Item], unit_ids: list[str]) -> list[str]:
+    """The areas of the per-area items are exactly the units of the unit plan.
+
+    U3 is split by review unit (`bin/plan-units.py`), so every hunk of the change
+    is reviewed by the per-area items of the unit that holds it. A unit with no
+    rows is a part of the change that nobody reviewed.
+    """
+    rows = table_rows(ledger.splitlines())
+    if not rows or tuple(rows[0]) != LEDGER_COLUMNS:
+        return []
+    areas = {
+        cells[2]
+        for cells in rows[1:]
+        if len(cells) > 2 and cells[1].strip("`") in catalog and catalog[cells[1].strip("`")].per_area
+    }
+    violations = [
+        f"항목 원장에 단위 `{unit}` 의 영역별 항목 행이 없다: 이 단위의 hunk 를 아무도 리뷰하지 않았다. "
+        f"행만 채우지 말고 `{unit}` 의 hunk 를 영역별 항목마다 리뷰한 뒤 그 턴에서 행을 쓴다."
+        for unit in unit_ids
+        if unit not in areas
+    ]
+    violations += [
+        f"항목 원장의 영역 `{area}` 은 단위 계획에 없는 단위다: 영역은 `units.json` 의 단위 id 로 나눈다. "
+        "영역 이름을 바꿔 맞추지 말고 그 행이 리뷰한 hunk 가 속한 단위 id 를 적는다."
+        for area in sorted(areas - set(unit_ids))
+    ]
+    return violations
+
+
+def read_unit_ids(path: str) -> list[str]:
+    plan = json.loads(read_text(path))
+    units = plan.get("units") if isinstance(plan, dict) else None
+    if not isinstance(units, list) or not all(isinstance(u, dict) and isinstance(u.get("id"), str) for u in units):
+        raise ValueError(f"{path} 는 plan-units.py 의 단위 계획이 아니다(`units` 목록과 각 단위의 `id` 가 없다). plan-units.py 로 다시 만든다")
+    return [unit["id"] for unit in units]
+
+
 def read_text(path: str) -> str:
     return Path(path).read_text(encoding="utf-8")
 
@@ -295,14 +335,18 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Check an rv review document and its item ledger.")
     parser.add_argument("review", help="review markdown document")
     parser.add_argument("--ledger", required=True, help="item ledger markdown file (references/items.md)")
+    parser.add_argument("--units", help="unit plan from bin/plan-units.py; the per-area rows must cover every unit")
     args = parser.parse_args(argv)
     try:
         review, ledger, catalog = read_text(args.review), read_text(args.ledger), read_catalog(read_text(str(ITEMS_PATH)))
-    except (OSError, UnicodeDecodeError, ValueError) as error:
+        unit_ids = read_unit_ids(args.units) if args.units else None
+    except (OSError, UnicodeDecodeError, ValueError, KeyError) as error:
         print(f"읽기 실패: {error}", file=sys.stderr)
         return 2
     violations = [f"{args.review}: {v}" for v in check_document(review)]
     violations += [f"{args.ledger}: {v}" for v in check_ledger(ledger, review, catalog)]
+    if unit_ids is not None:
+        violations += [f"{args.ledger}: {v}" for v in check_units(ledger, catalog, unit_ids)]
     for violation in violations:
         print(violation)
     if violations:

@@ -22,7 +22,7 @@ The ledger is a Markdown file kept with the review's separate material, not a se
 |---|---|
 | 턴 | `<session name>:<turn number>`; unique in the ledger, so two rows never come from one turn |
 | 항목 | An item id from the catalog |
-| 영역 | `전체` for an item that is not per area; for a per-area item, the area name U0 gave, or `전체` when U3 is not split |
+| 영역 | `전체` for an item that is not per area; for a per-area item, the review unit id from U0's `units.json` (`U-1`, ...), or `전체` for a target without a diff |
 | 확인한 범위 | What was read or run for the item, naming each of the item's sub-checks with its result |
 | 근거 | At least one `file:line`, a command in backticks, or a URL |
 | 판정 | The R-IDs the item produced, `배제: <reason>` when the item found nothing, or `해당 없음: <reason>` when the item does not apply |
