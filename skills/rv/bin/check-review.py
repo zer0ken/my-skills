@@ -7,9 +7,11 @@ into a short "grounds" paragraph lets size growth and duplication pass without a
 written judgment, so this check fails such a document before it is posted.
 
 rv also examines each review item of `references/items.md` in its own turn and
-records it in the item ledger. A ledger that misses an item, merges two items
-into one turn, leaves a cell empty, or skips a sub-check makes the thoroughness
-of the review unverifiable, so this check fails it too. With `--units`, the
+records it in the item ledger; a per-area item covers every area of its session
+in that one turn and writes one row per area, so its rows share the turn. A
+ledger that misses an item or an area, merges two items into one turn, leaves a
+cell empty, or skips a sub-check makes the thoroughness of the review
+unverifiable, so this check fails it too. With `--units`, the
 areas of the per-area items must be the units of `bin/plan-units.py`, so a
 unit that no row reviewed fails as well.
 
@@ -217,7 +219,7 @@ def read_catalog(text: str) -> dict[str, Item]:
 
 
 def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str]:
-    """Every item has its own turn, a complete row, and findings the review contains."""
+    """Every item has its own turn, a complete row per area, and findings the review contains."""
     rows = table_rows(ledger.splitlines())
     if not rows or tuple(rows[0]) != LEDGER_COLUMNS:
         return [
@@ -227,7 +229,7 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
         ]
     review_ids = set(R_ID_RE.findall(review))
     violations: list[str] = []
-    turns: set[str] = set()
+    turn_items: dict[str, str] = {}
     seen: dict[str, list[str]] = {}
     for cells in rows[1:]:
         if len(cells) != len(LEDGER_COLUMNS):
@@ -255,9 +257,11 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
             continue
         if not TURN_RE.match(row["턴"]):
             violations.append(f"항목 원장의 {label} 행 턴 `{row['턴']}` 이 `<세션>:<번호>` 형식이 아니다.")
-        elif row["턴"] in turns:
-            violations.append(f"항목 원장의 턴 `{row['턴']}` 에 항목이 둘 이상이다: 한 턴에는 한 항목만 검토한다.")
-        turns.add(row["턴"])
+        elif turn_items.setdefault(row["턴"], item_id) != item_id:
+            violations.append(
+                f"항목 원장의 턴 `{row['턴']}` 에 `{turn_items[row['턴']]}` 와 `{item_id}` 가 함께 있다: 한 턴에는 한 항목만 검토한다. "
+                f"턴 값만 바꿔 맞추지 말고 `{item_id}` 를 자기 턴에서 다시 검토하고 그 턴에서 행을 쓴다."
+            )
         if not item.per_area and area != WHOLE_AREA:
             violations.append(f"항목 원장의 {label} 행 영역이 `{WHOLE_AREA}` 가 아니다: 이 항목은 영역별 항목이 아니다.")
         if not EVIDENCE_RE.search(row["근거"]):

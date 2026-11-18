@@ -87,11 +87,11 @@ def ledger_row(turn: int, item, area: str = "전체", verdict: str = "배제: �
 
 
 def build_ledger(areas=("전체",), verdicts=None) -> str:
+    """One turn per item; a per-area item writes one row per area in its turn."""
     verdicts = verdicts or {}
-    rows, turn = [], 0
-    for item in CATALOG.values():
+    rows = []
+    for turn, item in enumerate(CATALOG.values(), start=1):
         for area in areas if item.per_area else ("전체",):
-            turn += 1
             rows.append(ledger_row(turn, item, area, verdicts.get(item.id, "배제: 결함 없음")))
     return HEADER + "\n".join(rows) + "\n"
 
@@ -120,8 +120,20 @@ class CheckLedgerTest(unittest.TestCase):
         text = LEDGER.replace("| 리뷰어:3 |", "| 리뷰어:2 |")
         self.assertEqual(
             check_review.check_ledger(text, COMPLETE, CATALOG),
-            ["항목 원장의 턴 `리뷰어:2` 에 항목이 둘 이상이다: 한 턴에는 한 항목만 검토한다."],
+            [
+                (
+                    "항목 원장의 턴 `리뷰어:2` 에 `U1-import` 와 `U1-layout` 가 함께 있다: 한 턴에는 한 항목만 검토한다. "
+                    "턴 값만 바꿔 맞추지 말고 `U1-layout` 를 자기 턴에서 다시 검토하고 그 턴에서 행을 쓴다."
+                )
+            ],
         )
+
+    def test_per_area_item_covers_its_areas_in_one_turn(self):
+        text = build_ledger(areas=("U-1", "U-2"), verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다"})
+        turns = [line.split("|")[1].strip() for line in text.splitlines() if "| U3-db |" in line]
+        self.assertEqual(len(turns), 2)
+        self.assertEqual(len(set(turns)), 1, "U3-db 의 두 단위 행은 한 턴에서 나온다")
+        self.assertEqual(check_review.check_ledger(text, COMPLETE, CATALOG), [])
 
     def test_skipped_sub_check_fails(self):
         text = LEDGER.replace("1.6 확인; ", "")

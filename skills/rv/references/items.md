@@ -8,10 +8,12 @@ A review item (검토 항목) is one checklist judgment of U0-U3 that the review
 
 Each item is examined in its own turn, and the turns are consecutive turns of the same reviewing session. The user's words (2026-11-14): "Rv 스킬로 리뷰를 할 때, 각 항목 반드시 별도의 턴으로 파악하도록 해야도ㅑ. 그리고 철저히 리뷰할 수 있어야돼." and, asked whether that means consecutive turns of one session or separate sessions, "같은 세션의 연속 턴." A turn is one prompt to the session and the response that ends it. The session keeps what earlier turns read, so an item does not reread what an earlier item already established, but it does not judge the next item before its own turn.
 
-1. The driver (the coordinator, or the agent that received the review) sends one item per prompt: the item id, its area, its `SKILL.md` part, and its sub-checks from the catalog. Each next item goes to the same session as a follow-up prompt that keeps its context, after the turn of the previous item ended.
-2. The reviewing session examines only that item, appends the item's row to the ledger file, and ends the turn with that row and the R-IDs it produced. It does not start the next item in the same turn and does not write a row for an item it was not sent.
+The words name the item, not the pair of an item and an area: a per-area item is one item, examined in one turn over every area its session reviews, with one row per area written in that turn. So a session's item turns number its items, whatever the number of areas; one turn per item and area multiplies the turns by the number of review units, and a review that does not finish is not posted. The user's words (2026-11-16), when automated reviews of 22-40 item turns did not finish: "리뷰가 왜 안 끝나 (…)" and "리뷰를 해서 올리기 하라고. 그게 어렵냐?". Thoroughness per area is kept by the rows, not by the turns: each area's row names every sub-check with its result for that area and its own evidence.
+
+1. The driver (the coordinator, or the agent that received the review) sends one item per prompt: the item id, its areas (`전체`, or for a per-area item every unit the session reviews), its `SKILL.md` part, and its sub-checks from the catalog. Each next item goes to the same session as a follow-up prompt that keeps its context, after the turn of the previous item ended.
+2. The reviewing session examines only that item, in each of its areas, appends the item's rows to the ledger file, one per area, and ends the turn with those rows and the R-IDs it produced. It does not start the next item in the same turn and does not write a row for an item it was not sent.
 3. When the agent that received the review has nobody to send it the next prompt (the user called `/rv` in that session), it becomes the driver: it opens one reviewing session, a new Claude session separated from the producer as the agent rules say, and drives it item by item. Only when it cannot open a session does it examine the items itself as steps, one item and its row before any reading for the next, writes `단계:<n>` in the `턴` column, and states in `## 검증 범위` that the items were not separated into turns.
-4. Units that run in parallel (U1 and U2, U3 per area) each have their own reviewing session, and each session takes its unit's items in consecutive turns. U4 verifiers stay separate fresh sessions; per-item turns do not merge verification into the reviewing session.
+4. Units that run in parallel (U1 and U2, U3 split by review units) each have their own reviewing session, and each session takes its unit's items in consecutive turns; a U3 session given several review units covers all of them in each per-area item's turn. U4 verifiers stay separate fresh sessions; per-item turns do not merge verification into the reviewing session.
 5. A follow-up review runs every item again at the current head, because it is exhaustive.
 
 ## Ledger format
@@ -20,7 +22,7 @@ The ledger is a Markdown file kept with the review's separate material, not a se
 
 | Column | Value |
 |---|---|
-| 턴 | `<session name>:<turn number>`; unique in the ledger, so two rows never come from one turn |
+| 턴 | `<session name>:<turn number>`; one turn holds one item, so rows that share a turn are the area rows of one per-area item, and two items never share a turn |
 | 항목 | An item id from the catalog |
 | 영역 | `전체` for an item that is not per area; for a per-area item, the review unit id from U0's `units.json` (`U-1`, ...), or `전체` for a target without a diff |
 | 확인한 범위 | What was read or run for the item, naming each of the item's sub-checks with its result |

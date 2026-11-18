@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.27.0"
+  version: "2.28.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -24,7 +24,7 @@ A review serves gatekeeping, accident prevention, maintaining norms, and educati
 
 This skill is divided into seven units (U0-U6). A single agent runs them in sequence, or an agent that distributes work starts workers per unit. The agent that distributes work is called the coordinator. Each unit has defined inputs and outputs, so it can run independently. Sections are ordered from the cheapest review onward.
 
-The checklist judgments of U0-U3 are review items (검토 항목), listed in the catalog of `references/items.md`. Each item is examined in its own turn, one item per turn, in consecutive turns of the same reviewing session, and its row in the item ledger (항목 원장) is written in that turn: what was checked for each of its sub-checks, the evidence, and the R-IDs or the reason it is cleared. The user's words (2026-11-14): "Rv 스킬로 리뷰를 할 때, 각 항목 반드시 별도의 턴으로 파악하도록 해야도ㅑ. 그리고 철저히 리뷰할 수 있어야돼." and "같은 세션의 연속 턴." Without this split one turn could run every item and an item could pass with no written check; the ledger and its check make each item's coverage verifiable. Read `references/items.md` before U0; it holds the catalog, who sends each item's prompt, and the ledger format. The turn split applies inside a reviewing session; U4 verifiers stay separate fresh sessions.
+The checklist judgments of U0-U3 are review items (검토 항목), listed in the catalog of `references/items.md`. Each item is examined in its own turn, one item per turn, in consecutive turns of the same reviewing session, and its row in the item ledger (항목 원장) is written in that turn: what was checked for each of its sub-checks, the evidence, and the R-IDs or the reason it is cleared. The user's words (2026-11-14): "Rv 스킬로 리뷰를 할 때, 각 항목 반드시 별도의 턴으로 파악하도록 해야도ㅑ. 그리고 철저히 리뷰할 수 있어야돼." and "같은 세션의 연속 턴." The words name the item, not the pair of an item and an area: a per-area item takes one turn over every area its session reviews and writes one row per area in it, so the turns number the items, not items times review units. Without this split one turn could run every item and an item could pass with no written check; the ledger and its check make each item's coverage verifiable. Read `references/items.md` before U0; it holds the catalog, who sends each item's prompt, and the ledger format. The turn split applies inside a reviewing session; U4 verifiers stay separate fresh sessions.
 
 ## Input contract
 
