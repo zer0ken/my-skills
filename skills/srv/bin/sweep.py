@@ -43,6 +43,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -374,9 +375,11 @@ def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, 
         raise ValueError(f"the response is not a chat completion ({type(error).__name__}: {error}): {str(payload)[:300]}") from error
 
 
-def run_task(task: Task, context: dict, options: argparse.Namespace) -> dict:
-    """Review one task once (one sample); one retry when the call fails or the answer is invalid."""
-    messages = build_messages(task, context)
+def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace) -> dict:
+    """Review one task once (one sample); one retry when the call fails or the answer is invalid.
+
+    `anchor` re-locates the answer's finding lines against the files they quote.
+    """
     attempts, errors, usage_total = 0, [], {"prompt_tokens": 0, "completion_tokens": 0}
     started = time.monotonic()
     while attempts < 2:
@@ -403,7 +406,7 @@ def run_task(task: Task, context: dict, options: argparse.Namespace) -> dict:
         if problems:
             errors.append(f"attempt {attempts}: " + "; ".join(problems))
             continue
-        findings = anchor_findings.anchor_findings(answer["findings"], context["repo"])
+        findings = anchor(answer["findings"])
         return {
             "task": task.name,
             "unit": task.unit["id"],
@@ -467,13 +470,13 @@ class Progress:
             self.bar.close()
 
 
-def read_result(out: Path, task: Task, diff_sha256: str) -> dict | None:
-    """The task's output for this plan; an output left by a run on another diff does not count."""
+def read_result(out: Path, task: Task, source_sha256: str) -> dict | None:
+    """The task's output for this input; an output left by a run on another input does not count."""
     path = out / f"{task.name}.json"
     if not path.is_file():
         return None
     result = json.loads(path.read_text(encoding="utf-8"))
-    return result if result.get("diff_sha256") == diff_sha256 else None
+    return result if result.get("source_sha256") == source_sha256 else None
 
 
 def merge_samples(task: Task, samples: list[dict]) -> dict:
@@ -539,11 +542,30 @@ def run_sweep(options: argparse.Namespace) -> int:
     if missing_methods:
         print(f"sweep: no method file for perspectives {missing_methods} in {options.perspectives}", file=sys.stderr)
         return 2
+    return run_round(
+        all_tasks, tasks,
+        lambda task: build_messages(task, context),
+        lambda findings: anchor_findings.anchor_findings(findings, repo),
+        options, out, diff_sha256, started,
+    )
+
+
+def run_round(
+    all_tasks: list[Task], tasks: list[Task], build: Callable[[Task], list[dict]],
+    anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
+) -> int:
+    """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
+
+    Shared by srv round 1 and prv (`~/.agents/skills/prv/bin/sweep.py`); the caller decides the tasks, how a
+    task's messages are built, how its findings are anchored, and which input `source_sha256` names.
+    Exit 0 when every task of `all_tasks` has a valid output for this input, 1 otherwise.
+    """
+    messages = {task.name: build(task) for task in tasks}
     progress = Progress(len(tasks), out)
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {
-            pool.submit(run_task, task, context, options): (task, number)
+            pool.submit(run_task, task, messages[task.name], anchor, options): (task, number)
             for task in tasks
             for number in range(1, options.samples + 1)
         }
@@ -556,11 +578,11 @@ def run_sweep(options: argparse.Namespace) -> int:
             if len(done[task.name]) < options.samples:
                 continue
             result = merge_samples(task, [done[task.name][n] for n in range(1, options.samples + 1)])
-            result["diff_sha256"] = diff_sha256
+            result["source_sha256"] = source_sha256
             (out / f"{result['task']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance(result)
     progress.close()
-    results = [read_result(out, task, diff_sha256) for task in all_tasks]
+    results = [read_result(out, task, source_sha256) for task in all_tasks]
     failed = sorted(task.name for task, result in zip(all_tasks, results) if not (result and result["ok"]))
     results = [result for result in results if result]
     severities = {s: 0 for s in SEVERITIES}
@@ -585,8 +607,8 @@ def run_sweep(options: argparse.Namespace) -> int:
     print(json.dumps(summary), file=sys.stderr)
     if failed:
         print(
-            f"sweep: {len(failed)} tasks have no valid output ({', '.join(failed)}). Their units are unreviewed "
-            "for that perspective: read each task file's `errors`, fix the cause (endpoint, token limit, schema), "
+            f"sweep: {len(failed)} tasks have no valid output ({', '.join(failed)}). What they cover is unreviewed "
+            "from their perspective: read each task file's `errors`, fix the cause (endpoint, token limit, schema), "
             "and rerun those tasks with --only; do not drop them from the review or mark them reviewed.",
             file=sys.stderr,
         )

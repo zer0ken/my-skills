@@ -270,7 +270,7 @@ class SweepTest(unittest.TestCase):
     def test_output_from_another_diff_does_not_count(self) -> None:
         self.assertEqual(self.run_sweep(), 0)
         stale = self.read("U-2__db.json")
-        stale["diff_sha256"] = "0" * 64
+        stale["source_sha256"] = "0" * 64
         (self.out / "U-2__db.json").write_text(json.dumps(stale), encoding="utf-8")
         self.assertEqual(self.run_sweep("--only", "U-1__trace"), 1)
         self.assertEqual(self.read("summary.json")["failed"], ["U-2__db"],
