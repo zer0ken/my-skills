@@ -12,7 +12,7 @@ The procedure for posting as a PR review or comment is as follows. Post and edit
 
 4. Check every review body and comment with anti-slop before posting, whether or not the repository runs the anti-slop workflow, as the global instructions require of every text posted on GitHub: read the latest rules and vocabulary through the connected repository tools and compare the draft. Clean up vocabulary and unnecessary phrases without changing technical meaning, severity, evidence, or verification limits. Do not download or run executables.
 
-   A review body over 50 lines folds every heading into a `<details>` block whose `<summary>` holds the heading as `<summary><h3>제목</h3></summary>`, never as plain text, keeps the summary at the top unfolded, and separates consecutive `<details>` blocks with one blank line and no `---` line.
+   A review body over 50 lines folds every heading into a `<details>` block whose `<summary>` holds the heading as `<summary><h3>제목</h3></summary>`, never as plain text, keeps the summary at the top unfolded, and separates consecutive `<details>` blocks with one blank line and no `---` line. Fold the document before the format check of `SKILL.md` U6 and check the folded file that will be posted: the check reads `<summary><h3>개념과 정의</h3></summary>` as the section `## 개념과 정의` and does not count the `<details>` and `<summary>` tag lines as section content.
 
 5. Where the repository runs the anti-slop workflow, after posting or editing, wait until all anti-slop runs finish, and check the section for your own comment id in the bot thread comment. If there is no section, there are 0 detections. If there are detections, edit the same comment and check again.
 

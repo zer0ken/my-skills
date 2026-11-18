@@ -27,7 +27,7 @@ The ledger is a Markdown file kept with the review's separate material, not a se
 | 근거 | At least one `file:line`, a command in backticks, or a URL |
 | 판정 | The R-IDs the item produced, `배제: <reason>` when the item found nothing, or `해당 없음: <reason>` when the item does not apply |
 
-A `해당 없음` row is exempt from naming the sub-checks but still gives its reason and evidence, such as the `git diff --stat` that shows no DB file changed. Every R-ID a row names must be a finding in the review document. A per-area item appears once for every area that any per-area row names; any other item appears exactly once.
+A `|` inside a cell, inside a backtick command too, is written `\|`, because a GFM table reads every other `|` as a cell boundary ("Include a pipe in a cell’s content by escaping it, including inside other inline spans", https://github.github.com/gfm/#tables-extension-); `&#124;` does not serve, because a code span shows it as those six characters. A `해당 없음` row is exempt from naming the sub-checks but still gives its reason and evidence, such as the `git diff --stat` that shows no DB file changed. Every R-ID a row names must be a finding in the review document. A per-area item appears once for every area that any per-area row names; any other item appears exactly once.
 
 ## Catalog
 

@@ -11,6 +11,12 @@ records it in the item ledger. A ledger that misses an item, merges two items
 into one turn, leaves a cell empty, or skips a sub-check makes the thoroughness
 of the review unverifiable, so this check fails it too.
 
+A review body over 50 lines is posted with each heading folded into
+`<details>` as `<summary><h3>제목</h3></summary>` (`references/posting.md`), so
+that line is read as the section `## 제목`, and the `<details>` and `<summary>`
+tag lines around it are not section content. A `|` inside a table cell is
+written `\\|`, as GFM tables require, and is not a cell separator.
+
 Usage: check-review.py REVIEW.md --ledger LEDGER.md
 Exit codes: 0 the review and ledger pass, 1 a format violation,
 2 a file could not be read.
@@ -40,7 +46,9 @@ DEFINED = "정의됨"
 FINDING_ID_RE = re.compile(r"\bR-?\d+\b")
 NOT_APPLICABLE = "해당 없음"
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
-HEADING_RE = re.compile(r"^## (.+?)\s*#*\s*$")
+HEADING_RE = re.compile(r"^(?:## (.+?)\s*#*|<summary><h3>(.+?)</h3></summary>)\s*$")
+FOLD_TAG_RE = re.compile(r"^\s*</?(?:details|summary)>\s*$")
+CELL_SEPARATOR_RE = re.compile(r"(?<!\\)\|")
 COMMENT_RE = re.compile(r"^\s*<!--.*-->\s*$")
 TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 
@@ -55,7 +63,7 @@ def split_sections(text: str) -> tuple[list[str], list[tuple[str, list[str]]]]:
             in_fence = not in_fence
         heading = None if in_fence else HEADING_RE.match(line)
         if heading:
-            sections.append((heading.group(1), []))
+            sections.append((heading.group(1) or heading.group(2), []))
         elif sections:
             sections[-1][1].append(line)
         else:
@@ -64,7 +72,9 @@ def split_sections(text: str) -> tuple[list[str], list[tuple[str, list[str]]]]:
 
 
 def content_lines(lines: list[str]) -> list[str]:
-    return [line for line in lines if line.strip() and not COMMENT_RE.match(line)]
+    return [
+        line for line in lines if line.strip() and not COMMENT_RE.match(line) and not FOLD_TAG_RE.match(line)
+    ]
 
 
 def has_table(lines: list[str]) -> bool:
@@ -84,7 +94,8 @@ def table_rows(lines: list[str]) -> list[list[str]]:
             continue
         if TABLE_SEPARATOR_RE.match(line):
             continue
-        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+        cells = CELL_SEPARATOR_RE.split(line.strip().removeprefix("|").removesuffix("|"))
+        rows.append([cell.strip().replace("\\|", "|") for cell in cells])
     return rows
 
 
@@ -123,7 +134,8 @@ def check_document(text: str) -> list[str]:
         count = titles.count(required)
         if count == 0:
             violations.append(
-                f"`## {required}` 절이 없다: 이 판단을 쓰지 않은 리뷰는 그 기준을 검토했는지 독자가 확인할 수 없다."
+                f"`## {required}` 절이 없다: 이 판단을 쓰지 않은 리뷰는 그 기준을 검토했는지 독자가 확인할 수 없다. "
+                f"50줄 넘는 글로 접었다면 그 제목 줄은 `<summary><h3>{required}</h3></summary>` 로 쓴다."
             )
         elif count > 1:
             violations.append(f"`## {required}` 절이 {count}번 있다: 같은 판단은 한 절에만 둔다.")
@@ -215,7 +227,18 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
     turns: set[str] = set()
     seen: dict[str, list[str]] = {}
     for cells in rows[1:]:
-        row = dict(zip(LEDGER_COLUMNS, cells + [""] * len(LEDGER_COLUMNS)))
+        if len(cells) != len(LEDGER_COLUMNS):
+            # The 턴, 항목, and 영역 cells come first and hold no `|`, so the row still counts for its item.
+            padded = cells + [""] * len(LEDGER_COLUMNS)
+            item_id, area = padded[1].strip("`"), padded[2]
+            if item_id in catalog:
+                seen.setdefault(item_id, []).append(area)
+            violations.append(
+                f"항목 원장의 `{item_id}` 행 칸이 {len(cells)}개다(열은 {len(LEDGER_COLUMNS)}개): "
+                "칸 안의 `|` 는 GFM 표 규칙대로 `\\|` 로 쓴다. `&#124;` 는 백틱 안에서 글자 그대로 남으니 쓰지 말고, 칸을 지우거나 합치지 않는다."
+            )
+            continue
+        row = dict(zip(LEDGER_COLUMNS, cells))
         item_id, area, verdict = row["항목"].strip("`"), row["영역"], row["판정"]
         label = f"`{item_id}`({area})"
         item = catalog.get(item_id)

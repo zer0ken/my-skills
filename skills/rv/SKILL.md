@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.25.0"
+  version: "2.26.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -285,7 +285,7 @@ When the round cap is reached, mark unverified propagated findings as PLAUSIBLE 
 
 ## Result format
 
-Identifiers (commits, issues, PRs, files) are written for a person to read easily and reach, as the global instructions on replies and reports say, and this is not settled by the stricter-rule comparison below. The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
+Identifiers (commits, issues, PRs, files) are written for a person to read easily and reach, as the global instructions on replies and reports say, and this is not settled by the stricter-rule comparison below. The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order; a body over 50 lines folded for posting writes each heading line as `<summary><h3>제목</h3></summary>` with the same title (`references/posting.md`), and the format check reads that line as the same section. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
 
 1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base each as a commit link whose text is the 7-character short SHA (the 40-character SHA does not appear in the prose), the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
 

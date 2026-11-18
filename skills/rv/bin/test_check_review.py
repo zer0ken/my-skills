@@ -61,6 +61,22 @@ COMPLETE = """\
 """
 
 
+def fold(document: str) -> str:
+    """Fold every `## 제목` of a review the way `references/posting.md` folds a body over 50 lines."""
+    lines, open_section, in_fence = [], False, False
+    for line in document.splitlines():
+        if line.startswith("```"):
+            in_fence = not in_fence
+        if line.startswith("## ") and not in_fence:
+            if open_section:
+                lines += ["", "</details>", ""]
+            lines += ["<details>", f"<summary><h3>{line[3:]}</h3></summary>", ""]
+            open_section = True
+        else:
+            lines.append(line)
+    return "\n".join(lines + ["", "</details>", ""])
+
+
 CATALOG = check_review.read_catalog(check_review.ITEMS_PATH.read_text(encoding="utf-8"))
 HEADER = "| 턴 | 항목 | 영역 | 확인한 범위 | 근거 | 판정 |\n|---|---|---|---|---|---|\n"
 
@@ -171,6 +187,22 @@ class CheckLedgerTest(unittest.TestCase):
             ["항목 원장의 `U9-extra` 는 목록에 없는 항목이다: 항목은 `references/items.md` 목록에서만 고른다."],
         )
 
+    def test_escaped_pipe_stays_inside_cell(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("`relation.py:10`", "`rg -n merge_ \\| wc -l`"))
+        self.assertEqual(check_review.check_ledger(text, COMPLETE, CATALOG), [])
+
+    def test_unescaped_pipe_in_cell_fails(self):
+        row = ledger_row(4, CATALOG["U1-names"])
+        text = LEDGER.replace(row, row.replace("`relation.py:10`", "`rg -n merge_ | wc -l`"))
+        self.assertEqual(
+            check_review.check_ledger(text, COMPLETE, CATALOG),
+            [
+                ("항목 원장의 `U1-names` 행 칸이 7개다(열은 6개): 칸 안의 `|` 는 GFM 표 규칙대로 `\\|` 로 쓴다. "
+                "`&#124;` 는 백틱 안에서 글자 그대로 남으니 쓰지 말고, 칸을 지우거나 합치지 않는다.")
+            ],
+        )
+
     def test_main_requires_ledger(self):
         with tempfile.TemporaryDirectory() as tmp:
             review, ledger = Path(tmp, "review.md"), Path(tmp, "ledger.md")
@@ -194,7 +226,8 @@ class CheckReviewTest(unittest.TestCase):
         self.assertEqual(
             check_review.check_document(text),
             [
-                "`## 시험` 절이 없다: 이 판단을 쓰지 않은 리뷰는 그 기준을 검토했는지 독자가 확인할 수 없다."
+                ("`## 시험` 절이 없다: 이 판단을 쓰지 않은 리뷰는 그 기준을 검토했는지 독자가 확인할 수 없다. "
+                "50줄 넘는 글로 접었다면 그 제목 줄은 `<summary><h3>시험</h3></summary>` 로 쓴다.")
             ],
         )
 
@@ -241,6 +274,31 @@ class CheckReviewTest(unittest.TestCase):
         self.assertEqual(
             check_review.check_document(text),
             ["`## 개념과 정의` 절에 `판정` 열이 있는 단위 표가 없다: 단위마다 정의와 판정이 없으면 정의 없는 구조를 찾았는지 확인할 수 없다."],
+        )
+
+    def test_folded_document_passes(self):
+        self.assertEqual(check_review.check_document(fold(COMPLETE)), [])
+
+    def test_folded_empty_section_fails(self):
+        text = fold(COMPLETE.replace("측정 없음: 측정 공백으로 기록한다.\n", ""))
+        self.assertEqual(
+            check_review.check_document(text),
+            ["`## 품질` 절이 비어 있다: 판단이 없으면 `해당 없음: <이유>` 를 쓴다."],
+        )
+
+    def test_folded_document_without_verdict_paragraph_fails(self):
+        text = fold(COMPLETE.replace("@author 판정은 변경 요청이며 head `abc`, finding 1건(MAJOR 1)이다.\n", ""))
+        self.assertEqual(
+            check_review.check_document(text),
+            ["판정 첫 문단이 없다: 독자가 판정, head, finding 수를 첫 문단에서 찾지 못한다."],
+        )
+
+    def test_missing_section_names_folded_form(self):
+        text = fold(COMPLETE).replace("<summary><h3>시험</h3></summary>", "<summary>시험</summary>")
+        self.assertIn(
+            "`## 시험` 절이 없다: 이 판단을 쓰지 않은 리뷰는 그 기준을 검토했는지 독자가 확인할 수 없다. "
+            "50줄 넘는 글로 접었다면 그 제목 줄은 `<summary><h3>시험</h3></summary>` 로 쓴다.",
+            check_review.check_document(text),
         )
 
     def test_old_grounds_paragraph_format_fails(self):
