@@ -3,7 +3,7 @@ name: sucks
 description: "Style rules for Korean technical documents. Use when writing or editing Korean prose such as READMEs, design documents, issues, PR bodies, slides, and comments. Excludes both translated-English AI document style and choppy blog style, and writes in a neutral technical written style."
 metadata:
   author: hrlee
-  version: "2.10.4"
+  version: "2.11.0"
   domain: writing
   triggers: 한국어 문서, README, 문체, 말투, 번역투, 산문, 기술 문서, korean prose, doc tone
   role: guardian
@@ -295,10 +295,12 @@ Introduction comes with three conditions.
 - 나쁜 예: `관계 ID 재번호는 걸러내지 못합니다`
 - 좋은 예: `관계 ID의 번호를 다시 매기는 것은 걸러내지 못합니다`
 
-**Escape `~` in Markdown.** Writing ranges with `~` is fine. GitHub Markdown renders text between two tildes as strikethrough, so outside code spans and code blocks write `~` as `\~`.
+**Escape `~` in Markdown, but not in HTML blocks.** Writing ranges with `~` is fine. GitHub Markdown renders text between two tildes as strikethrough, so in Markdown text write `~` as `\~`. An HTML block is the exception: from a line that starts with a tag such as `<details>` or `<summary><h3>제목</h3></summary>` to the next blank line, GitHub parses no Markdown and no backslash escape ("Backslash escapes do not work in code blocks, code spans, autolinks, or raw HTML", https://github.github.com/gfm/), so `\~` shows as `\~` and a bare `~` strikes nothing; there write `~` as is. A blank line after the tag line returns the body to Markdown, where `\~` applies again. Code spans and code blocks need neither. The user's words (2026-11-19), after seeing `\~` inside `<details>` render as `\~`: "마크다운 안에서 details 태그 같이 html 태그를 섞어서 쓸때 안에 ~를 \~ 이렇게 이스케이프 하면 실제로는 그냥 \~로 표시되는게 확인됐어. 이거고려하도록 해."
 
-- 나쁜 예: `R-001~R-006, 3~5개` (두 `~` 사이가 취소선이 된다)
+- 나쁜 예: `R-001~R-006, 3~5개` (Markdown 문단에서 두 `~` 사이가 취소선이 된다)
 - 좋은 예: `R-001\~R-006, 3\~5개`
+- 나쁜 예: `<summary><h3>3\~5단계</h3></summary>` (HTML 블록 안이라 `\~`가 그대로 보인다)
+- 좋은 예: `<summary><h3>3~5단계</h3></summary>`
 
 **Do not use metaphors for technical subjects.**
 
