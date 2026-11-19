@@ -28,7 +28,7 @@ Apply to the implementation on both paths.
 
 1. Computational complexity. Worst-case complexity is at most O(n) in the input size. Write the input size as a symbol for each path to check it. Nested loops, correlated subqueries, greedy algorithms that re-evaluate all candidates every iteration, and sorting (O(n log n)) also count as exceeding it; if the consumer does not require order, remove the sort. For SQL, block even the bad plans the planner could choose through the query structure, and confirm linearity by measuring with the input size doubled. Write this condition into delegation briefs too.
 2. Model calls. Bind the number of model calls to the output space or the changed delta, not the input size. Do not ask again about what has already been judged or has not changed. Report computational complexity and call count separately. One model call costs T_llm, so it is slow even if linear.
-3. Anti-pattern cleanup. Once implementation commits accumulate, before measurement and `/rv`, have a worker who did not implement it clean up the whole PR diff (`origin/main..HEAD`) by anti-pattern, maintainability, and simplification criteria while preserving behavior. Write these criteria into the brief.
+3. Anti-pattern cleanup. Once implementation commits accumulate, before measurement and `/rv`, have a worker who did not implement it clean up the whole PR diff (`origin/main...HEAD`, the diff from the fork point) by anti-pattern, maintainability, and simplification criteria while preserving behavior. Write these criteria into the brief.
 
 ## Direct path
 
