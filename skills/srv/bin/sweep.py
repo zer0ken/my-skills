@@ -15,7 +15,9 @@ The request carries everything the reviewer needs: the brief
 unit's hunks, the unit's files at the head with line numbers, and the lines
 elsewhere in the head that name a symbol the hunks define or change. The answer
 is held to a JSON Schema, validated here, retried once when invalid, and its
-finding lines are re-located from their anchors (`anchor-findings.py`).
+finding lines are re-located from their anchors (`anchor-findings.py`). A call the
+server refuses (overload, an open circuit breaker, a dropped connection) waits and
+is sent again (`run_task`).
 
 Coverage is this script's job: it exits 1 when any task has no valid output,
 because a task without output is a unit the swarm did not review.
@@ -36,6 +38,7 @@ import http.client
 import importlib.util
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -62,6 +65,13 @@ SYMBOL_RES = (
     re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)"),
 )
 HUNK_CONTEXT_RE = re.compile(r"^@@[^@]*@@\s*(.*)$")
+# A server that refuses a call (overloaded, or a router whose circuit breaker is open) is waited for, not counted as
+# a failed attempt: on 2026-11-20 the vllm-router on 100.99.0.1:8000 opened its circuit for 61 s after send errors to
+# its workers, and 197 of 234 tasks failed because both attempts of each call came back refused within one second.
+REFUSED_STATUSES = frozenset({429, 502, 503, 504})
+REFUSAL_WINDOW_S = 900.0
+BACKOFF_BASE_S = 2.0
+BACKOFF_CAP_S = 60.0
 
 FINDINGS_SCHEMA = {
     "type": "object",
@@ -352,6 +362,22 @@ def validate_answer(answer: object) -> list[str]:
     return problems
 
 
+class ServerRefused(Exception):
+    """The server did not take the call now (HTTP 429, 502, 503, 504, or a refused or dropped connection).
+
+    `retry_after` is the server's Retry-After in seconds, None when it gave none.
+    """
+
+    def __init__(self, message: str, retry_after: float | None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+def retry_after_seconds(value: str | None) -> float | None:
+    """Retry-After in its delay-seconds form (RFC 9110 section 10.2.3); the HTTP-date form is treated as absent."""
+    return float(value) if value is not None and value.strip().isdigit() else None
+
+
 def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, dict, str]:
     """POST one chat completion; return the message content, the usage block, and the finish reason."""
     body = {
@@ -375,7 +401,15 @@ def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, 
     except urllib.error.HTTPError as error:
         # The server states the cause (context length, schema) in the body, not in the status line.
         body = error.read().decode("utf-8", errors="replace")[:500]
+        if error.code in REFUSED_STATUSES:
+            raise ServerRefused(f"HTTP {error.code}: {body}", retry_after_seconds(error.headers.get("Retry-After"))) from error
         raise ValueError(f"HTTP {error.code}: {body}") from error
+    except urllib.error.URLError as error:
+        if isinstance(error.reason, ConnectionError):
+            raise ServerRefused(f"connection failed: {error.reason}", None) from error
+        raise
+    except ConnectionError as error:  # the server closed the connection before it answered
+        raise ServerRefused(f"connection lost: {error}", None) from error
     try:
         choice = payload["choices"][0]
         return choice["message"].get("content") or "", payload.get("usage") or {}, choice.get("finish_reason") or ""
@@ -386,17 +420,38 @@ def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, 
 def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace) -> dict:
     """Review one task once (one sample); one retry when the call fails or the answer is invalid.
 
+    A call the server refuses is sent again after a wait, capped exponential backoff with full jitter or the
+    server's Retry-After, until it answers or `REFUSAL_WINDOW_S` passes; the wait uses no attempt.
     `anchor` re-locates the answer's finding lines against the files they quote.
     """
     attempts, errors, usage_total = 0, [], {"prompt_tokens": 0, "completion_tokens": 0}
     started = time.monotonic()
+    refused_since, refusals = None, 0
     while attempts < 2:
-        attempts += 1
         try:
             content, usage, finish_reason = call_model(messages, options)
+        except ServerRefused as refusal:
+            now = time.monotonic()
+            refused_since = now if refused_since is None else refused_since
+            left = REFUSAL_WINDOW_S - (now - refused_since)
+            if left <= 0:
+                errors.append(
+                    f"the server refused every call for {REFUSAL_WINDOW_S:.0f} s, last: {refusal}; check that it "
+                    "answers (/v1/models, its logs) before rerunning the task"
+                )
+                break
+            backoff = random.uniform(0, min(BACKOFF_CAP_S, BACKOFF_BASE_S * 2**refusals))
+            delay = min(left, refusal.retry_after if refusal.retry_after is not None else backoff)
+            refusals += 1
+            errors.append(f"refused: {refusal}; sent again after {delay:.1f} s")
+            time.sleep(delay)
+            continue
         except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError) as error:
+            attempts += 1
             errors.append(f"attempt {attempts}: call failed: {error}")
             continue
+        attempts += 1
+        refused_since, refusals = None, 0
         for key in usage_total:
             usage_total[key] += int(usage.get(key) or 0)
         if finish_reason == "length":
@@ -646,7 +701,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-concurrency", type=int, default=128,
-        help="requests in flight; round 1 on #1415 sent 117 at once at 128, so the round took its slowest call",
+        help="requests this client keeps in flight, not the server's capacity: the server queues or refuses what it "
+        "cannot take, and a refused call waits and is sent again; at 128 round 1 on #1415 sent all 117 calls at once",
     )
     parser.add_argument("--max-tokens", type=int, default=65536, help="covers reasoning and answer tokens")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")

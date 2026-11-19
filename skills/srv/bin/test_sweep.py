@@ -5,6 +5,7 @@ import http.server
 import importlib.util
 import io
 import json
+import socket
 import subprocess
 import sys
 import tempfile
@@ -48,15 +49,17 @@ class FakeEndpoint(http.server.BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeEndpoint.requests.append(body)
         reply = FakeEndpoint.respond(body)
-        status = 200
-        if isinstance(reply, dict):  # a raw response: {"status": ..., "payload": ...}
-            status, payload = reply["status"], json.dumps(reply["payload"])
+        status, headers = 200, {}
+        if isinstance(reply, dict):  # a raw response: {"status": ..., "payload": ..., "headers": {...}}
+            status, payload, headers = reply["status"], json.dumps(reply["payload"]), reply.get("headers", {})
         else:
             content, finish_reason = reply if isinstance(reply, tuple) else (reply, "stop")
             choice = {"message": {"content": content}, "finish_reason": finish_reason}
             payload = json.dumps({"choices": [choice], "usage": {"prompt_tokens": 10, "completion_tokens": 5}})
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        for name, value in headers.items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(payload.encode())
 
@@ -201,6 +204,69 @@ class SweepTest(unittest.TestCase):
         result = self.read("U-1__trace.json")
         self.assertEqual(result["attempts"], 2)
         self.assertTrue(result["errors"][0].startswith("sample 1: attempt 1: content is not JSON"))
+
+    def test_refused_call_is_sent_again_until_the_server_answers(self) -> None:
+        calls: dict[str, int] = {}
+        lock = threading.Lock()
+        open_circuit = {"status": 503, "payload": {"error": "No available workers (all circuits open or unhealthy)"}}
+
+        def respond(body: dict):
+            task = task_of(body)
+            with lock:
+                calls[task] = calls.get(task, 0) + 1
+                refused = task == "U-1__trace" and calls[task] <= 3
+            return open_circuit if refused else answer()
+
+        FakeEndpoint.respond = staticmethod(respond)
+        with mock.patch.object(sweep, "BACKOFF_BASE_S", 0.01):
+            self.assertEqual(self.run_sweep(), 0, "a server that refuses for a while must not leave the task unreviewed")
+        result = self.read("U-1__trace.json")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["attempts"], 1, "a refused call is a wait, not a used attempt")
+        self.assertEqual(calls["U-1__trace"], 4)
+        self.assertEqual(sum(error.startswith("sample 1: refused: HTTP 503") for error in result["errors"]), 3,
+                         "each wait is recorded so the procedure log can account for the server's refusals")
+
+    def test_refusal_longer_than_the_window_fails_the_task(self) -> None:
+        def respond(body: dict):
+            if task_of(body) == "U-1__trace":
+                return {"status": 503, "payload": {"error": "No available workers"}}
+            return answer()
+
+        FakeEndpoint.respond = staticmethod(respond)
+        with mock.patch.object(sweep, "BACKOFF_BASE_S", 0.01), mock.patch.object(sweep, "REFUSAL_WINDOW_S", 0.2):
+            self.assertEqual(self.run_sweep(), 1)
+        result = self.read("U-1__trace.json")
+        self.assertFalse(result["ok"])
+        self.assertIn("the server refused every call for 0 s, last: HTTP 503", result["errors"][-1])
+        self.assertEqual(self.read("summary.json")["failed"], ["U-1__trace"])
+
+    def test_retry_after_sets_the_wait(self) -> None:
+        calls: list[int] = []
+
+        def respond(body: dict):
+            if task_of(body) != "U-1__trace":
+                return answer()
+            calls.append(1)
+            if len(calls) == 1:
+                return {"status": 429, "payload": {"error": "queue full"}, "headers": {"Retry-After": "0"}}
+            return answer()
+
+        FakeEndpoint.respond = staticmethod(respond)
+        with mock.patch.object(sweep, "BACKOFF_BASE_S", 1000.0):  # a jittered wait would take minutes
+            self.assertEqual(self.run_sweep(), 0)
+        self.assertIn("sent again after 0.0 s", self.read("U-1__trace.json")["errors"][0])
+
+    def test_closed_port_is_a_refusal(self) -> None:
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            closed = probe.getsockname()[1]
+        with mock.patch.object(sweep, "BACKOFF_BASE_S", 0.01), mock.patch.object(sweep, "REFUSAL_WINDOW_S", 0.2):
+            code = self.run_sweep("--base-url", f"http://127.0.0.1:{closed}/v1")
+        self.assertEqual(code, 1)
+        errors = self.read("U-1__trace.json")["errors"]
+        self.assertTrue(errors[0].startswith("sample 1: refused: connection failed"), errors[0])
+        self.assertIn("the server refused every call", errors[-1])
 
     def test_enclosing_names_walk_out_to_the_top_level(self) -> None:
         lines = ["class Store:", "    x = 1", "", "    def load(self):", "        if True:", "            return 1", "def other():", "    pass"]
