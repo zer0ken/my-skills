@@ -3,7 +3,7 @@
 @font-face{font-family:Pretendard;src:url(fonts/Pretendard-Bold.otf);font-weight:700}
 @font-face{font-family:Pretendard;src:url(fonts/Pretendard-ExtraBold.otf);font-weight:800}
 :root{--panel:#FFFFFF;--ink:#14171B;--muted:#5D6570;--dim:#B3B9C2;--accent:#0B8FD8;--accentText:#006DA8;--line:#E6E9ED;--soft:#EEF1F4;--edge:#9AA3AD;--tint:#E2F1FB}
-body{margin:0;background:#fff;color:var(--ink);font:15px/1.5 Pretendard,"Pretendard Variable","Noto Sans KR",sans-serif;word-break:keep-all}
+body{margin:0;background:transparent;color:var(--ink);font:15px/1.5 Pretendard,"Pretendard Variable","Noto Sans KR",sans-serif;word-break:keep-all}
 .card{margin:0;padding:26px 28px 22px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
 .title{font-size:24px;font-weight:800;letter-spacing:-.02em}
 .sub{font-size:14px;color:var(--muted);margin-top:2px}
