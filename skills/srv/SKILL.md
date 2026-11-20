@@ -3,7 +3,7 @@ name: swarm-review
 description: "Swarm review (srv) of a code change: the change is split into review units by a script, independent structured-output calls to the self-hosted model (three samples by default) review each unit from each perspective built from rv's review items, one operator session verifies every suggestion against the code, sends narrow follow-up questions to new reviewer sessions for further rounds, and returns one review document. Use when the user calls /srv, /swarm-review, $srv, or $swarm-review, or asks for a swarm review of a PR, branch, or commit range (코드 변경을 여러 리뷰어 세션으로 훑어 리뷰할 때)."
 metadata:
   author: hrlee
-  version: "0.7.1"
+  version: "0.8.0"
   domain: workflow
   triggers: srv, swarm-review, swarm review, 스웜 리뷰
   dependencies:
@@ -69,7 +69,7 @@ Which perspectives a unit gets is decided by the frontmatter of each method file
 | db | `references/perspectives/db.md` | U3-db; `sql-expert` DM-Querying, DM-Processing, DM-Internals | queries, schema, storage backends |
 | concurrency | `references/perspectives/concurrency.md` | U3 failure and recovery tracing; `parallel-expert` | tasks, workers, locks, retries, recovery |
 | llm | `references/perspectives/llm.md` | `llm-expert` structured output, prompt engineering, diagnosis, serving | prompts, model calls, output contracts |
-| cost | `references/perspectives/cost.md` | U3-cost; prv perf | hot paths, batch work, model or DB calls per unit |
+| cost | `references/perspectives/cost.md` | U3-cost; prv perf | SQL and Cypher files and query lines, hot paths, batch work, model or DB calls per unit |
 | docs | `references/perspectives/docs.md` | U3-docs; `sucks` | documents, docstrings, or user-facing text |
 
 A perspective is a checklist, not a persona. The user's words (2026-11-12): "전문 작업에서는 '역할극'이 아니라, 메소돌로지를 적용해야돼." A new perspective is a new method file whose items name their source (an rv item, an `-expert` section, or a repository rule).

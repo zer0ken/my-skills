@@ -48,7 +48,7 @@ A `|` inside a cell, inside a backtick command too, is written `\|`, because a G
 | U2-quality | U2 | 아니오 | U2 question 2 | 2.1, 2.2, 2.3 |
 | U3-safety | U3 | 예 | U3 steps 1-4 | 안전 사실, 심볼 밖 소비자, 실행 증명, 배제 목록 |
 | U3-reuse | U3 | 예 | U3, reuse and known implementations | 저장소 재사용, 외부 구현, 의존성, 최소 변경 |
-| U3-cost | U3 | 예 | U3, implementation cost | 입력 규모, 반복 작업 |
+| U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 |
 | U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 |
 | U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 |
 | U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI |

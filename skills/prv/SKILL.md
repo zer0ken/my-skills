@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with blind structured-output calls to the local model, one perspective each with a method checklist and several samples per perspective, then have the one operator session verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document. The session that owns the plan does not run it: it starts one operator session that runs every step and returns one consolidated file."
 metadata:
   author: hrlee
-  version: "1.12.1"
+  version: "1.13.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -67,7 +67,7 @@ Choose the perspectives the plan touches; `trace` always runs.
 | P3 | `references/perspectives/concurrency.md` | Transactions, concurrency, failure and recovery (`parallel-expert`, `sql-expert` DM-Internals) |
 | P4 | `references/perspectives/backends.md` | Equivalence across storage backends and test fakes |
 | P5 | `references/perspectives/ops.md` | Lifecycle of new state, background tasks, migration, public contract |
-| P6 | `references/perspectives/perf.md` | Hot paths, budgets, measurement on realistic data |
+| P6 | `references/perspectives/perf.md` | Known algorithms and their complexity for each computation, hot paths, budgets, measurement on realistic data |
 
 A perspective is a checklist, not a persona. The user's words (2026-11-12): "전문 작업에서는 '역할극'이 아니라, 메소돌로지를 적용해야돼." A new perspective is a new method file whose items come from a field's sources or its `-expert` skill.
 

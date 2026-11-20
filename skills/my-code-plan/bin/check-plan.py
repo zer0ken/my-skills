@@ -4,10 +4,13 @@
 Usage: python3 -I check-plan.py <plan.md> --repo <repository or worktree root>
 
 The plan file holds one Markdown table under the heading `## Plan tree` with the
-columns id, depth, parents, node, check, code, status (see ../SKILL.md). The check
-enforces the structure of top-down refinement: every node descends exactly one
-depth from its parents, a depth is settled before the next is written, and every
-branch ends in a leaf that names a real code change. On success it prints one
+columns id, depth, parents, node, check, code, status, and under `## Algorithms`
+either a table with the columns node, problem, candidates, chosen, grounds or the
+one line `none: <reason>` (see ../SKILL.md). The check enforces the structure of
+top-down refinement: every node descends exactly one depth from its parents, a
+depth is settled before the next is written, every branch ends in a leaf that names
+a real code change, and every computation the plan records was chosen from at least
+two known candidates with their complexity. On success it prints one
 `approved: <absolute path>` line per leaf and `my-code-plan: plan OK`.
 """
 
@@ -17,6 +20,7 @@ import re
 import sys
 
 COLUMNS = ["id", "depth", "parents", "node", "check", "code", "status"]
+ALGORITHM_COLUMNS = ["node", "problem", "candidates", "chosen", "grounds"]
 STATUSES = {"draft", "settled"}
 MIN_LEAF_DEPTH = 2
 OK_LINE = "my-code-plan: plan OK"
@@ -29,15 +33,25 @@ DONT = (
     "Do not satisfy this check by renumbering depths, marking draft rows settled without checking them, deleting"
     " rows, or pointing a leaf at whatever file you were about to edit; fix the node whose content is missing."
 )
+ALGORITHM_WHY = (
+    "The algorithm table exists because the first algorithm that meets a computation's definition is often not"
+    " the cheapest known one (an all-pairs medoid where the member nearest the centroid takes one pass), and an"
+    " implementer who never names the problem and lists the known algorithms with their complexity never sees it."
+)
+ALGORITHM_DONT = (
+    "Do not satisfy it by writing `none:` for a plan that computes something, padding the candidates with a"
+    " strawman, or copying the definition you already implemented into `chosen`; name the problem by its known"
+    " type, look up its known algorithms and the platform's native features, and choose by complexity."
+)
 
 
-def read_rows(text):
-    """Rows of the table under `## Plan tree` as dicts, with their line numbers."""
+def read_rows(text, heading="Plan tree", columns=COLUMNS):
+    """Rows of the table under `## <heading>` as dicts, with their line numbers."""
     lines = text.splitlines()
     try:
-        start = next(i for i, line in enumerate(lines) if re.fullmatch(r"##\s+Plan tree\s*", line))
+        start = next(i for i, line in enumerate(lines) if re.fullmatch(rf"##\s+{heading}\s*", line))
     except StopIteration:
-        return None, ["the file has no `## Plan tree` heading; write the tree as the table that SKILL.md shows"]
+        return None, [f"the file has no `## {heading}` heading; write it as SKILL.md shows"]
     header, rows, errors = None, [], []
     for number, line in enumerate(lines[start + 1:], start + 2):
         if line.startswith("#"):
@@ -49,18 +63,68 @@ def read_rows(text):
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if header is None:
             header = [cell.lower() for cell in cells]
-            if header != COLUMNS:
-                return None, [f"line {number}: the columns are {header}, but must be exactly {COLUMNS}"]
+            if header != columns:
+                return None, [f"line {number}: the columns are {header}, but must be exactly {columns}"]
             continue
         if set("".join(cells)) <= set("-: "):
             continue
-        if len(cells) != len(COLUMNS):
-            errors.append(f"line {number}: {len(cells)} cells, expected {len(COLUMNS)}")
+        if len(cells) != len(columns):
+            errors.append(f"line {number}: {len(cells)} cells, expected {len(columns)}")
             continue
-        rows.append(dict(zip(COLUMNS, cells), line=number))
+        rows.append(dict(zip(columns, cells), line=number))
     if header is None:
-        return None, ["no table follows `## Plan tree`"]
+        return None, [f"no table follows `## {heading}`"]
     return rows, errors
+
+
+def check_algorithms(text, node_ids):
+    """Errors of the `## Algorithms` section: a `none: <reason>` line, or rows whose choice names one of at least
+    two candidates, each written `<name>: <complexity>` with a big-O bound."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if re.fullmatch(r"##\s+Algorithms\s*", line)), None)
+    if start is None:
+        return ["the file has no `## Algorithms` heading; add the algorithm table, or `none: <reason>` when no node"
+                " computes anything"]
+    body = []
+    for line in lines[start + 1:]:
+        if line.startswith("#"):
+            break
+        if line.strip():
+            body.append(line.strip())
+    if body and re.match(r"none:", body[0]):
+        if len(body) > 1 or not body[0][len("none:"):].strip():
+            return ["`## Algorithms` with `none:` holds that one line with its reason and no table"]
+        return []
+    rows, errors = read_rows(text, "Algorithms", ALGORITHM_COLUMNS)
+    if rows is None:
+        return errors
+    if not rows and not errors:
+        return ["the algorithm table has no rows; give one row per node that specifies a computation, or write"
+                " `none: <reason>`"]
+    for row in rows:
+        where = f"line {row['line']} (algorithm row for {row['node'] or 'no node'})"
+        if row["node"] not in node_ids:
+            errors.append(f"{where}: `{row['node']}` is not a plan-tree node id; name the node that specifies the"
+                          " computation")
+        if not row["problem"] or row["problem"] == "-":
+            errors.append(f"{where}: no problem; name the problem the computation solves by its known type")
+        candidates = [c.strip() for c in row["candidates"].split(";") if c.strip()]
+        if len(candidates) < 2:
+            errors.append(f"{where}: {len(candidates)} candidate; list at least two, the one that first meets the"
+                          " definition and the known alternatives, separated by `;`")
+        names = []
+        for candidate in candidates:
+            name, _, cost = candidate.partition(":")
+            if not name.strip() or "O(" not in cost:
+                errors.append(f"{where}: candidate `{candidate}` is not `<name>: <complexity>` with a big-O bound"
+                              " in the input sizes")
+            names.append(name.strip())
+        if row["chosen"] not in names:
+            errors.append(f"{where}: chosen `{row['chosen']}` is not the name of a candidate in the row")
+        if not row["grounds"] or row["grounds"] == "-":
+            errors.append(f"{where}: no grounds; say why the choice is the cheapest candidate that meets the"
+                          " requirement, with its source")
+    return errors
 
 
 def leaf_path(code, repo):
@@ -155,18 +219,27 @@ def main():
     args = parser.parse_args()
     repo = os.path.realpath(args.repo)
     with open(args.plan, encoding="utf-8") as handle:
-        rows, errors = read_rows(handle.read())
+        text = handle.read()
+    rows, errors = read_rows(text)
     approved = []
     if rows is not None and not errors:
         if not rows:
             errors = ["the plan tree table has no rows"]
         else:
             errors, approved = check(rows, repo)
-    if errors:
-        print(f"my-code-plan: plan {args.plan} is not ready for editing.\n{WHY}", file=sys.stderr)
-        for error in errors:
-            print(f"  - {error}", file=sys.stderr)
-        print(DONT, file=sys.stderr)
+    algorithm_errors = check_algorithms(text, {row["id"] for row in rows or []})
+    if errors or algorithm_errors:
+        print(f"my-code-plan: plan {args.plan} is not ready for editing.", file=sys.stderr)
+        if errors:
+            print(WHY, file=sys.stderr)
+            for error in errors:
+                print(f"  - {error}", file=sys.stderr)
+            print(DONT, file=sys.stderr)
+        if algorithm_errors:
+            print(ALGORITHM_WHY, file=sys.stderr)
+            for error in algorithm_errors:
+                print(f"  - {error}", file=sys.stderr)
+            print(ALGORITHM_DONT, file=sys.stderr)
         return 1
     for path in sorted(set(approved)):
         print(f"approved: {path}")
