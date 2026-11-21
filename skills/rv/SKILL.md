@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.29.0"
+  version: "2.30.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -276,6 +276,8 @@ Drop every finding outside the scope (`## Scope of a finding`), then merge the f
 Before posting or handing the document over, run `uv run --no-project python ~/.agents/skills/rv/bin/check-review.py <review.md> --ledger <ledger.md> --units <units.json>` (without `--units` only for a target without a diff) and fix the document and the ledger until it prints `rv review format: review and item ledger passed (<n> items)`. The script uses only the standard library, so where `uv` cannot run, such as a read-only sandbox, run it with `python3 -I` instead; a review whose check was not run is not handed over as passed. It rejects a document that lacks the verdict paragraph or a mandatory section, leaves a section empty, puts the sections out of order, ends on a section other than `검증 범위`, has no table in `크기와 증가`, or has a row in the `개념과 정의` table whose `판정` is not `정의됨` and that names no R-ID. It rejects a ledger that misses an item of the catalog (per area for the per-area items), puts two items in one turn, leaves a cell empty, gives no `file:line`, backtick command, or URL as evidence, omits a sub-check from `확인한 범위`, has a verdict that is not R-IDs, `배제: <이유>`, or `해당 없음: <이유>`, or names an R-ID the review document does not contain; with `--units`, it also rejects a unit that no per-area row reviewed and an area that is not a unit id. A fix the check forces goes back to the item's turn: rerun the item, do not edit the row alone. Exit code 1 is a format violation and 2 is a read failure.
 
 The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
+
+A review body over 50 lines folds every heading into `<details>` blocks holding `<summary><h3>제목</h3></summary>`, with consecutive blocks separated by one blank line and no `---` line; `~/.agents/skills/issue/SKILL.md` holds the rule with its grounds.
 
 ## Termination condition
 
