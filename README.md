@@ -11,6 +11,7 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 | [eli5](skills/eli5/SKILL.md) | 주제를 쉬운 말과 큰 그림으로 설명한다. |
 | [handoff](skills/handoff/SKILL.md) | 대화를 핸드오프 문서로 압축해 다른 에이전트가 이어받게 한다. |
 | [issue](skills/issue/SKILL.md) | 이슈를 올린다. 본문은 항목 이름을 붙인 불릿 한 줄씩, 상세는 코멘트로. |
+| [jhchoi-style](skills/jhchoi-style/SKILL.md) | 논문 형식 한국어 기술 문서(주로 PDF): 절 구성, 도식, HTML과 Chrome 인쇄 경로, 배치 함정, 근거 규칙. |
 | [openai-cookbook](skills/openai-cookbook/SKILL.md) | Find OpenAI Cookbook examples for a topic. |
 | [my-code-plan](skills/my-code-plan/SKILL.md) | 모든 코드 수정 전에 맥락 깊이 0(요구사항)부터 N(코드 변경)까지 한 깊이씩 탑다운으로 계획하고 검사기로 확인한다. |
 | [osiri](skills/osiri/SKILL.md) | Technical reviews of code, designs, and PRs, plus peer audits of reports, claims, evidence, and figures. |
