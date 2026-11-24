@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest import mock
 from pathlib import Path
 
 
@@ -25,6 +24,7 @@ def load(name: str, file: str):
 
 design = load("design", "design.py")
 fixtures = load("test_sweep_fixtures", "test_sweep.py")
+context_script = load("srv_context", "context.py")
 FakeEndpoint, DIFF, SOURCE, CALLER = fixtures.FakeEndpoint, fixtures.DIFF, fixtures.SOURCE, fixtures.CALLER
 
 
@@ -38,7 +38,7 @@ def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTUR
 
 
 def perspective(pid: str, breadth: list[str], depth: str = "low", means: str = "read") -> dict:
-    return {"id": pid, "value": "v", "sources": ["catalog: db"], "breadth": breadth, "depth": depth,
+    return {"id": pid, "value": "v", "broken_if": "x", "sources": ["catalog: db"], "breadth": breadth, "depth": depth,
             "checks": [{"question": "c", "means": means}]}
 
 
@@ -122,6 +122,24 @@ class CheckPerspectivesTest(unittest.TestCase):
         answer["perspectives"].append(perspective("K-2", ["U-1/E-2"], depth="high"))
         self.assertEqual(self.check(answer, change("E-1"), structural), [])
 
+    def test_a_perspective_states_what_breaks_its_value(self) -> None:
+        answer = valid_perspectives()
+        answer["perspectives"][0]["broken_if"] = " "
+        problems = design.check_perspectives(answer, {"U-1/E-1": change("E-1")}, ["db", "trace"])
+        self.assertTrue(any("K-1 has no `broken_if`" in p for p in problems), problems)
+
+    def test_a_low_perspective_stays_narrow(self) -> None:
+        many = {f"U-1/E-{n}": change(f"E-{n}") for n in range(1, design.LOW_BREADTH_MAX + 2)}
+        answer = valid_perspectives()
+        answer["perspectives"][0]["breadth"] = list(many)
+        problems = design.check_perspectives(answer, many, ["db", "trace"])
+        self.assertTrue(any(f"K-1 is `low` with {design.LOW_BREADTH_MAX + 1} changes" in p for p in problems), problems)
+        answer["perspectives"] = [perspective("K-1", list(many)[: design.LOW_BREADTH_MAX], means="execute"),
+                                  perspective("K-2", list(many)[design.LOW_BREADTH_MAX:], means="execute"),
+                                  perspective("K-3", list(many), depth="high")]
+        self.assertEqual(design.check_perspectives(answer, many, ["db", "trace"]), [],
+                         "a high perspective may be wide: it judges structure, not lines")
+
     def test_a_check_states_its_means(self) -> None:
         answer = valid_perspectives()
         answer["perspectives"][0]["checks"] = ["c"]
@@ -196,9 +214,11 @@ class DesignRunTest(unittest.TestCase):
         self.requirement = root / "issue.md"
         self.requirement.write_text("Load rows.\n", encoding="utf-8")
         self.out = root / "design"
-        jail = mock.patch.object(design.sweep.reviewer, "Jail", fixtures.FakeJail)  # one HTTP call per session, no omp
-        jail.start()
-        self.addCleanup(jail.stop)
+        self.context = root / "context"
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(context_script.main([
+                "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
+                "--requirements", str(self.requirement), "--out", str(self.context)]), 0)
         self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeEndpoint)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         FakeEndpoint.requests = []
@@ -212,7 +232,7 @@ class DesignRunTest(unittest.TestCase):
     def run_design(self) -> int:
         argv = [
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo), "--values", str(self.values),
-            "--requirements", str(self.requirement), "--out", str(self.out),
+            "--context", str(self.context), "--out", str(self.out),
             "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1", "--model", "fake",
         ]
         stderr = io.StringIO()
@@ -227,6 +247,9 @@ class DesignRunTest(unittest.TestCase):
         unit_body = next(b for b in FakeEndpoint.requests if step(b) == "srv-changes")
         self.assertEqual(unit_body["response_format"]["json_schema"]["schema"], design.CHANGES_SCHEMA)
         self.assertRegex(unit_body["messages"][1]["content"], r"@@ [^\n]*@@[^\n]*  \[H1\]")
+        self.assertTrue(unit_body["messages"][1]["content"].startswith("# Repository context of this review"),
+                        "every request starts with the shared pack, so the server reuses its prefix")
+        self.assertIn("Load rows.", unit_body["messages"][1]["content"])
         whole = next(b for b in FakeEndpoint.requests if step(b) == "srv-perspectives")["messages"][1]["content"]
         self.assertIn("## db\n\n1. Check queries.", whole)
         self.assertIn("- U-1/E-1 [returned_value]", whole)

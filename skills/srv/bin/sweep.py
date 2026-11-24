@@ -98,6 +98,7 @@ BACKOFF_BASE_S = 2.0
 BACKOFF_CAP_S = 60.0
 # What a call reports and the round sums; `tool_calls` comes only from reviewer sessions.
 USAGE_KEYS = ("prompt_tokens", "completion_tokens", "tool_calls")
+PACK_FILE = "pack.md"  # the context pack `context.py` writes and every request of a review starts with
 
 FINDINGS_SCHEMA = {
     "type": "object",
@@ -151,6 +152,22 @@ def load_module(name: str, path: Path):
 plan_units = load_module("plan_units", SKILLS / "rv" / "bin" / "plan-units.py")
 anchor_findings = load_module("anchor_findings", Path(__file__).resolve().with_name("anchor-findings.py"))
 reviewer = load_module("srv_reviewer", Path(__file__).resolve().with_name("reviewer.py"))
+
+
+# srv's inspectors answer in this schema: prv's FINDINGS_SCHEMA plus `questions`, what the inspector could not decide
+# inside its own perspective and asks the perspective that judges another change. `checked` rows hold what was
+# observed at each location, not whether the value holds: a separate judge decides the value from them (team.py).
+INSPECTION_SCHEMA = {
+    **FINDINGS_SCHEMA,
+    "required": [*FINDINGS_SCHEMA["required"], "questions"],
+    "properties": {
+        **FINDINGS_SCHEMA["properties"],
+        "questions": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["about", "question"],
+            "properties": {"about": {"type": "string"}, "question": {"type": "string"}},
+        }},
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -209,6 +226,7 @@ def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_
     )
     return (
         f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
+        f"The value is broken if: {perspective.get('broken_if', '(not stated)')}\n\n"
         f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
         f"Breadth (the changes this perspective judges):\n{chr(10).join(rows)}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
         f"Sources of the value:\n\n{sources}"
@@ -411,27 +429,35 @@ def find_callers(repo: Path, unit: dict, symbols: list[str]) -> str:
 
 
 def build_messages(task: Task, context: dict) -> list[dict]:
+    """An inspector's request: the shared pack first (every request of the review starts with it, so the server reuses
+    the prefix), then the perspective and the hunks of its breadth. A `low` perspective also gets the files of its
+    breadth with line numbers, because it reads line by line; a `high` one judges the structure from the pack's
+    occurrences and the change descriptions, and opens a file only for a location it must cite."""
     view = task.unit
-    user = "\n\n".join(
-        [
-            perspective_block(context["perspectives"], context["designs"], task.perspective, context["catalog"]),
-            "# Requirement copies (what the change answers)\n\n" + context["requirements"],
-            f"# The hunks of the breadth (`<unit>/H<n>`)\n\n```diff\n{breadth_diff(context['changes'], context['plan'], view)}\n```",
-            "# Their files at the head (line number, `|`, then the line)\n\n" + numbered_head_files(context["repo"], context["changes"], view),
-            "# Lines elsewhere at the head that name a changed symbol\n\n"
-            + find_callers(context["repo"], view, changed_symbols(context["repo"], context["changes"], view)),
-            change_files(context["changes"]),
-            "# Output JSON Schema\n\n```json\n" + json.dumps(FINDINGS_SCHEMA, indent=1) + "\n```",
-        ]
-    )
-    return [{"role": "system", "content": context["brief"]}, {"role": "user", "content": user}]
+    depth = next(p["depth"] for p in context["perspectives"]["perspectives"] if p["id"] == task.perspective)
+    parts = [
+        context["pack"],
+        perspective_block(context["perspectives"], context["designs"], task.perspective, context["catalog"]),
+        f"# The hunks of the breadth (`<unit>/H<n>`)\n\n```diff\n{breadth_diff(context['changes'], context['plan'], view)}\n```",
+    ]
+    if depth == "low":
+        parts.append("# Their files at the head (line number, `|`, then the line)\n\n"
+                     + numbered_head_files(context["repo"], context["changes"], view))
+    parts.append("# Output JSON Schema\n\n```json\n" + json.dumps(INSPECTION_SCHEMA, indent=1) + "\n```")
+    return [{"role": "system", "content": context["brief"]}, {"role": "user", "content": "\n\n".join(parts)}]
 
 
-def change_files(changes: dict) -> str:
-    """Every file of the whole change, so a reviewer can follow a concept the unit shares with other units: a structure
-    such as one identity represented in six queries spans units (PR 1726, R-004)."""
-    rows = "\n".join(f"- {change.path} ({change.status})" for change in changes.values())
-    return "# Files of the whole change (other units review their hunks; open them with your tools)\n\n" + rows
+def validate_inspection(answer: object) -> list[str]:
+    """Violations of an inspector's answer (INSPECTION_SCHEMA): prv's checks plus each question's target and text."""
+    if not isinstance(answer, dict) or set(answer) != {"findings", "checked", "questions"}:
+        return ["answer is not an object with exactly `findings`, `checked`, and `questions`"]
+    problems = validate_answer({key: answer[key] for key in ("findings", "checked")})
+    if not isinstance(answer["questions"], list):
+        return [*problems, "`questions` is not a list"]
+    for index, row in enumerate(answer["questions"]):
+        if not isinstance(row, dict) or set(row) != {"about", "question"} or not str(row.get("question", "")).strip():
+            problems.append(f"`questions[{index}]` is not an object with `about` (a change id `<unit>/E-<n>`) and a question")
+    return problems
 
 
 def validate_answer(answer: object) -> list[str]:
@@ -456,6 +482,14 @@ def validate_answer(answer: object) -> list[str]:
     if answer["checked"] == []:
         problems.append("`checked` is empty: every checklist item of the perspective needs a row")
     return problems
+
+
+def read_pack(directory: Path, source_sha256: str) -> str:
+    """The pack built for this diff; a pack of another diff is refused."""
+    meta = json.loads((directory / "pack.json").read_text(encoding="utf-8"))
+    if meta["source_sha256"] != source_sha256:
+        raise ValueError(f"{directory / PACK_FILE} was built for another diff; rerun context.py on this one")
+    return (directory / PACK_FILE).read_text(encoding="utf-8")
 
 
 class ServerRefused(Exception):
@@ -594,9 +628,10 @@ def request_json(
 
 
 def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace,
-             call: Callable[..., tuple[str, dict, str]] = call_model) -> dict:
+             call: Callable[..., tuple[str, dict, str]] = call_model,
+             validate: Callable[[object], list[str]] = validate_answer, schema: dict = FINDINGS_SCHEMA) -> dict:
     """Review one task once (one sample) with `request_json`; `anchor` re-locates the answer's finding lines."""
-    reply = request_json(messages, options, validate_answer, call=call)
+    reply = request_json(messages, options, validate, schema, call=call)
     result = {
         "task": task.name, "unit": task.unit["id"], "perspective": task.perspective, "ok": reply.answer is not None,
         "attempts": reply.attempts, "errors": reply.errors, "seconds": reply.seconds, "usage": reply.usage,
@@ -604,6 +639,8 @@ def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], li
     if reply.answer is not None:
         result["findings"] = anchor(reply.answer["findings"])
         result["checked"] = reply.answer["checked"]
+        if "questions" in reply.answer:
+            result["questions"] = reply.answer["questions"]
     return result
 
 
@@ -674,6 +711,8 @@ def merge_samples(task: Task, samples: list[dict]) -> dict:
     if merged["ok"]:
         merged["findings"] = [{**finding, "sample": n} for n, sample in enumerate(samples, 1) for finding in sample["findings"]]
         merged["checked"] = [{**row, "sample": n} for n, sample in enumerate(samples, 1) for row in sample["checked"]]
+        if any("questions" in sample for sample in samples):
+            merged["questions"] = [{**row, "sample": n} for n, sample in enumerate(samples, 1) for row in sample.get("questions", [])]
     return merged
 
 
@@ -723,7 +762,7 @@ def run_sweep(options: argparse.Namespace) -> int:
         "brief": BRIEF_PATH.read_text(encoding="utf-8"),
         "plan": plan, "designs": designs, "perspectives": perspectives,
         "catalog": {path.stem: path.read_text(encoding="utf-8").strip() for path in sorted(Path(options.values).glob("*.md"))},
-        "requirements": "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements),
+        "pack": read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
     }
@@ -741,6 +780,7 @@ def run_sweep(options: argparse.Namespace) -> int:
             lambda findings: anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
             lambda task: functools.partial(jail.call, tools=reviewer.REVIEW_TOOLS, label=task.name),
+            validate_inspection, INSPECTION_SCHEMA,
         )
     return code
 
@@ -750,6 +790,7 @@ def run_round(
     anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
     label: str, only_arg: Callable[[Task], str],
     call_for: Callable[[Task], Callable[..., tuple[str, dict, str]]] = lambda task: call_model,
+    validate: Callable[[object], list[str]] = validate_answer, schema: dict = FINDINGS_SCHEMA,
 ) -> int:
     """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
 
@@ -764,7 +805,7 @@ def run_round(
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {
-            pool.submit(run_task, task, messages[task.name], anchor, options, call_for(task)): (task, number)
+            pool.submit(run_task, task, messages[task.name], anchor, options, call_for(task), validate, schema): (task, number)
             for task in tasks
             for number in range(1, options.samples + 1)
         }
@@ -825,7 +866,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--repo", required=True, help="head worktree")
     parser.add_argument("--design", required=True, help="design directory that design.py wrote for this unit plan")
     parser.add_argument("--values", default=str(VALUES), help="value catalog directory the designs name sources from")
-    parser.add_argument("--requirements", required=True, nargs="+", help="requirement copies")
+    parser.add_argument("--context", required=True, help="context directory that context.py wrote for this diff")
     parser.add_argument("--out", required=True, help="round directory for task outputs and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
     parser.add_argument("--model", required=True)

@@ -19,12 +19,16 @@ How a check is decided (read, trace, or execute) is the check's means, not the d
 
 So the stage has two steps:
 
-1. Change set, per review unit: one omp session with read tools reads the unit's
-   hunks (each labelled with a hunk id), its head files, the lines that call into it,
-   and the repository's rules, and answers with the unit's changes, each with the
+1. Change set, per review unit: one structured-output call reads the review's context
+   pack (`context.py`: requirements, the documents on the change's paths, callers, and
+   where each name the diff adds occurs), the unit's hunks (each labelled with a hunk
+   id), and its head files, and answers with the unit's changes, each with the
    structure it alters or why it alters none, the hunks that change no behaviour, and
-   the repository rules it read (`check_changes`). Units run at once.
-2. Perspectives, for the whole change: one omp session reads the change set of every
+   the repository rules it cites from the pack (`check_changes`). Units run at once.
+   No exploration is left to it: the pack already holds what a session would search
+   for, so the call is one request, not an agent session (the user, 2026-11-24:
+   "단발 구조화 출력은 좋지. 필요하면 그렇게 해.").
+2. Perspectives, for the whole change: one structured-output call reads the change set of every
    unit (changes named `<unit>/E-<n>`), the rules, the requirement copies, and the
    value catalog (`references/values/*.md`), and answers with the perspectives, whose
    breadth may span units, and what it did with every catalog entry
@@ -36,6 +40,11 @@ Coverage is checked here, in code, not trusted to the model:
 - every change states the structure it alters (a concept, data model, placement of a
   responsibility, or module boundary) or why it alters none;
 - every change is in the breadth of some `low`-depth perspective, so the union of breadths is the change set;
+- a `low` perspective's breadth holds at most `LOW_BREADTH_MAX` changes, because breadth and depth trade
+  against each other (the user, 2026-11-24: "넓게 보려면 앝게 봐야돼. 좁게 보려면 깊게 봐야돼. 넓고 깊게
+  보라고 해봤자 어차피 못본다", "그러니까 관점이 필요한거라고");
+- every perspective states `broken_if`, the observable state that lowers its value, so the value is decided
+  from what the reviewers observe, not from each reviewer's own reading of the value;
 - every change that alters a structure is also in the breadth of some `high`-depth
   perspective, because a structural defect seen at low level shows only its symptoms;
 - every change that rests on an external program, service, or library is in the breadth of a
@@ -49,7 +58,7 @@ script exits 1.
 
 Usage:
   uv run design.py --units units.json --diff diff.patch --repo HEAD_WORKTREE \
-      --requirements FILE [FILE ...] --out design --base-url URL --model MODEL [--api-key-env NAME]
+      --context CONTEXT_DIR --out design --base-url URL --model MODEL [--api-key-env NAME]
 Writes design/<unit>.json (change sets), design/perspectives.json, and summary.json.
 Exit codes: 0 the change set and the perspectives are valid, 1 some step failed, 2 bad input.
 """
@@ -77,6 +86,11 @@ CHANGE_KINDS = (
 DEPTHS = ("high", "low")
 MEANS = ("read", "trace", "execute")
 PERSPECTIVES_FILE = "perspectives.json"
+# A low perspective judges behaviour inside functions, line by line, so it must stay narrow. On PR #1470 every low
+# perspective had at most 8 changes and round 1 held all eight first-review findings; on PR #1726 low perspectives
+# spanned up to 42 changes over 24 units, sessions ran up to 287 s, and findings were missed (2026-11-24 designs,
+# ~/agent-assets/rebot/srv-measure-8, -9). The cap is that measured bound, not a tuned optimum.
+LOW_BREADTH_MAX = 8
 
 _STRINGS = {"type": "array", "items": {"type": "string"}}
 CHANGES_SCHEMA = {
@@ -114,9 +128,10 @@ PERSPECTIVES_SCHEMA = {
     "properties": {
         "perspectives": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
-            "required": ["id", "value", "sources", "breadth", "depth", "checks"],
+            "required": ["id", "value", "broken_if", "sources", "breadth", "depth", "checks"],
             "properties": {
-                "id": {"type": "string"}, "value": {"type": "string"}, "sources": _STRINGS, "breadth": _STRINGS,
+                "id": {"type": "string"}, "value": {"type": "string"}, "broken_if": {"type": "string"},
+                "sources": _STRINGS, "breadth": _STRINGS,
                 "depth": {"type": "string", "enum": list(DEPTHS)},
                 "checks": {"type": "array", "items": {
                     "type": "object", "additionalProperties": False, "required": ["question", "means"],
@@ -199,6 +214,17 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
         pid = p.get("id")
         if not str(p.get("value", "")).strip():
             problems.append(f"{pid} has no value")
+        if not str(p.get("broken_if", "")).strip():
+            problems.append(
+                f"{pid} has no `broken_if`: state the observable state at its depth that lowers the value, so a judge "
+                "can decide it from the facts the reviewers report"
+            )
+        if p.get("depth") == "low" and len(p.get("breadth", [])) > LOW_BREADTH_MAX:
+            problems.append(
+                f"{pid} is `low` with {len(p.get('breadth', []))} changes in its breadth, over {LOW_BREADTH_MAX}: a "
+                "perspective that reads behaviour line by line must be narrow, so split it into narrower `low` "
+                "perspectives, or judge the shared concept in a `high` perspective instead"
+            )
         if p.get("depth") not in DEPTHS:
             problems.append(f"{pid} depth is not one of {DEPTHS}")
         checks = [c for c in p.get("checks", []) if isinstance(c, dict)]
@@ -270,13 +296,11 @@ def change_set_text(changes: dict[str, dict], plan: dict) -> str:
 
 def build_change_messages(unit: dict, context: dict) -> list[dict]:
     user = "\n\n".join([
-        "# Requirement copies (what the change answers)\n\n" + context["requirements"],
+        context["pack"],
         f"# Unit {unit['id']} ({unit['rule']}): its hunks, each labelled with its hunk id\n\n```diff\n"
         + sweep.labelled_diff(context["changes"], unit) + "\n```",
         "# Unit files at the head (line number, `|`, then the line)\n\n"
         + sweep.numbered_head_files(context["repo"], context["changes"], unit),
-        "# Lines elsewhere at the head that name a changed symbol\n\n" + context["callers"][unit["id"]],
-        sweep.change_files(context["changes"]),
         "# Output JSON Schema\n\n```json\n" + json.dumps(CHANGES_SCHEMA, indent=1) + "\n```",
     ])
     return [{"role": "system", "content": context["changes_brief"]}, {"role": "user", "content": user}]
@@ -286,9 +310,9 @@ def build_perspective_messages(designs: dict[str, dict], plan: dict, context: di
     catalog = "\n\n".join(f"## {name}\n\n{text}" for name, text in context["catalog"].items())
     rules = sorted({(r["source"], r["text"]) for d in designs.values() for r in d["rules"]})
     user = "\n\n".join([
+        context["pack"],
         "# Value catalog (universal value sources; cite an entry as `catalog: <id>`)\n\n" + catalog,
-        "# Requirement copies (what the change answers)\n\n" + context["requirements"],
-        "# Repository rules the change-set sessions read\n\n"
+        "# Repository rules the change-set step cited\n\n"
         + ("\n".join(f"- {source}: {text}" for source, text in rules) or "(none read)"),
         "# Change set of the whole change (`<unit>/E-<n>`)\n\n" + change_set_text(change_set(designs), plan),
         "# Output JSON Schema\n\n```json\n" + json.dumps(PERSPECTIVES_SCHEMA, indent=1) + "\n```",
@@ -333,21 +357,18 @@ def run_design(options: argparse.Namespace) -> int:
         "changes_brief": CHANGES_BRIEF.read_text(encoding="utf-8"),
         "perspectives_brief": PERSPECTIVES_BRIEF.read_text(encoding="utf-8"),
         "catalog": read_catalog(Path(options.values)),
-        "requirements": "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements),
+        "pack": sweep.read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
-        "callers": {u["id"]: sweep.find_callers(repo, u, sweep.changed_symbols(repo, changes, u)) for u in plan["units"]},
     }
     # A unit's change set written for this diff and valid is kept; --only runs named units again.
     rerun = [u for u in plan["units"] if u["id"] in (options.only or [])
              or not read_valid(out / f"{u['id']}.json", diff_sha256)]
     progress = sweep.Progress(len(rerun) + 1, out, "srv design")
-    with sweep.reviewer.Jail(options, out / "sessions.jsonl") as jail, concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
-        # Change-set sessions read the repository's rules and callers; they run nothing.
-        unit_call = functools.partial(jail.call, tools=sweep.reviewer.DESIGN_TOOLS, label="changes")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {pool.submit(ask, build_change_messages(unit, context),
                                functools.partial(check_changes, hunks=sweep.hunk_ids(changes, unit)),
-                               CHANGES_SCHEMA, "srv-changes", options, unit_call): unit for unit in rerun}
+                               CHANGES_SCHEMA, "srv-changes", options, sweep.call_model): unit for unit in rerun}
         for future in concurrent.futures.as_completed(futures):
             unit = futures[future]
             try:
@@ -361,14 +382,12 @@ def run_design(options: argparse.Namespace) -> int:
         failed_units = [uid for uid, d in designs.items() if d is None]
         perspectives = None
         if not failed_units:
-            # The perspective session works from the change set and the rules the unit sessions read; it opens
-            # nothing itself, so its answer rests only on what this request shows.
+            # The perspective call works from the pack, the change set, and the rules the unit calls cited.
             all_changes = change_set(designs)
             try:
                 perspectives = ask(build_perspective_messages(designs, plan, context),
                                    functools.partial(check_perspectives, changes=all_changes, catalog=list(context["catalog"])),
-                                   PERSPECTIVES_SCHEMA, "srv-perspectives", options,
-                                   functools.partial(jail.call, tools=(), label="perspectives"))
+                                   PERSPECTIVES_SCHEMA, "srv-perspectives", options, sweep.call_model)
             except Exception as error:  # noqa: BLE001 - recorded as the step's failure
                 perspectives = failed(error)
             perspectives["source_sha256"] = diff_sha256
@@ -425,7 +444,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
     parser.add_argument("--values", default=str(VALUES), help="value catalog directory")
-    parser.add_argument("--requirements", required=True, nargs="+", help="requirement copies")
+    parser.add_argument("--context", required=True, help="context directory that context.py wrote for this diff")
     parser.add_argument("--out", required=True, help="design directory, one file per unit and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
     parser.add_argument("--model", required=True)

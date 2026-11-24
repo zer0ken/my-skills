@@ -18,7 +18,7 @@ questions.json: [{"id": "Q1", "perspective": "K-3", "question": "..."}]
 
 Usage:
   uv run followup.py --questions questions.json --units units.json --diff diff.patch --repo HEAD_WORKTREE \
-      --design design --requirements FILE [FILE ...] --out round-2 --base-url URL --model MODEL [--api-key-env NAME]
+      --design design --context context --out round-2 --base-url URL --model MODEL [--api-key-env NAME]
 Exit codes: 0 every question has a valid answer, 1 some failed, 2 bad input.
 """
 
@@ -60,12 +60,11 @@ def build_messages(question: dict, context: dict) -> list[dict]:
     perspective = next(p for p in context["perspectives"]["perspectives"] if p["id"] == question["perspective"])
     view = sweep.perspective_view(context["plan"], context["designs"], perspective)
     user = "\n\n".join([
+        context["pack"],
         sweep.perspective_block(context["perspectives"], context["designs"], question["perspective"], context["catalog"]),
         f"# Question {question['id']}\n\n{question['question']}",
-        "# Requirement copies (what the change answers)\n\n" + context["requirements"],
         f"# The hunks of the breadth (`<unit>/H<n>`)\n\n```diff\n{sweep.breadth_diff(context['changes'], context['plan'], view)}\n```",
-        sweep.change_files(context["changes"]),
-        "# Output JSON Schema\n\n```json\n" + json.dumps(sweep.FINDINGS_SCHEMA, indent=1) + "\n```",
+        "# Output JSON Schema\n\n```json\n" + json.dumps(sweep.INSPECTION_SCHEMA, indent=1) + "\n```",
     ])
     return [{"role": "system", "content": context["brief"]}, {"role": "user", "content": user}]
 
@@ -106,7 +105,7 @@ def run_followup(options: argparse.Namespace) -> int:
     context = {
         "brief": follow_up_brief(), "plan": plan, "designs": designs, "perspectives": perspectives,
         "catalog": {p.stem: p.read_text(encoding="utf-8").strip() for p in sorted(sweep.VALUES.glob("*.md"))},
-        "requirements": "\n\n".join(Path(p).read_text(encoding="utf-8") for p in options.requirements),
+        "pack": sweep.read_pack(Path(options.context), diff_sha256),
         "changes": {c.path: c for c in sweep.plan_units.parse_diff(diff_text)},
     }
     by_task = {}
@@ -124,6 +123,7 @@ def run_followup(options: argparse.Namespace) -> int:
             lambda findings: sweep.anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv follow-up", lambda task: task.perspective,
             lambda task: functools.partial(jail.call, tools=sweep.reviewer.REVIEW_TOOLS, label=task.name),
+            sweep.validate_inspection, sweep.INSPECTION_SCHEMA,
         )
     return code
 
@@ -135,7 +135,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--diff", required=True)
     parser.add_argument("--repo", required=True, help="head worktree")
     parser.add_argument("--design", required=True)
-    parser.add_argument("--requirements", required=True, nargs="+")
+    parser.add_argument("--context", required=True, help="context directory that context.py wrote for this diff")
     parser.add_argument("--out", required=True, help="round directory, `round-<k>`")
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--model", required=True)

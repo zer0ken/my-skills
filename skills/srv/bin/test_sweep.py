@@ -21,6 +21,9 @@ assert SPEC and SPEC.loader
 sweep = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = sweep
 SPEC.loader.exec_module(sweep)
+CONTEXT_SPEC = importlib.util.spec_from_file_location("srv_context", Path(__file__).with_name("context.py"))
+context_script = importlib.util.module_from_spec(CONTEXT_SPEC)
+CONTEXT_SPEC.loader.exec_module(context_script)
 
 SOURCE = "def load(rows):\n    query = 'SELECT 1'\n    return rows\n"
 CALLER = "from pkg.store import load\n\nload([])\n"
@@ -31,11 +34,12 @@ DIFF = (
 )
 
 
-def answer(findings=None, checked=None) -> str:
+def answer(findings=None, checked=None, questions=None) -> str:
     return json.dumps(
         {
             "findings": findings or [],
             "checked": checked if checked is not None else [{"item": "1", "location": "pkg/store.py:1", "result": "ok"}],
+            "questions": questions or [],
         }
     )
 
@@ -129,6 +133,11 @@ class SweepTest(unittest.TestCase):
         self.requirement = root / "issue.md"
         self.requirement.write_text("Load rows.\n", encoding="utf-8")
         self.out = root / "round-1"
+        self.context = root / "context"
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(context_script.main([
+                "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
+                "--requirements", str(self.requirement), "--out", str(self.context)]), 0)
         self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeEndpoint)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         FakeEndpoint.requests = []
@@ -148,7 +157,7 @@ class SweepTest(unittest.TestCase):
         design = {
             "ok": True, "source_sha256": hashlib.sha256(DIFF.encode()).hexdigest(),
             "perspectives": [
-                {"id": p, "value": f"value of {p}", "sources": [f"catalog: {p}"], "breadth": b, "depth": depth,
+                {"id": p, "value": f"value of {p}", "broken_if": f"broken {p}", "sources": [f"catalog: {p}"], "breadth": b, "depth": depth,
                  "checks": [{"question": "c", "means": "execute"}]}
                 for p, b in breadths.items()
             ],
@@ -164,7 +173,7 @@ class SweepTest(unittest.TestCase):
     def run_sweep(self, *extra: str) -> int:
         argv = [
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
-            "--design", str(self.design), "--values", str(self.values), "--requirements", str(self.requirement),
+            "--design", str(self.design), "--values", str(self.values), "--context", str(self.context),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
             "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
@@ -186,7 +195,9 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(self.read("progress.json")["done"], 2)
         body = FakeEndpoint.requests[0]
         self.assertEqual(body["response_format"]["type"], "json_schema")
-        self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.FINDINGS_SCHEMA)
+        self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.INSPECTION_SCHEMA)
+        self.assertTrue(body["messages"][1]["content"].startswith("# Repository context of this review"),
+                        "every request starts with the shared pack")
 
     def test_every_review_session_can_read_and_run(self) -> None:
         # How a check is decided belongs to the check; a session of any depth may need to run its counterexample.
@@ -202,6 +213,21 @@ class SweepTest(unittest.TestCase):
         self.assertIn("1. [execute] c", user)
         self.assertIn("# Files of the whole change", user)
         self.assertIn("- pkg/store.py (modified)", user)
+
+    def test_a_high_perspective_judges_structure_without_the_files_line_by_line(self) -> None:
+        # Breadth and depth trade (user, 2026-11-24: "넓게 보려면 앝게 봐야돼. 좁게 보려면 깊게 봐야돼."): a high
+        # perspective gets the hunks and the pack's occurrences, a low one also the files with line numbers.
+        self.write_perspectives(depth="high")
+        self.assertEqual(self.run_sweep(), 0)
+        user = next(b for b in FakeEndpoint.requests if task_of(b) == "change__trace")["messages"][1]["content"]
+        self.assertNotIn("# Their files at the head", user)
+        self.assertIn("The value is broken if: broken trace", user)
+
+    def test_questions_to_other_perspectives_are_kept_per_sample(self) -> None:
+        question = {"about": "U-1/E-1", "question": "q"}
+        FakeEndpoint.respond = staticmethod(lambda body: answer(questions=[question]))
+        self.assertEqual(self.run_sweep(), 0)
+        self.assertEqual(self.read("change__db.json")["questions"], [{**question, "sample": 1}])
 
     def test_samples_are_independent_calls_pooled_per_task(self) -> None:
         def respond(body: dict) -> str:
@@ -434,8 +460,12 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(sweep.line_windows([(100, 100), (150, 150), (400, 400)], 420), [(40, 210), (340, 420)])
 
     def test_empty_checked_list_is_invalid(self) -> None:
-        self.assertEqual(sweep.validate_answer(json.loads(answer(checked=[]))),
+        self.assertEqual(sweep.validate_inspection(json.loads(answer(checked=[]))),
                          ["`checked` is empty: every checklist item of the perspective needs a row"])
+
+    def test_a_question_needs_its_target_and_text(self) -> None:
+        self.assertEqual(sweep.validate_inspection(json.loads(answer(questions=[{"about": "U-1/E-1", "question": " "}]))),
+                         ["`questions[0]` is not an object with `about` (a change id `<unit>/E-<n>`) and a question"])
 
     def test_task_without_valid_output_fails_coverage_until_rerun(self) -> None:
         FakeEndpoint.respond = staticmethod(lambda body: "{}" if task_of(body) == "change__db" else answer())
