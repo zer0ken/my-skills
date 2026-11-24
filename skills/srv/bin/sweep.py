@@ -670,15 +670,14 @@ def run_sweep(options: argparse.Namespace) -> int:
         print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
         return 2
     depth = {(u, p["id"]): p["depth"] for u, d in designs.items() for p in d["perspectives"]}
-    with reviewer.Jail(options) as jail:
+    with reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = run_round(
             all_tasks, tasks,
             lambda task: build_messages(task, context),
             lambda findings: anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
-            lambda task: functools.partial(jail.call, sandbox=depth[(task.unit["id"], task.perspective)] == "execute"),
+            lambda task: functools.partial(jail.call, depth=depth[(task.unit["id"], task.perspective)], label=task.name),
         )
-        jail.write_log(out / "sessions.json")
     return code
 
 

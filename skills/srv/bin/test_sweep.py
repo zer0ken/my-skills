@@ -78,11 +78,11 @@ def task_of(body: dict) -> str:
 
 class FakeJail:
     """Stands in for `reviewer.Jail`: each session is one HTTP call to the fake endpoint, so the round's logic is tested
-    without omp. `sandboxed` records which tasks were given `sandbox_run`."""
+    without omp. `depths` records the depth each session was started with."""
 
-    sandboxed: ClassVar[list[bool]] = []
+    depths: ClassVar[list[str]] = []
 
-    def __init__(self, options) -> None:
+    def __init__(self, options, log=None) -> None:
         self.options = options
 
     def __enter__(self) -> "FakeJail":
@@ -91,12 +91,9 @@ class FakeJail:
     def __exit__(self, *_exc) -> None:
         return None
 
-    def call(self, messages, options, schema, schema_name, sandbox=False):
-        FakeJail.sandboxed.append(sandbox)
+    def call(self, messages, options, schema, schema_name, depth="trace", label=""):
+        FakeJail.depths.append(depth)
         return sweep.call_model(messages, options, schema, schema_name)
-
-    def write_log(self, path: Path) -> None:
-        path.write_text("[]\n", encoding="utf-8")
 
 
 class SweepTest(unittest.TestCase):
@@ -104,7 +101,7 @@ class SweepTest(unittest.TestCase):
         jail = mock.patch.object(sweep.reviewer, "Jail", FakeJail)
         jail.start()
         self.addCleanup(jail.stop)
-        FakeJail.sandboxed = []
+        FakeJail.depths = []
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.repo = root / "repo"
@@ -182,12 +179,11 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(body["response_format"]["type"], "json_schema")
         self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.FINDINGS_SCHEMA)
 
-    def test_only_execute_perspectives_get_the_sandbox_tool(self) -> None:
-        # The change's code runs only where a perspective's value is decided by running it.
+    def test_each_session_gets_its_perspectives_depth(self) -> None:
+        # The depth bounds the session's tools; the change's code runs only where a value is decided by running it.
         self.write_design("U-1", ["trace"], depth="execute")
         self.assertEqual(self.run_sweep(), 0)
-        self.assertEqual(sorted(FakeJail.sandboxed), [False, False, True])
-        self.assertEqual(self.read("sessions.json"), [])
+        self.assertEqual(sorted(FakeJail.depths), ["execute", "read", "read"])
 
     def test_samples_are_independent_calls_pooled_per_task(self) -> None:
         def respond(body: dict) -> str:

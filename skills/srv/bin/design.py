@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import functools
 import hashlib
 import importlib.util
 import json
@@ -255,8 +256,10 @@ def run_design(options: argparse.Namespace) -> int:
     }
     units = [u for u in plan["units"] if not options.only or u["id"] in options.only]
     progress = sweep.Progress(len(units), out, "srv design")
-    with sweep.reviewer.Jail(options) as jail, concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
-        futures = {pool.submit(design_unit, unit, context, options, jail.call): unit for unit in units}
+    with sweep.reviewer.Jail(options, out / "sessions.jsonl") as jail, concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
+        # The design session reads the repository's rules and callers: trace-depth tools.
+        call = functools.partial(jail.call, depth="trace", label="design")
+        futures = {pool.submit(design_unit, unit, context, options, call): unit for unit in units}
         for future in concurrent.futures.as_completed(futures):
             unit = futures[future]
             try:
@@ -267,7 +270,6 @@ def run_design(options: argparse.Namespace) -> int:
             result["source_sha256"] = diff_sha256
             (out / f"{unit['id']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance({**result, "task": unit["id"]})
-        jail.write_log(out / "sessions.json")
     progress.close()
     results = [read_design(out, u["id"], diff_sha256) for u in plan["units"]]
     failed = [u["id"] for u, r in zip(plan["units"], results) if not (r and r["ok"])]

@@ -9,6 +9,7 @@ import importlib.util
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -103,6 +104,71 @@ python3 -I -c 'import json; print(json.dumps({"type": "message_end", "message": 
 """
 
 
+class DepthTest(unittest.TestCase):
+    def test_depth_decides_the_tools(self) -> None:
+        options = argparse.Namespace(model="m", reasoning_effort="high", timeout=60)
+        read = reviewer.omp_arguments(options, "s", reviewer.DEPTH_TOOLS["read"])
+        self.assertIn("--no-tools", read, "at read depth the request decides the value; the session gets no tool")
+        self.assertNotIn("--tools", read)
+        execute = reviewer.omp_arguments(options, "s", reviewer.DEPTH_TOOLS["execute"])
+        self.assertEqual(execute[execute.index("--tools") + 1], "read,grep,glob,sandbox_run")
+        self.assertIn("/opt/srv/sandbox_tool.ts", execute)
+
+
+class AdmissionTest(unittest.TestCase):
+    def test_sessions_fit_the_free_thread_budget(self) -> None:
+        # The user's process limit counts threads; a session past it fails at start (EAGAIN), so the jail admits only
+        # what fits, keeping a fifth of the free threads for the user's other work.
+        with mock.patch.object(reviewer.resource, "getrlimit", return_value=(8192, 8192)), \
+             mock.patch.object(reviewer, "user_threads", return_value=1292):
+            self.assertEqual(reviewer.session_slots(), (8192 - 1292) * 4 // 5 // reviewer.THREADS_PER_SESSION)
+        with mock.patch.object(reviewer.resource, "getrlimit", return_value=(8192, 8192)), \
+             mock.patch.object(reviewer, "user_threads", return_value=8000):
+            self.assertEqual(reviewer.session_slots(), 1, "a full budget still admits one session, one at a time")
+
+
+class RelayTest(unittest.TestCase):
+    def test_a_failed_connect_does_not_stop_the_relay(self) -> None:
+        # In the first full run the accept loop ended while 29 sessions waited; every later connection then stayed
+        # in the accept queue. One failed upstream connect must cost only its own connection.
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = socket.socket(socket.AF_UNIX)
+            listener.bind(f"{tmp}/s")
+            listener.listen(8)
+            attempts = []
+
+            def connect():
+                attempts.append(1)
+                if len(attempts) == 1:
+                    raise ConnectionRefusedError("first upstream refused")
+                server, peer = socket.socketpair()
+                threading.Thread(target=lambda: (server.sendall(server.recv(5)), server.close()), daemon=True).start()
+                return peer
+
+            errors: list[str] = []
+            threading.Thread(target=reviewer.serve, args=(listener, connect, errors), daemon=True).start()
+            for expected in (b"", b"hello"):
+                client = socket.socket(socket.AF_UNIX)
+                client.settimeout(5)
+                client.connect(f"{tmp}/s")
+                if expected:
+                    client.sendall(expected)
+                self.assertEqual(client.recv(5), expected)
+                client.close()
+            listener.close()
+        self.assertEqual(errors, ["relay: upstream connect failed: first upstream refused"])
+
+    def test_the_upstream_connection_has_no_read_timeout(self) -> None:
+        # A model may stay silent for minutes while it reasons; a read timeout would cut the answer off.
+        server = socket.create_server(("127.0.0.1", 0))
+        jail = reviewer.Jail.__new__(reviewer.Jail)
+        jail.upstream = server.getsockname()
+        upstream = jail.connect_upstream()
+        self.assertIsNone(upstream.gettimeout())
+        upstream.close()
+        server.close()
+
+
 @unittest.skipUnless(shutil.which("bwrap"), "the jail needs bubblewrap")
 class JailTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -131,15 +197,15 @@ class JailTest(unittest.TestCase):
         self.server.server_close()
         self.tmp.cleanup()
 
-    def probe(self, sandbox: bool) -> dict:
+    def probe(self, depth: str) -> dict:
         which = shutil.which
         fake = mock.patch.object(reviewer.shutil, "which", lambda name: str(self.fake) if name == "omp" else which(name))
         with fake, reviewer.Jail(self.options) as jail:
-            content, _usage, _finish = jail.call([{"role": "user", "content": "q"}], self.options, {}, "t", sandbox=sandbox)
+            content, _usage, _finish = jail.call([{"role": "user", "content": "q"}], self.options, {}, "t", depth=depth)
         return json.loads(content)
 
     def test_the_session_reaches_only_the_model_and_reads_the_head(self) -> None:
-        report = self.probe(sandbox=False)
+        report = self.probe("trace")
         self.assertEqual(report["model_via_relay"], "model-server", "the relay is the session's way to the model")
         self.assertNotEqual(report["host_loopback"], "model-server",
                             "the session has its own network namespace: the host's loopback is not reachable")
@@ -152,7 +218,7 @@ class JailTest(unittest.TestCase):
         self.assertNotIn("sandbox_run", report["args"][report["args"].index("--tools") + 1])
 
     def test_a_counterexample_run_cannot_reach_the_relay_and_starts_from_the_head(self) -> None:
-        report = self.probe(sandbox=True)
+        report = self.probe("execute")
         code, stderr = report["sandbox_relay"]
         self.assertNotEqual(code, 0, "code run by sandbox_run must not reach the model relay")
         self.assertTrue("FileNotFoundError" in stderr or "ConnectionRefusedError" in stderr, stderr)

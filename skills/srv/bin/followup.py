@@ -119,16 +119,15 @@ def run_followup(options: argparse.Namespace) -> int:
         tasks.append(task)
     depth = {(u, p["id"]): p["depth"] for u, d in designs.items() for p in d["perspectives"]}
     only = [t for t in tasks if not options.only or t.perspective in options.only]
-    with sweep.reviewer.Jail(options) as jail:
+    with sweep.reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = sweep.run_round(
             tasks, only,
             lambda task: build_messages(by_task[task.name], context),
             lambda findings: sweep.anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv follow-up", lambda task: task.perspective,
             lambda task: functools.partial(
-                jail.call, sandbox=depth[(task.unit["id"], by_task[task.name]["perspective"])] == "execute"),
+                jail.call, depth=depth[(task.unit["id"], by_task[task.name]["perspective"])], label=task.name),
         )
-        jail.write_log(out / "sessions.json")
     return code
 
 

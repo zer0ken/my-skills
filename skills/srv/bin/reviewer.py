@@ -32,7 +32,7 @@ untrusted input, so the jail holds:
 
 The answer is the text of the last assistant message; the caller validates it.
 
-Usage as a module: `with Jail(options) as jail: jail.call(messages, options, schema, name, sandbox=False)`.
+Usage as a module: `with Jail(options, log) as jail: jail.call(messages, options, schema, name, depth="trace")`.
 The file also runs inside the jail as the inner end of the relay: `reviewer.py relay-inner SOCKET PORT`.
 """
 
@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import resource
 import shutil
 import socket
 import subprocess
@@ -55,8 +56,17 @@ from urllib.parse import urlsplit
 BIN = Path(__file__).resolve().parent
 INNER_PORT = 18000
 READ_TOOLS = ("read", "grep", "glob")
+# A perspective's depth is how far its verification must go, so it also bounds what the session may do: at `read` the
+# request decides the value and the session gets no tool, at `trace` it follows the behaviour with read tools, at
+# `execute` it also runs counterexamples. In the first full run a `read` session with tools made 67 tool calls.
+DEPTH_TOOLS = {"read": (), "trace": READ_TOOLS, "execute": (*READ_TOOLS, "sandbox_run")}
 SANDBOX_TOOL = BIN / "sandbox_tool.ts"
 SYSTEM_DIRS = ("/usr", "/etc")
+# One omp session runs about 200 threads (measured 200 to 206 on omp 19.1.1, 2026-11-24), and its jail, shell, and
+# relay add a few; every thread counts against the user's process limit (RLIMIT_NPROC). On that day 39 sessions at
+# once met a limit of 8192 with 6,600 threads already in use, and sessions failed with "Failed to start HTTP Client
+# thread: EAGAIN" and "bwrap: Can't fork".
+THREADS_PER_SESSION = 230
 SYSTEM_LINKS = {"/bin": "usr/bin", "/sbin": "usr/sbin", "/lib": "usr/lib", "/lib64": "usr/lib64"}
 JAIL_GUIDANCE = (
     "The change under review is at /work, read-only; `git show` is not available, the request holds the diff. "
@@ -86,20 +96,35 @@ def pump(source: socket.socket, target: socket.socket) -> None:
         source.close()
 
 
-def serve(listener: socket.socket, connect) -> None:
-    """Relay every accepted connection to a new upstream connection, one thread per direction."""
-    while True:
+def relay(client: socket.socket, connect, errors: list[str]) -> None:
+    """One connection: open its upstream here, not in the accept loop, so a slow connect delays only this one."""
+    try:
+        upstream = connect()
+    except OSError as error:
+        errors.append(f"relay: upstream connect failed: {error}")
+        client.close()
+        return
+    threading.Thread(target=pump, args=(upstream, client), daemon=True).start()
+    pump(client, upstream)
+
+
+def serve(listener: socket.socket, connect, errors: list[str] | None = None) -> None:
+    """Relay every accepted connection to a new upstream connection until the listener is closed.
+
+    One failed accept or connect must not end the loop: in the first full run the loop ended while 29 sessions
+    waited, and every later connection stayed in the accept queue until the sessions timed out.
+    """
+    errors = [] if errors is None else errors
+    while listener.fileno() != -1:
         try:
             client, _ = listener.accept()
-        except OSError:
-            return
-        try:
-            upstream = connect()
-        except OSError:
-            client.close()
+        except OSError as error:
+            if listener.fileno() == -1:
+                return
+            errors.append(f"relay: accept failed: {error}")
+            time.sleep(0.1)
             continue
-        threading.Thread(target=pump, args=(client, upstream), daemon=True).start()
-        threading.Thread(target=pump, args=(upstream, client), daemon=True).start()
+        threading.Thread(target=relay, args=(client, connect, errors), daemon=True).start()
 
 
 def relay_inner(path: str, port: int) -> None:
@@ -142,7 +167,7 @@ def jail_command(head: Path, agent: Path, relay: Path, omp: Path, omp_args: list
     git = head / ".git"
     if git.is_dir() and not git.is_symlink():
         cmd += ["--tmpfs", "/work/.git"]
-    elif git.exists() or git.is_symlink():
+    elif git.exists() or git.is_symlink():  # a worktree's .git is a file naming the main repository
         cmd += ["--ro-bind", "/dev/null", "/work/.git"]
     if sandbox:
         cmd += ["--ro-bind", str(SANDBOX_TOOL), "/opt/srv/sandbox_tool.ts",
@@ -156,13 +181,36 @@ def jail_command(head: Path, agent: Path, relay: Path, omp: Path, omp_args: list
     return [*cmd, "--chdir", "/review", "--", "/bin/sh", "-c", inner + "exec " + quoted]
 
 
-def omp_arguments(options: argparse.Namespace, system: str, tools: list[str], sandbox: bool) -> list[str]:
+def user_threads(uid: int) -> int:
+    """Threads the user runs now, from /proc; the process limit counts threads, not processes."""
+    total = 0
+    for status in Path("/proc").glob("[0-9]*/status"):
+        try:
+            fields = dict(line.split(":", 1) for line in status.read_text().splitlines() if ":" in line)
+        except OSError:
+            continue  # the process ended while it was read
+        if fields.get("Uid", "").split()[:1] == [str(uid)]:
+            total += int(fields.get("Threads", "1"))
+    return total
+
+
+def session_slots(reserve: float = 0.2) -> int:
+    """How many reviewer sessions fit in the user's thread budget now, keeping `reserve` of the free part for the
+    user's other work; at least one."""
+    limit, _hard = resource.getrlimit(resource.RLIMIT_NPROC)
+    if limit == resource.RLIM_INFINITY:
+        return 1 << 16
+    free = limit - user_threads(os.getuid())
+    return max(1, int(free * (1 - reserve)) // THREADS_PER_SESSION)
+
+
+def omp_arguments(options: argparse.Namespace, system: str, tools: tuple[str, ...]) -> list[str]:
     args = ["-p", "--mode", "json", "--no-session", "--no-extensions", "--no-skills", "--no-rules",
             "--no-context-files", "--no-title", "--no-lsp", "--offline", "--approval-mode", "yolo",
-            "--tools", ",".join(tools), "--model", f"srv/{options.model}",
+            *(["--tools", ",".join(tools)] if tools else ["--no-tools"]), "--model", f"srv/{options.model}",
             "--thinking", options.reasoning_effort or "off", "--max-time", str(int(options.timeout)),
             "--append-system-prompt", system]
-    if sandbox:
+    if "sandbox_run" in tools:
         args += ["-e", "/opt/srv/sandbox_tool.ts"]
     return args
 
@@ -205,8 +253,9 @@ def strip_fence(content: str) -> str:
 class Jail:
     """The reviewer jail for one srv run: its agent directory and the outer end of the model relay."""
 
-    def __init__(self, options: argparse.Namespace) -> None:
+    def __init__(self, options: argparse.Namespace, log: Path | None = None) -> None:
         self.options = options
+        self.log = log
         self.head = Path(options.repo).resolve(strict=True)
         found = shutil.which("omp")
         if not found or not shutil.which("bwrap"):
@@ -215,7 +264,6 @@ class Jail:
         location = urlsplit(options.base_url)
         self.upstream = (location.hostname or "", location.port or (443 if location.scheme == "https" else 80))
         self.sandbox_files: Path | None = None
-        self.calls: list[dict] = []
         self.lock = threading.Lock()
 
     def __enter__(self) -> Self:
@@ -229,45 +277,69 @@ class Jail:
         self.listener = socket.socket(socket.AF_UNIX)
         self.listener.bind(str(self.temp / "relay" / "model.sock"))
         self.listener.listen(512)
-        threading.Thread(target=serve, args=(self.listener, lambda: socket.create_connection(self.upstream, timeout=30)),
-                         daemon=True).start()
+        self.relay_errors: list[str] = []
+        self.slots = session_slots()
+        self.admission = threading.BoundedSemaphore(self.slots)
+        self.record({"event": "start", "slots": self.slots})
+        threading.Thread(target=serve, args=(self.listener, self.connect_upstream, self.relay_errors), daemon=True).start()
         tracked = subprocess.run(["git", "-C", str(self.head), "ls-files", "-z"], capture_output=True, check=True).stdout
         self.sandbox_files = self.temp / "tracked.txt"
         self.sandbox_files.write_bytes(tracked)
         return self
 
+    def connect_upstream(self) -> socket.socket:
+        """A connection to the model server; the timeout bounds the connect only, because a model may stay silent
+        for minutes while it reasons, and a read timeout would cut the answer off."""
+        upstream = socket.create_connection(self.upstream, timeout=30)
+        upstream.settimeout(None)
+        return upstream
+
+    def record(self, row: dict) -> None:
+        """Append one line to the run's session log as it happens, so a killed run keeps what finished."""
+        if self.log is None:
+            return
+        with self.lock, self.log.open("a", encoding="utf-8") as log:
+            log.write(json.dumps(row, ensure_ascii=False) + "\n")
+
     def __exit__(self, *_exc) -> None:
+        for error in self.relay_errors:
+            self.record({"event": "relay_error", "error": error})
         self.listener.close()
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def call(self, messages: list[dict], options: argparse.Namespace, schema: dict, schema_name: str,
-             sandbox: bool = False) -> tuple[str, dict, str]:
-        """One omp session; the contract of `sweep.call_model`: content, usage, finish reason."""
+             depth: str = "trace", label: str = "") -> tuple[str, dict, str]:
+        """One omp session with the tools its depth allows; the contract of `sweep.call_model`: content, usage,
+        finish reason. `schema` is in the request text already; the caller validates the answer against it."""
+        del schema
+        tools = DEPTH_TOOLS[depth]
+        sandbox = "sandbox_run" in tools
         system = "\n".join(m["content"] for m in messages if m["role"] == "system")
-        system += "\n\n" + JAIL_GUIDANCE + (SANDBOX_GUIDANCE if sandbox else "")
+        system += "\n\n" + (JAIL_GUIDANCE if tools else "") + (SANDBOX_GUIDANCE if sandbox else "")
         prompt = "\n\n".join(m["content"] for m in messages if m["role"] != "system")
         prompt += f"\n\nEnd with one JSON object for `{schema_name}` that matches the output JSON Schema, and nothing after it."
-        tools = [*READ_TOOLS, *(["sandbox_run"] if sandbox else [])]
         spec = {"files": self.sandbox_files, "ro": list(getattr(options, "sandbox_ro", []) or [])} if sandbox else None
         command = jail_command(self.head, self.temp / "agent", self.temp / "relay", self.omp,
-                               omp_arguments(options, system, tools, sandbox), spec)
-        started = time.monotonic()
-        try:
-            result = subprocess.run(command, input=prompt, text=True, capture_output=True,
-                                    timeout=options.timeout + 60, check=False)
-        except subprocess.TimeoutExpired as error:
-            raise TimeoutError(f"the omp session ran past {options.timeout + 60:.0f} s") from error
+                               omp_arguments(options, system, tools), spec)
+        with self.admission:  # admission control: a session starts only when a thread budget slot is free
+            started = time.monotonic()
+            try:
+                result = subprocess.run(command, input=prompt, text=True, capture_output=True,
+                                        timeout=options.timeout + 60, check=False)
+            except subprocess.TimeoutExpired as error:
+                raise TimeoutError(f"the omp session ran past {options.timeout + 60:.0f} s") from error
+        row = {"event": "session", "label": label, "schema": schema_name, "depth": depth,
+               "seconds": round(time.monotonic() - started, 1), "exit": result.returncode}
         if result.returncode:
+            self.record({**row, "error": result.stderr.strip()[-800:]})
             raise ValueError(f"omp exited {result.returncode}: {result.stderr.strip()[-800:]}")
-        content, usage, finish, tool_calls = read_events(result.stdout)
-        with self.lock:
-            self.calls.append({"schema": schema_name, "seconds": round(time.monotonic() - started, 1),
-                               "usage": usage, "tools": tool_calls})
+        try:
+            content, usage, finish, tool_calls = read_events(result.stdout)
+        except ValueError as error:
+            self.record({**row, "error": str(error)})
+            raise
+        self.record({**row, "usage": usage, "tools": tool_calls})
         return content, usage, finish
-
-    def write_log(self, path: Path) -> None:
-        """Every session of the run with its time, usage, and tool calls, for the procedure log."""
-        path.write_text(json.dumps(self.calls, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str]) -> int:
