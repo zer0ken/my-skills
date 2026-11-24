@@ -1,11 +1,11 @@
 ---
 name: cleanup
-description: Clean up resources used only by the current session and preserve reusable data outside the project. Use on an explicit cleanup request or as the mandatory workflow finishing step. Other session endings suggest this skill; pi delegates finishing to an orchestrator that has it.
+description: Clean up resources used only by the current session and preserve reusable data outside the project. Use when the session finishes its assigned work, before its final report, on an explicit cleanup request, and as the mandatory workflow finishing step; never end a session with a suggestion to run it. pi delegates finishing to an orchestrator that has it.
 ---
 
 # Session cleanup
 
-Execute cleanup when invoked. At an ordinary session ending, suggest using this skill rather than treating the suggestion as authorization to execute it. Workflow finishing requires execution. Address the user in Korean using the neutral technical written-style rule.
+Execute cleanup when invoked. A session runs this skill itself when its assigned work is finished, meaning what the work was for has ended, such as its PR merged, its issue closed, or its deliverable handed over with nothing left, and it runs it before the final report so the report carries the result; it does not end with a suggestion to run it or a question whether to. Workflow finishing requires execution too. Address the user in Korean using the neutral technical written-style rule.
 
 ## Ownership and preservation
 
