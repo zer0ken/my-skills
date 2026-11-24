@@ -62,6 +62,13 @@ class PureTest(unittest.TestCase):
         self.assertEqual(team.decide_cluster(group, [no, no, no]), ("REJECTED", "MINOR"))
         self.assertEqual(team.decide_cluster(group, [yes, yes])[0], "PLAUSIBLE", "a failed call leaves it unsettled")
 
+    def test_metrics_are_summed_over_replicas_for_the_model_only(self) -> None:
+        values: dict[str, float] = {}
+        team.add_metrics(values, 'vllm:prompt_tokens_total{model_name="m",engine="0"} 5\n'
+                                 'vllm:prompt_tokens_total{model_name="other",engine="0"} 7\n', "m")
+        team.add_metrics(values, 'vllm:prompt_tokens_total{model_name="m",engine="0"} 3\n', "m")
+        self.assertEqual(values, {"vllm:prompt_tokens_total": 8.0})
+
     def test_majority_needs_more_than_half(self) -> None:
         self.assertEqual(team.majority(["broken", "broken", "holds"]), "broken")
         self.assertEqual(team.majority(["broken", "holds", "undecided"]), "undecided")

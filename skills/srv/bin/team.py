@@ -108,18 +108,25 @@ def strip(text: str) -> str:
 # ---------------------------------------------------------------- server metrics
 
 
-def server_metrics(base_url: str) -> dict[str, float]:
-    """The model server's counters, summed over its label sets; empty when it has no Prometheus endpoint."""
-    url = base_url.rstrip("/").removesuffix("/v1") + "/metrics"
-    try:
-        with urllib.request.urlopen(url, timeout=5) as response:
-            text = response.read().decode("utf-8", errors="replace")
-    except OSError:
-        return {}
+def server_metrics(urls: list[str], model: str) -> dict[str, float]:
+    """The counters for `model` (its `model_name` label), summed over every metrics URL and label set; empty when one
+    URL does not answer, because a partial sum would read as a drop. A server behind a load balancer answers each
+    read from one replica, so its replicas' own metrics URLs are passed (`--metrics-url`), not the balancer's."""
     values: dict[str, float] = {}
+    for url in urls:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                text = response.read().decode("utf-8", errors="replace")
+        except OSError:
+            return {}
+        add_metrics(values, text, model)
+    return values
+
+
+def add_metrics(values: dict[str, float], text: str, model: str) -> None:
     for line in text.splitlines():
         name = line.split("{", 1)[0].split(" ", 1)[0]
-        if name in METRICS:
+        if name in METRICS and f'model_name="{model}"' in line:
             values[name] = values.get(name, 0.0) + float(line.rsplit(" ", 1)[1])
     return values
 
@@ -133,16 +140,16 @@ def metric_delta(before: dict[str, float], after: dict[str, float]) -> dict[str,
 class Stages:
     """Wall time and server work of each stage, written to `team-summary.json` as each stage ends."""
 
-    def __init__(self, out: Path, base_url: str) -> None:
-        self.out, self.base_url, self.rows = out, base_url, []
+    def __init__(self, out: Path, urls: list[str], model: str) -> None:
+        self.out, self.urls, self.model, self.rows = out, urls, model, []
 
     def run(self, name: str, work):
-        before, started = server_metrics(self.base_url), time.monotonic()
+        before, started = server_metrics(self.urls, self.model), time.monotonic()
         try:
             return work()
         finally:
             self.rows.append({"stage": name, "seconds": round(time.monotonic() - started, 1),
-                              "server": metric_delta(before, server_metrics(self.base_url))})
+                              "server": metric_delta(before, server_metrics(self.urls, self.model))})
             self.write()
 
     def write(self, **extra) -> None:
@@ -416,7 +423,7 @@ def run_team(options: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     repo = Path(options.repo)
     diff_sha256 = hashlib.sha256(Path(options.diff).read_bytes()).hexdigest()
-    stages = Stages(out, options.base_url)
+    stages = Stages(out, options.metrics_url or [options.base_url.rstrip("/").removesuffix("/v1") + "/metrics"], options.model)
     model = ["--base-url", options.base_url, "--model", options.model,
              *(["--api-key-env", options.api_key_env] if options.api_key_env else [])]
     common = ["--units", options.units, "--diff", options.diff, "--repo", options.repo]
@@ -501,6 +508,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--api-key-env")
     parser.add_argument("--sandbox-ro", action="append", default=[])
+    parser.add_argument("--metrics-url", action="append", default=[],
+                        help="a Prometheus metrics URL of the model server; repeat it for each replica behind a load "
+                        "balancer (default: the base URL's /metrics)")
     parser.add_argument("--design-effort", default="high")
     parser.add_argument("--inspect-effort", default="high", help="omp --thinking of the inspector sessions")
     parser.add_argument("--inspect-timeout", type=float, default=900, help="omp --max-time of each inspector session")
