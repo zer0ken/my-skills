@@ -222,6 +222,19 @@ class CheckPerspectivesTest(unittest.TestCase):
         self.assertEqual(design.widen_to_stakes(answer, changes, items, []), [],
                          "a low perspective is not widened: its breadth is capped and judged line by line")
 
+    def test_a_mistyped_breadth_id_is_dropped_and_coverage_still_decides(self) -> None:
+        # Run 13g (PR #1726): the second answer failed on `U-5/E/5` alone.
+        changes = {"U-1/E-1": change("E-1"), "U-2/E-1": change("E-1", unit="U-2")}
+        answer = valid_perspectives()
+        answer["perspectives"] = [perspective("K-1", ["U-1/E-1", "U-2/E-1", "U-2/E/1"], means="execute")]
+        self.assertEqual(design.drop_unknown_breadth(answer, changes), [{"perspective": "K-1", "entries": ["U-2/E/1"]}])
+        self.assertEqual(design.check_perspectives(answer, changes, CATALOG, []), [],
+                         "a typo whose change another entry holds leaves coverage whole")
+        answer["perspectives"] = [perspective("K-1", ["U-1/E-1", "U-2/E/1"], means="execute")]
+        design.drop_unknown_breadth(answer, changes)
+        self.assertTrue(any("['U-2/E-1'] are in no `low`-depth" in p for p in design.check_perspectives(answer, changes, CATALOG, [])),
+                        "a typo that was the only holder of a change still fails coverage")
+
     def test_a_rule_states_its_stake_and_is_asked_over_it(self) -> None:
         # Coordinator, 2026-11-25: "규칙마다 걸리는 변경 종류를 설계 답에 적게 하고 코드가 같은 방식으로 덮음을 확인하게 하라".
         changes = {"U-1/E-1": change("E-1", kind="test_contract"),

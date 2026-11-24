@@ -355,6 +355,20 @@ def source_stakes(answer: dict, changes: dict[str, dict], catalog: dict[str, Cat
     return stakes
 
 
+def drop_unknown_breadth(answer: object, changes: dict[str, dict]) -> list[dict]:
+    """Remove from every breadth the entries that are not change ids, and return what was removed. A mistyped id
+    (`U-5/E/5`, run 13g) names no change, so it reviews nothing; the coverage checks that follow still fail when the
+    change it meant is then left without a perspective."""
+    dropped = []
+    for p in answer.get("perspectives") or [] if isinstance(answer, dict) else []:
+        if isinstance(p, dict) and isinstance(p.get("breadth"), list):
+            unknown = [cid for cid in p["breadth"] if cid not in changes]
+            if unknown:
+                p["breadth"] = [cid for cid in p["breadth"] if cid in changes]
+                dropped.append({"perspective": p.get("id"), "entries": unknown})
+    return dropped
+
+
 def widen_to_stakes(answer: object, changes: dict[str, dict], catalog: dict[str, CatalogItem],
                     rules: list[str]) -> list[dict]:
     """Add to a `high` perspective that asks a source the changes of the source's stake that no perspective asking it
@@ -514,15 +528,21 @@ def run_design(options: argparse.Namespace) -> int:
             all_changes = change_set(ready, {u["id"]: sweep.hunk_files(changes, u) for u in plan["units"]})
             rules = rule_ids(ready)
             widened: list[dict] = []
+            dropped: list[dict] = []
+            answers: list[object] = []  # every attempt's parsed answer, so a failed step can be re-checked offline
 
             def validate(answer: object) -> list[str]:
+                answers.append(json.loads(json.dumps(answer)))
+                dropped[:] = drop_unknown_breadth(answer, all_changes)
                 widened[:] = widen_to_stakes(answer, all_changes, context["catalog"], rules)
                 return check_perspectives(answer, all_changes, context["catalog"], rules)
 
             try:
                 perspectives = ask(build_perspective_messages(ready, all_changes, context), validate,
                                    PERSPECTIVES_SCHEMA, "srv-perspectives", options, sweep.call_model)
-                perspectives["widened"] = widened
+                perspectives["widened"], perspectives["dropped"] = widened, dropped
+                (out / "perspective-answers.json").write_text(json.dumps(answers, ensure_ascii=False, indent=1) + "\n",
+                                                             encoding="utf-8")
             except Exception as error:  # noqa: BLE001 - recorded as the step's failure
                 perspectives = failed(error)
             perspectives["source_sha256"] = diff_sha256
