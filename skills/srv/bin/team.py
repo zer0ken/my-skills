@@ -569,7 +569,8 @@ def run_team(options: argparse.Namespace) -> int:
     # The user's order (2026-11-24, "끝나고 하이레벨 -> 로우레벨 순으로 검토해서 중복 없는 지적사항만 남겨"): merge
     # first, so verification runs once per remaining defect instead of once per duplicate.
     depth_of = {p["id"]: p["depth"] for p in perspectives}
-    clusters = stages.run("merge", lambda: merge(candidates(findings), depth_of, verify_options))
+    merge_options = argparse.Namespace(**{**vars(judge_options), "reasoning_effort": options.merge_effort})
+    clusters = stages.run("merge", lambda: merge(candidates(findings), depth_of, merge_options))
     clusters = stages.run("verify", lambda: settle(clusters, repo, pack, changes, verify_options))
     (out / "clusters.json").write_text(json.dumps(clusters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     ran = ran_counterexample(out, questions)
@@ -615,9 +616,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--inspect-effort", default="medium", help="omp --thinking of the inspector sessions; on PR #1470 "
                         "medium held eight of eight in 201 s of inspection (run 10c) where high took 438 s (run 11b)")
     parser.add_argument("--inspect-timeout", type=float, default=900, help="omp --max-time of each inspector session")
-    parser.add_argument("--judge-effort", default="", help="reasoning effort of judge, verify, and merge calls; empty "
-                        "omits it, as in the judge replay that decided 5 of 5 in 3.7 s per call")
-    parser.add_argument("--verify-effort", default="")
+    # Measured on the rounds of run 11b (PR #1470, replays 12a and 12b, ~/agent-assets/rebot/srv-measure-11): with
+    # reasoning off ("none"), judge and verify kept all eight findings and verify fell from 108 s to 5 s; merge without
+    # reasoning joined defects with different causes and hid two findings, so merge keeps the server's default.
+    parser.add_argument("--judge-effort", default="none", help="reasoning effort of the judge calls; empty omits it")
+    parser.add_argument("--verify-effort", default="none", help="reasoning effort of the verify calls")
+    parser.add_argument("--merge-effort", default="", help="reasoning effort of the merge calls; empty omits it")
     return parser.parse_args(argv)
 
 
