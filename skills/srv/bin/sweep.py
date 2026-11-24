@@ -834,7 +834,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--samples", type=int, default=1,
         help="independent reviewer sessions per task, run at once, their findings pooled. Three samples was measured "
         "for calls without tools (PR #1415); with omp sessions that read and run, one sample per perspective held "
-        "eight of eight first-review findings of PR #1470 and cut the round from 580 s to 369 s (2026-11-24)",
+        "eight of eight first-review findings of PR #1470 in 369 s against 580 s for three samples (2026-11-24, one run "
+        "each, the second also with 14 perspectives instead of 18)",
     )
     parser.add_argument(
         "--max-concurrency", type=int, default=128,
