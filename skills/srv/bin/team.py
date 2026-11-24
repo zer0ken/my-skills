@@ -373,7 +373,15 @@ def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]
             target = by_id[target]["merged_into"]
         if target:
             cluster["merged_into"] = target
-            by_id[target].setdefault("symptoms", []).append(cluster["id"])
+            kept = by_id[target]
+            kept.setdefault("symptoms", []).append(cluster["id"])
+            # A duplicate that was itself confirmed confirms the defect it joins, and the defect is as severe as its
+            # most severe confirmed part.
+            if cluster["verdict"] == "CONFIRMED":
+                if kept["verdict"] != "CONFIRMED":
+                    kept["verdict"], kept["severity"] = "CONFIRMED", cluster["severity"]
+                elif sweep.SEVERITIES.index(cluster["severity"]) < sweep.SEVERITIES.index(kept["severity"]):
+                    kept["severity"] = cluster["severity"]
     return clusters
 
 

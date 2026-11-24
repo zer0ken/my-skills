@@ -121,6 +121,7 @@ class ModelTest(unittest.TestCase):
         team.merge(clusters, {"K-1": "high", "K-2": "low"}, self.options)
         self.assertEqual({c["id"]: c.get("merged_into") for c in clusters}, {"R-001": None, "R-002": "R-001", "R-003": "R-001"},
                          "the high cluster is kept first even when a low one is more severe")
+        self.assertEqual(clusters[1]["severity"], "BLOCKER", "the kept defect takes the severity of its confirmed duplicate")
 
     def test_verify_confirms_only_by_unanimous_calls(self) -> None:
         FakeEndpoint.respond = staticmethod(lambda body: json.dumps({"verdict": "CONFIRMED", "severity": "BLOCKER", "reason": "r"}))
