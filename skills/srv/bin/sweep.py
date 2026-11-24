@@ -677,6 +677,7 @@ def run_sweep(options: argparse.Namespace) -> int:
             lambda findings: anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
             lambda task: functools.partial(jail.call, depth=depth[(task.unit["id"], task.perspective)], label=task.name),
+            lambda task: options.depth_samples.get(depth[(task.unit["id"], task.perspective)], options.samples),
         )
     return code
 
@@ -686,15 +687,18 @@ def run_round(
     anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
     label: str, only_arg: Callable[[Task], str],
     call_for: Callable[[Task], Callable[..., tuple[str, dict, str]]] = lambda task: call_model,
+    samples_for: Callable[[Task], int] | None = None,
 ) -> int:
     """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
 
     Shared by srv round 1 and prv (`~/.agents/skills/prv/bin/sweep.py`); the caller decides the tasks, how a
     task's messages are built, how its findings are anchored, which input `source_sha256` names, the round's `label`
     for progress and messages, `only_arg`, the `--only` value that reruns a task in the caller's command, and
-    `call_for`, what sends a task's messages (by default one HTTP call per sample).
+    `call_for`, what sends a task's messages (by default one HTTP call per sample), and `samples_for`, how many
+    samples a task runs (by default `--samples`).
     Exit 0 when every task of `all_tasks` has a valid output for this input, 1 otherwise.
     """
+    count = {task.name: (samples_for(task) if samples_for else options.samples) for task in tasks}
     messages = {task.name: build(task) for task in tasks}
     progress = Progress(len(tasks), out, label)
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
@@ -702,7 +706,7 @@ def run_round(
         futures = {
             pool.submit(run_task, task, messages[task.name], anchor, options, call_for(task)): (task, number)
             for task in tasks
-            for number in range(1, options.samples + 1)
+            for number in range(1, count[task.name] + 1)
         }
         for future in concurrent.futures.as_completed(futures):
             task, number = futures[future]
@@ -710,9 +714,9 @@ def run_round(
                 done[task.name][number] = future.result()
             except Exception as error:  # noqa: BLE001 - recorded as the sample's failure; the round must still report every task
                 done[task.name][number] = failed_result(task, error)
-            if len(done[task.name]) < options.samples:
+            if len(done[task.name]) < count[task.name]:
                 continue
-            result = merge_samples(task, [done[task.name][n] for n in range(1, options.samples + 1)])
+            result = merge_samples(task, [done[task.name][n] for n in range(1, count[task.name] + 1)])
             result["source_sha256"] = source_sha256
             (out / f"{result['task']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance(result)
@@ -732,7 +736,8 @@ def run_round(
         "wall_s": round(time.monotonic() - started, 1),
         "slowest_s": max((r["seconds"] for r in results), default=0),
         "this_run_tasks": len(tasks),
-        "samples": options.samples,
+        # One number when every task ran the same count (prv, or a uniform --samples), else the counts used.
+        "samples": counts[0] if len(counts := sorted({count[t.name] for t in tasks} or {options.samples})) == 1 else counts,
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in results),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in results),
         "tool_calls": sum(r["usage"].get("tool_calls", 0) for r in results),
@@ -779,10 +784,20 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call or session (omp --max-time)")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
     parser.add_argument("--only", nargs="+", help="task names `<unit>__<perspective>` to run, for a rerun of failed tasks")
+    parser.add_argument(
+        "--depth-samples", default="read=3,trace=1,execute=1",
+        help="samples per perspective depth, overriding --samples: three samples was measured for calls without tools "
+        "(PR #1415, #1470); a session that reads and runs goes deeper per sample, so trace and execute run one "
+        "(2026-11-24 PR #1470 measurement; see SKILL.md Limits)",
+    )
     parser.add_argument("--sandbox-ro", action="append", default=[],
                         help="prepared dependency directory mounted read-only into execute-depth counterexample runs")
     options = parser.parse_args(argv)
-    if options.samples < 1:
+    try:
+        options.depth_samples = {k: int(v) for k, v in (pair.split("=") for pair in options.depth_samples.split(",") if pair)}
+    except ValueError:
+        parser.error("--depth-samples is depth=count pairs, such as read=3,trace=1,execute=1")
+    if min([options.samples, *options.depth_samples.values()]) < 1:
         parser.error("--samples must be 1 or more: a task with no sample is a unit perspective nobody reviewed")
     return options
 

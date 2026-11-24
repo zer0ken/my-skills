@@ -157,7 +157,7 @@ class SweepTest(unittest.TestCase):
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
             "--design", str(self.design), "--values", str(self.values), "--requirements", str(self.requirement),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
-            "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
+            "--model", "fake", "--max-concurrency", "4", "--samples", "1", "--depth-samples", "", *extra,
         ]
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
@@ -184,6 +184,15 @@ class SweepTest(unittest.TestCase):
         self.write_design("U-1", ["trace"], depth="execute")
         self.assertEqual(self.run_sweep(), 0)
         self.assertEqual(sorted(FakeJail.depths), ["execute", "read", "read"])
+
+    def test_samples_follow_the_perspectives_depth(self) -> None:
+        # Three samples was measured for calls without tools; a session that reads and runs goes deeper per sample.
+        self.write_design("U-1", ["trace"], depth="execute")
+        self.assertEqual(self.run_sweep("--depth-samples", "read=3,execute=1"), 0)
+        self.assertEqual(len(FakeEndpoint.requests), 3 + 3 + 1)
+        self.assertEqual(self.read("U-1__trace.json")["samples"], 1)
+        self.assertEqual(self.read("U-2__db.json")["samples"], 3)
+        self.assertEqual(self.read("summary.json")["samples"], [1, 3])
 
     def test_samples_are_independent_calls_pooled_per_task(self) -> None:
         def respond(body: dict) -> str:
