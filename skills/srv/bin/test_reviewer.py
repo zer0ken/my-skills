@@ -121,6 +121,20 @@ class ToolsTest(unittest.TestCase):
         self.assertIn("/opt/srv/sandbox_tool.ts", review)
 
 
+class PinTest(unittest.TestCase):
+    def test_a_pinned_command_runs_with_only_its_cpus(self) -> None:
+        cpu = min(os.sched_getaffinity(0))
+        command = reviewer.pinned([sys.executable, "-I", "-c", "import os; print(sorted(os.sched_getaffinity(0)))"], [cpu])
+        output = subprocess.run(command, capture_output=True, text=True, check=True).stdout
+        self.assertEqual(output.strip(), f"[{cpu}]", "omp sizes its thread pools to the CPUs it may use")
+
+    def test_sessions_take_the_allowed_cpus_in_turn(self) -> None:
+        jail = reviewer.Jail.__new__(reviewer.Jail)
+        jail.lock, jail.sessions_started, jail.cpus = threading.Lock(), 0, [2, 3, 5, 7, 11, 13]
+        with mock.patch.object(reviewer, "SESSION_CPUS", 4):
+            self.assertEqual([jail.next_cpus() for _ in range(3)], [[2, 3, 5, 7], [2, 3, 11, 13], [5, 7, 11, 13]])
+
+
 class AdmissionTest(unittest.TestCase):
     def test_sessions_fit_the_free_thread_budget(self) -> None:
         # The user's process limit counts threads; a session past it fails at start (EAGAIN), so the jail admits only

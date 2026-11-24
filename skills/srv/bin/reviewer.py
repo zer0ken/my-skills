@@ -69,6 +69,12 @@ SYSTEM_DIRS = ("/usr", "/etc")
 # once met a limit of 8192 with 6,600 threads already in use, and sessions failed with "Failed to start HTTP Client
 # thread: EAGAIN" and "bwrap: Can't fork".
 THREADS_PER_SESSION = 230
+# omp sizes its thread pools to the CPUs it may use: a session on 64 CPUs ran 129 `tokio-rt-worker` and 64
+# `pi-fs-worker` threads, and the same omp started with the affinity of 4 CPUs peaked at 16 threads and of 8 at 26
+# (2026-11-24). So every session runs pinned to SESSION_CPUS CPUs, taken in turn from the CPUs this process may use,
+# and the thread budget admits that many more sessions at once. A session mostly waits on the model; its
+# counterexample runs inherit the same CPUs.
+SESSION_CPUS = 4
 SYSTEM_LINKS = {"/bin": "usr/bin", "/sbin": "usr/sbin", "/lib": "usr/lib", "/lib64": "usr/lib64"}
 JAIL_GUIDANCE = (
     "The change under review is at /work, read-only; `git show` is not available, the request holds the diff. "
@@ -187,6 +193,13 @@ def jail_command(head: Path, agent: Path, relay: Path, omp: Path, omp_args: list
     return [*cmd, "--chdir", "/review", "--", "/bin/sh", "-c", inner + "exec " + quoted]
 
 
+def pinned(command: list[str], cpus: list[int]) -> list[str]:
+    """`command` started through `reviewer.py pin`, which sets the CPU affinity and execs it, so every process and
+    thread of the session inherits the affinity before it starts (Python's `preexec_fn` is not safe in a process
+    that runs threads, as srv does)."""
+    return [sys.executable, "-I", str(Path(__file__).resolve()), "pin", ",".join(map(str, cpus)), "--", *command]
+
+
 def user_threads(uid: int) -> int:
     """Threads the user runs now, from /proc; the process limit counts threads, not processes."""
     total = 0
@@ -277,6 +290,8 @@ class Jail:
         self.upstream = (location.hostname or "", location.port or (443 if location.scheme == "https" else 80))
         self.sandbox_files: Path | None = None
         self.lock = threading.Lock()
+        self.cpus = sorted(os.sched_getaffinity(0))
+        self.sessions_started = 0
 
     def __enter__(self) -> Self:
         # A unix socket path is limited to about 108 bytes, so the relay lives in a short temporary directory.
@@ -306,6 +321,14 @@ class Jail:
         upstream.settimeout(None)
         return upstream
 
+    def next_cpus(self) -> list[int]:
+        """The next SESSION_CPUS of the CPUs this process may use, in turn, so concurrent sessions spread over them."""
+        with self.lock:
+            start = self.sessions_started * SESSION_CPUS
+            self.sessions_started += 1
+        width = min(SESSION_CPUS, len(self.cpus))
+        return sorted({self.cpus[(start + offset) % len(self.cpus)] for offset in range(width)})
+
     def record(self, row: dict) -> None:
         """Append one line to the run's session log as it happens, so a killed run keeps what finished."""
         if self.log is None:
@@ -330,8 +353,8 @@ class Jail:
         prompt = "\n\n".join(m["content"] for m in messages if m["role"] != "system")
         prompt += f"\n\nEnd with one JSON object for `{schema_name}` that matches the output JSON Schema, and nothing after it."
         spec = {"files": self.sandbox_files, "ro": list(getattr(options, "sandbox_ro", []) or [])} if sandbox else None
-        command = jail_command(self.head, self.temp / "agent", self.temp / "relay", self.omp,
-                               omp_arguments(options, system, tools), spec)
+        command = pinned(jail_command(self.head, self.temp / "agent", self.temp / "relay", self.omp,
+                                      omp_arguments(options, system, tools), spec), self.next_cpus())
         with self.admission:  # admission control: a session starts only when a thread budget slot is free
             started = time.monotonic()
             try:
@@ -357,7 +380,11 @@ def main(argv: list[str]) -> int:
     if argv[:1] == ["relay-inner"] and len(argv) == 3:
         relay_inner(argv[1], int(argv[2]))
         return 0
-    print("reviewer.py is a module of srv; inside the jail it runs as `relay-inner SOCKET PORT`", file=sys.stderr)
+    if argv[:1] == ["pin"] and len(argv) > 3 and argv[2] == "--":
+        os.sched_setaffinity(0, {int(cpu) for cpu in argv[1].split(",")})
+        os.execvp(argv[3], argv[3:])
+    print("reviewer.py is a module of srv; inside the jail it runs as `relay-inner SOCKET PORT`, and a session "
+          "starts through `pin CPUS -- COMMAND`", file=sys.stderr)
     return 2
 
 
