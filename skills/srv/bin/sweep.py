@@ -831,8 +831,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--api-key-env", help="environment variable holding the API key")
     parser.add_argument(
-        "--samples", type=int, default=3,
-        help="independent calls per task, run at once; their findings are pooled, because one call misses causes another finds",
+        "--samples", type=int, default=1,
+        help="independent reviewer sessions per task, run at once, their findings pooled. Three samples was measured "
+        "for calls without tools (PR #1415); with omp sessions that read and run, one sample per perspective held "
+        "eight of eight first-review findings of PR #1470 and cut the round from 580 s to 369 s (2026-11-24)",
     )
     parser.add_argument(
         "--max-concurrency", type=int, default=128,
