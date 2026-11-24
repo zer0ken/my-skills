@@ -46,6 +46,12 @@ class EventsTest(unittest.TestCase):
         self.assertEqual(usage, {"prompt_tokens": 350, "completion_tokens": 12, "tool_calls": 1})
         self.assertEqual((finish, tools), ("stop", [{"tool": "read", "args": {"path": "/work/a.py"}}]))
 
+    def test_the_answer_is_the_json_object_the_text_ends_with(self) -> None:
+        self.assertEqual(reviewer.answer_object('검토를 마쳤다. {"a": 1} 다음이 답이다:\n{"findings": [], "checked": [{"x": "}"}]}'),
+                         '{"findings": [], "checked": [{"x": "}"}]}')
+        self.assertEqual(reviewer.answer_object('```json\n{"a": 1}\n```'), '{"a": 1}')
+        self.assertEqual(reviewer.answer_object("no json here"), "no json here", "the caller reports what is not JSON")
+
     def test_a_session_that_ends_on_an_error_has_no_answer(self) -> None:
         stream = event("message_end", message={"role": "assistant", "stopReason": "error", "errorMessage": "HTTP 500",
                                                "content": []})

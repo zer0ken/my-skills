@@ -155,7 +155,11 @@ def jail_command(head: Path, agent: Path, relay: Path, omp: Path, omp_args: list
     """The bwrap command line that runs omp on the head with nothing but the relay socket."""
     cmd = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session", "--clearenv",
            "--setenv", "PATH", "/usr/bin:/bin", "--setenv", "HOME", "/home/omp", "--setenv", "LANG", "C.UTF-8",
-           "--setenv", "PI_CODING_AGENT_DIR", "/agent"]
+           "--setenv", "PI_CODING_AGENT_DIR", "/agent",
+           # Auto-QA adds a `report_issue` tool to every session, even with --no-tools (omp://resolve-tool-runtime.md:
+           # "`report_issue` always applies"); `PI_AUTO_QA` switches it off (omp://settings.md). In the first runs
+           # `read` sessions spent their turn on it and ended without the JSON answer.
+           "--setenv", "PI_AUTO_QA", "0"]
     for directory in SYSTEM_DIRS:
         cmd += ["--ro-bind", directory, directory]
     for link, target in SYSTEM_LINKS.items():
@@ -236,17 +240,23 @@ def read_events(stdout: str) -> tuple[str, dict, str, list[dict]]:
         reason = (last or {}).get("errorMessage") or (last or {}).get("stopReason") or "no final assistant message"
         raise ValueError(f"the omp session did not finish its answer: {reason}")
     content = "".join(part.get("text", "") for part in last.get("content", []) if part.get("type") == "text")
-    return strip_fence(content), usage, last["stopReason"], tools
+    return answer_object(content), usage, last["stopReason"], tools
 
 
-def strip_fence(content: str) -> str:
-    """The answer without a ```json fence around it; the session writes text, not a schema-bound response."""
+def answer_object(content: str) -> str:
+    """The JSON object the answer ends with. The session writes text, not a schema-bound response, and is asked to
+    end with one JSON object, so prose before it and a ```json fence around it are not part of the answer."""
     text = content.strip()
-    if text.startswith("```"):
-        first, _, rest = text.partition("\n")
-        body, _, closing = rest.rpartition("```")
-        if first.strip("`").strip().lower() in {"", "json"} and not closing.strip():
-            return body.strip()
+    if text.endswith("```"):
+        text = text[:-3].rstrip()
+    decoder = json.JSONDecoder()
+    for start in (i for i, char in enumerate(text) if char == "{"):
+        try:
+            _value, end = decoder.raw_decode(text, start)
+        except ValueError:
+            continue
+        if not text[end:].strip():
+            return text[start:end]
     return text
 
 
@@ -338,7 +348,7 @@ class Jail:
         except ValueError as error:
             self.record({**row, "error": str(error)})
             raise
-        self.record({**row, "usage": usage, "tools": tool_calls})
+        self.record({**row, "usage": usage, "tools": tool_calls, "answer_tail": content[-300:]})
         return content, usage, finish
 
 
