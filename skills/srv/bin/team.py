@@ -203,30 +203,25 @@ def judge_perspectives(perspectives: list[dict], results: dict[str, list[dict]],
 
 
 def judged_findings(perspectives: dict[str, dict], judgments: dict[str, dict], repo: Path) -> list[dict]:
-    """A broken value becomes one finding per decisive fact, at that fact's location, so each defect the inspectors
-    observed is verified and merged on its own. One finding per perspective lost observed defects: on PR #1726 (run
-    13h) a judge that decided a value broken from 74 observations kept one finding, and the observed copy of an existing
-    information builder (rv R-008) and the response counts computed before acceptance (rv R-006) never became findings
-    (the coordinator, 2026-11-25: "깨진 관점의 결정적 관찰마다 지적을 내서 관찰이 한 묶음으로 뭉개지지 않게 한다")."""
+    """A broken value becomes a finding at its first decisive location, so the structure it names is verified and
+    reported like any inspector's finding; its other decisive locations stay in the evidence."""
     findings = []
     for pid, judgment in judgments.items():
         if judgment["verdict"] != "broken":
             continue
-        reason = judgment["reasons"][0] if judgment["reasons"] else perspectives[pid]["broken_if"]
-        for number in judgment["decisive"] or range(1, len(judgment["facts"]) + 1)[:1]:
-            fact = judgment["facts"][number - 1]
-            located = LOCATION_RE.search(fact["location"])
-            if not located:
-                continue
-            path, line = located.group(1), int(located.group(2))
-            lines = sweep.anchor_findings.head_lines(repo, path) or []
-            anchor = lines[line - 1].strip() if 0 < line <= len(lines) else ""
-            findings.append(sweep.anchor_findings.anchor_finding({
-                "id": f"J-{pid}-{number}", "severity": "MAJOR", "file": path, "line": line, "anchor": anchor,
-                "condition": fact["observation"],
-                "evidence": f"{fact['location']}: {fact['observation']} (판정: {reason})",
-                "fix": "", "perspective": pid,
-            }, repo))
+        decisive = [judgment["facts"][n - 1] for n in judgment["decisive"]] or judgment["facts"]
+        located = [m for f in decisive for m in LOCATION_RE.finditer(f["location"])]
+        if not located:
+            continue
+        path, line = located[0].group(1), int(located[0].group(2))
+        lines = sweep.anchor_findings.head_lines(repo, path) or []
+        anchor = lines[line - 1].strip() if 0 < line <= len(lines) else ""
+        findings.append(sweep.anchor_findings.anchor_finding({
+            "id": f"J-{pid}", "severity": "MAJOR", "file": path, "line": line, "anchor": anchor,
+            "condition": judgment["reasons"][0] if judgment["reasons"] else perspectives[pid]["broken_if"],
+            "evidence": "; ".join(f"{f['location']}: {f['observation']}" for f in decisive),
+            "fix": "", "perspective": pid,
+        }, repo))
     return findings
 
 

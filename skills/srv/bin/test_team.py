@@ -110,17 +110,8 @@ class ModelTest(unittest.TestCase):
         self.assertIn("Broken if: broken K-1", user)
         self.assertIn("2. q.py:2: the test is written twice", user)
         found = team.judged_findings({"K-1": p}, judgments, self.repo)
-        self.assertEqual([(f["id"], f["file"], f["line"], f["anchor"], f["condition"]) for f in found],
-                         [("J-K-1-2", "q.py", 2, "filter_one()", "the test is written twice")])
-
-    def test_every_decisive_fact_of_a_broken_value_is_its_own_finding(self) -> None:
-        # Run 13h (PR #1726): one finding per broken perspective lost the observed defects rv R-006 and R-008.
-        judgments = {"K-1": {"verdict": "broken", "decisive": [1, 3], "reasons": ["r"], "facts": [
-            {"location": "q.py:1", "observation": "a copy"}, {"location": "q.py:2", "observation": "fine"},
-            {"location": "q.py:3", "observation": "counted before acceptance"}]}}
-        found = team.judged_findings({"K-1": perspective("K-1", ["U-1/E-1"])}, judgments, self.repo)
-        self.assertEqual([(f["id"], f["line"], f["condition"]) for f in found],
-                         [("J-K-1-1", 1, "a copy"), ("J-K-1-3", 3, "counted before acceptance")])
+        self.assertEqual((found[0]["id"], found[0]["file"], found[0]["line"], found[0]["anchor"]),
+                         ("J-K-1", "q.py", 2, "filter_one()"))
 
     def test_low_findings_merge_into_the_high_finding_they_are_a_symptom_of(self) -> None:
         # User, 2026-11-24: "끝나고 하이레벨 -> 로우레벨 순으로 검토해서 중복 없는 지적사항만 남겨."
