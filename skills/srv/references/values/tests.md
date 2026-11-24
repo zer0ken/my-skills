@@ -1,6 +1,3 @@
----
-match: always
----
 # Method: tests pin the contract
 Apply rv `~/.agents/skills/rv/SKILL.md` U3's paragraph on tests, the Software Testing sections of `~/.agents/skills/python-expert/SKILL.md`, and the AGENTS.md files under the repository's test directories.
 1. Each changed behavior has a test that would fail on the code before the change; name the test or report the behavior without one.

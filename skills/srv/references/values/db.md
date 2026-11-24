@@ -1,9 +1,3 @@
----
-match-path: *.sql
-match-path: */migrations/*
-match-line: \b(SELECT|INSERT|UPDATE|DELETE|MERGE|MATCH|CREATE|ALTER|DROP|WITH)\b\s
-match-line: (?i)\b(execute|executemany|fetch(all|one|row)?|session\.run|cypher|transaction|commit|rollback)\b
----
 # Method: queries, schema, and storage
 Apply rv `~/.agents/skills/rv/SKILL.md` U3 `### DB schema and usage` and the sections DM-Querying, DM-Processing, and DM-Internals of `~/.agents/skills/sql-expert/SKILL.md`.
 1. Each added or changed query: its rows, the fewest conditions that produce them, and the index or structure each access direction uses.

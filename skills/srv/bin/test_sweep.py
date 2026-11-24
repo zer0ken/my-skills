@@ -1,6 +1,7 @@
-"""Pin srv round 1: one call per (unit, perspective), validation and one retry, anchors, coverage."""
+"""Pin srv round 1: one call per (unit, designed perspective), validation and one retry, anchors, coverage."""
 
 import contextlib
+import hashlib
 import http.server
 import importlib.util
 import io
@@ -87,15 +88,20 @@ class SweepTest(unittest.TestCase):
         (self.repo / "docs" / "a.md").write_text("new\n", encoding="utf-8")
         for command in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "head"]):
             subprocess.run(["git", "-C", str(self.repo), *command], check=True)
-        self.perspectives = root / "perspectives"
-        self.perspectives.mkdir()
-        (self.perspectives / "trace.md").write_text("---\nmatch: always\n---\n1. Trace the requirement.\n", encoding="utf-8")
-        (self.perspectives / "db.md").write_text("---\nmatch-line: \\bSELECT\\b\n---\n1. Check queries.\n", encoding="utf-8")
+        self.values = root / "values"
+        self.values.mkdir()
+        (self.values / "trace.md").write_text("1. Trace the requirement.\n", encoding="utf-8")
+        (self.values / "db.md").write_text("1. Check queries.\n", encoding="utf-8")
         self.diff = root / "diff.patch"
         self.diff.write_text(DIFF, encoding="utf-8")
-        plan = sweep.plan_units.plan_units(DIFF, perspectives=sweep.plan_units.read_perspectives(self.perspectives))
+        plan = sweep.plan_units.plan_units(DIFF)
         self.units = root / "units.json"
         self.units.write_text(json.dumps(plan), encoding="utf-8")
+        self.design = root / "design"
+        self.design.mkdir()
+        # U-1 is docs/a.md, U-2 is pkg/store.py; the perspective ids name the value each one judges.
+        for unit, perspectives in (("U-1", ["trace"]), ("U-2", ["db", "trace"])):
+            self.write_design(unit, perspectives)
         self.requirement = root / "issue.md"
         self.requirement.write_text("Load rows.\n", encoding="utf-8")
         self.out = root / "round-1"
@@ -103,6 +109,19 @@ class SweepTest(unittest.TestCase):
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         FakeEndpoint.requests = []
         FakeEndpoint.respond = staticmethod(lambda body: answer())
+
+    def write_design(self, unit: str, perspectives: list[str], sha256: str | None = None) -> None:
+        design = {
+            "unit": unit, "ok": True, "source_sha256": sha256 or hashlib.sha256(DIFF.encode()).hexdigest(),
+            "changes": [{"id": "E-1", "kind": "returned_value", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]}],
+            "behaviour_free": [],
+            "perspectives": [
+                {"id": p, "value": f"value of {p}", "sources": [p], "breadth": ["E-1"], "depth": "read", "checks": ["c"]}
+                for p in perspectives
+            ],
+            "sources": [],
+        }
+        (self.design / f"{unit}.json").write_text(json.dumps(design), encoding="utf-8")
 
     def tearDown(self) -> None:
         self.server.shutdown()
@@ -112,7 +131,7 @@ class SweepTest(unittest.TestCase):
     def run_sweep(self, *extra: str) -> int:
         argv = [
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
-            "--perspectives", str(self.perspectives), "--requirements", str(self.requirement),
+            "--design", str(self.design), "--values", str(self.values), "--requirements", str(self.requirement),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
             "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
@@ -180,7 +199,8 @@ class SweepTest(unittest.TestCase):
         self.assertIn("    2|     query = 'SELECT 1'", user)
         self.assertIn("pkg/api.py:3:load([])", user)
         self.assertIn("1. Check queries.", user)
-        self.assertNotIn("match-line", user)
+        self.assertIn("Value: value of db", user)
+        self.assertIn("- E-1 [returned_value] s: b -> a (hunks H1)", user)
 
     def test_finding_line_is_re_located_from_its_anchor(self) -> None:
         finding = {"id": "F-1", "severity": "MAJOR", "file": "pkg/store.py", "line": 9,
@@ -347,12 +367,11 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(self.read("summary.json")["failed"], ["U-2__db"],
                          "a task file left by a run on another diff is not this plan's review of that task")
 
-    def test_unit_without_perspectives_is_rejected(self) -> None:
-        plan = json.loads(self.units.read_text(encoding="utf-8"))
-        plan["units"][0]["perspectives"] = {}
-        self.units.write_text(json.dumps(plan), encoding="utf-8")
+    def test_unit_without_a_valid_design_is_rejected(self) -> None:
+        self.write_design("U-1", ["trace"], sha256="0" * 64)
         self.assertEqual(self.run_sweep(), 2)
-        self.assertEqual(FakeEndpoint.requests, [], "a unit no task reviews must stop the round before any call")
+        self.assertEqual(FakeEndpoint.requests, [], "a unit no perspective covers must stop the round before any call")
+        self.assertIn("units ['U-1'] have no valid design", self.stderr)
 
     def test_line_windows_merge_when_they_touch(self) -> None:
         self.assertEqual(sweep.line_windows([(100, 100), (150, 150), (400, 400)], 420), [(40, 210), (340, 420)])

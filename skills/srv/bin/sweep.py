@@ -5,13 +5,13 @@
 # ///
 """srv round 1: review every (unit, perspective) task with independent structured-output model calls.
 
-A task is one review unit of `rv/bin/plan-units.py` and one perspective the unit
-plan matched to it. Each task is `--samples` independent requests (samples) to an
+A task is one review unit of `rv/bin/plan-units.py` and one perspective that
+`design.py` built for it: a value, the changes it judges, and the depth it reaches. Each task is `--samples` independent requests (samples) to an
 OpenAI-compatible endpoint, whose findings are pooled, because one call misses
 causes another finds; all samples of all tasks run in parallel, so the round
 takes about as long as its slowest call.
 The request carries everything the reviewer needs: the brief
-(`references/brief.md`), the perspective method, the requirement copies, the
+(`references/brief.md`), the perspective with the catalog entries it rests on, the requirement copies, the
 unit's hunks, the unit's files at the head with line numbers, and the lines
 elsewhere in the head that name a symbol the hunks define or change. The answer
 is held to a JSON Schema, validated here, retried once when invalid, and its
@@ -24,7 +24,7 @@ because a task without output is a unit the swarm did not review.
 
 Usage:
   uv run sweep.py --units units.json --diff diff.patch --repo HEAD_WORKTREE \
-      --perspectives DIR --requirements FILE [FILE ...] --out round-1 \
+      --design design --requirements FILE [FILE ...] --out round-1 \
       --base-url URL --model MODEL [--api-key-env NAME] [--max-concurrency 128]
 Exit codes: 0 every task has a valid output, 1 some task failed, 2 bad input.
 """
@@ -52,6 +52,14 @@ from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "brief.md"
+VALUES = Path(__file__).resolve().parents[1] / "references" / "values"
+DEPTH_MEANINGS = {
+    "read": "the changed lines and the lines shown in this request decide the value",
+    "trace": "the value is decided only by following callers, callees, or data beyond the unit; report what the request "
+    "shows, and name in `checked` each place you would have to follow",
+    "execute": "the value is decided only by running something; for each finding write in `condition` the exact input or "
+    "situation to run and the result that would show the value lowered, so the operator can run it",
+}
 SEVERITIES = ("BLOCKER", "MAJOR", "MINOR", "NIT")
 HEAD_CHARS_PER_UNIT = 60_000
 WINDOW_LINES = 60
@@ -136,8 +144,30 @@ class Task:
         return f"{self.unit['id']}__{self.perspective}"
 
 
-def list_tasks(plan: dict) -> list[Task]:
-    return [Task(unit, perspective) for unit in plan["units"] for perspective in sorted(unit.get("perspectives", {}))]
+def list_tasks(plan: dict, designs: dict[str, dict]) -> list[Task]:
+    """One task per unit and perspective its design built."""
+    return [Task(unit, p["id"]) for unit in plan["units"] for p in designs[unit["id"]]["perspectives"]]
+
+
+def perspective_block(design: dict, perspective_id: str, catalog: dict[str, str]) -> str:
+    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks, and its sources."""
+    perspective = next(p for p in design["perspectives"] if p["id"] == perspective_id)
+    changes = {c["id"]: c for c in design["changes"]}
+    breadth = "\n".join(
+        f"- {cid} [{changes[cid]['kind']}] {changes[cid]['subject']}: {changes[cid]['before']} -> {changes[cid]['after']} "
+        f"(hunks {', '.join(changes[cid]['hunks'])})"
+        for cid in perspective["breadth"]
+    )
+    checks = "\n".join(f"{n}. {check}" for n, check in enumerate(perspective["checks"], 1))
+    sources = "\n\n".join(
+        f"## {source}\n\n{catalog[source]}" if source in catalog else f"- {source}" for source in perspective["sources"]
+    )
+    return (
+        f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
+        f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
+        f"Breadth (the changes this perspective judges):\n{breadth}\n\nChecks:\n{checks}\n\n"
+        f"Sources of the value:\n\n{sources}"
+    )
 
 
 def strip_frontmatter(text: str) -> str:
@@ -322,12 +352,10 @@ def find_callers(repo: Path, unit: dict, symbols: list[str]) -> str:
 
 
 def build_messages(task: Task, context: dict) -> list[dict]:
-    method_path = context["perspectives"] / f"{task.perspective}.md"
-    method = strip_frontmatter(method_path.read_text(encoding="utf-8"))
     unit = task.unit
     user = "\n\n".join(
         [
-            f"# Perspective: {task.perspective}\n\n{method}",
+            perspective_block(context["designs"][unit["id"]], task.perspective, context["catalog"]),
             "# Requirement copies (what the change answers)\n\n" + context["requirements"],
             f"# Unit {unit['id']} ({unit['rule']}): its hunks\n\n```diff\n{unit_diff(context['changes'], unit)}\n```",
             "# Unit files at the head (line number, `|`, then the line)\n\n" + numbered_head_files(context["repo"], context["changes"], unit),
@@ -378,13 +406,15 @@ def retry_after_seconds(value: str | None) -> float | None:
     return float(value) if value is not None and value.strip().isdigit() else None
 
 
-def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, dict, str]:
-    """POST one chat completion; return the message content, the usage block, and the finish reason."""
+def call_model(
+    messages: list[dict], options: argparse.Namespace, schema: dict = FINDINGS_SCHEMA, schema_name: str = "srv-findings"
+) -> tuple[str, dict, str]:
+    """POST one chat completion held to `schema`; return the message content, the usage block, and the finish reason."""
     body = {
         "model": options.model,
         "messages": messages,
         "max_tokens": options.max_tokens,
-        "response_format": {"type": "json_schema", "json_schema": {"name": "srv-findings", "schema": FINDINGS_SCHEMA}},
+        "response_format": {"type": "json_schema", "json_schema": {"name": schema_name, "schema": schema}},
     }
     if options.reasoning_effort:
         body["reasoning_effort"] = options.reasoning_effort
@@ -417,19 +447,35 @@ def call_model(messages: list[dict], options: argparse.Namespace) -> tuple[str, 
         raise ValueError(f"the response is not a chat completion ({type(error).__name__}: {error}): {str(payload)[:300]}") from error
 
 
-def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace) -> dict:
-    """Review one task once (one sample); one retry when the call fails or the answer is invalid.
+@dataclass
+class Reply:
+    """The outcome of `request_json`: the valid answer, or None, with what it cost."""
+
+    answer: dict | None
+    attempts: int
+    errors: list[str]
+    usage: dict
+    seconds: float
+
+
+def request_json(
+    messages: list[dict], options: argparse.Namespace, validate: Callable[[object], list[str]],
+    schema: dict = FINDINGS_SCHEMA, schema_name: str = "srv-findings",
+    on_invalid: Callable[[list[dict], str, list[str]], list[dict]] | None = None,
+) -> Reply:
+    """Send one structured-output request; one retry when the call fails or the answer is invalid.
 
     A call the server refuses is sent again after a wait, capped exponential backoff with full jitter or the
     server's Retry-After, until it answers or `REFUSAL_WINDOW_S` passes; the wait uses no attempt.
-    `anchor` re-locates the answer's finding lines against the files they quote.
+    `validate` returns the problems of a parsed answer; `on_invalid` builds the retry's messages from the invalid
+    content and its problems (by default the same messages are sent again).
     """
     attempts, errors, usage_total = 0, [], {"prompt_tokens": 0, "completion_tokens": 0}
     started = time.monotonic()
     refused_since, refusals = None, 0
     while attempts < 2:
         try:
-            content, usage, finish_reason = call_model(messages, options)
+            content, usage, finish_reason = call_model(messages, options, schema, schema_name)
         except ServerRefused as refusal:
             now = time.monotonic()
             refused_since = now if refused_since is None else refused_since
@@ -465,33 +511,27 @@ def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], li
         except ValueError as error:
             errors.append(f"attempt {attempts}: content is not JSON: {error}")
             continue
-        problems = validate_answer(answer)
+        problems = validate(answer)
         if problems:
             errors.append(f"attempt {attempts}: " + "; ".join(problems))
+            if on_invalid is not None:
+                messages = on_invalid(messages, content, problems)
             continue
-        findings = anchor(answer["findings"])
-        return {
-            "task": task.name,
-            "unit": task.unit["id"],
-            "perspective": task.perspective,
-            "ok": True,
-            "attempts": attempts,
-            "errors": errors,
-            "seconds": round(time.monotonic() - started, 1),
-            "usage": usage_total,
-            "findings": findings,
-            "checked": answer["checked"],
-        }
-    return {
-        "task": task.name,
-        "unit": task.unit["id"],
-        "perspective": task.perspective,
-        "ok": False,
-        "attempts": attempts,
-        "errors": errors,
-        "seconds": round(time.monotonic() - started, 1),
-        "usage": usage_total,
+        return Reply(answer, attempts, errors, usage_total, round(time.monotonic() - started, 1))
+    return Reply(None, attempts, errors, usage_total, round(time.monotonic() - started, 1))
+
+
+def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace) -> dict:
+    """Review one task once (one sample) with `request_json`; `anchor` re-locates the answer's finding lines."""
+    reply = request_json(messages, options, validate_answer)
+    result = {
+        "task": task.name, "unit": task.unit["id"], "perspective": task.perspective, "ok": reply.answer is not None,
+        "attempts": reply.attempts, "errors": reply.errors, "seconds": reply.seconds, "usage": reply.usage,
     }
+    if reply.answer is not None:
+        result["findings"] = anchor(reply.answer["findings"])
+        result["checked"] = reply.answer["checked"]
+    return result
 
 
 class Progress:
@@ -580,12 +620,18 @@ def run_sweep(options: argparse.Namespace) -> int:
     if diff_sha256 != plan["diff_sha256"]:
         print("sweep: the diff is not the one the unit plan was made from; rerun plan-units.py on this diff", file=sys.stderr)
         return 2
-    bare = [unit["id"] for unit in plan["units"] if not unit.get("perspectives")]
+    designs = {}
+    for unit in plan["units"]:
+        path = Path(options.design) / f"{unit['id']}.json"
+        design = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+        if design and design.get("ok") and design.get("source_sha256") == diff_sha256:
+            designs[unit["id"]] = design
+    bare = [unit["id"] for unit in plan["units"] if unit["id"] not in designs]
     if bare:
         print(
-            f"sweep: units {bare} have no perspective, so no task would review them. Make the plan with "
-            "`plan-units.py --perspectives <srv perspectives>`; every unit matches the `match: always` methods. "
-            "Do not run the round on this plan or drop those units.",
+            f"sweep: units {bare} have no valid design for this diff in {options.design}, so no perspective would "
+            "review them. Run `design.py` on this unit plan and diff until it exits 0; do not run the round without "
+            "those units or give them perspectives that skipped its coverage check.",
             file=sys.stderr,
         )
         return 2
@@ -594,17 +640,19 @@ def run_sweep(options: argparse.Namespace) -> int:
     changes = {change.path: change for change in plan_units.parse_diff(diff_text)}
     context = {
         "brief": BRIEF_PATH.read_text(encoding="utf-8"),
-        "perspectives": Path(options.perspectives),
+        "designs": designs,
+        "catalog": {path.stem: path.read_text(encoding="utf-8").strip() for path in sorted(Path(options.values).glob("*.md"))},
         "requirements": "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements),
         "changes": changes,
         "repo": repo,
         "callers": {u["id"]: find_callers(repo, u, changed_symbols(repo, changes, u)) for u in plan["units"]},
     }
-    all_tasks = list_tasks(plan)
+    all_tasks = list_tasks(plan, designs)
     tasks = [task for task in all_tasks if not options.only or task.name in options.only]
-    missing_methods = sorted({t.perspective for t in tasks if not (context["perspectives"] / f"{t.perspective}.md").is_file()})
-    if missing_methods:
-        print(f"sweep: no method file for perspectives {missing_methods} in {options.perspectives}", file=sys.stderr)
+    missing = sorted({s for d in designs.values() for p in d["perspectives"] for s in p["sources"]
+                      if not s.startswith(("requirement:", "rule:")) and s not in context["catalog"]})
+    if missing:
+        print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
         return 2
     return run_round(
         all_tasks, tasks,
@@ -686,10 +734,11 @@ def run_round(
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="srv round 1: --samples structured-output calls per (unit, perspective), pooled.")
-    parser.add_argument("--units", required=True, help="unit plan from rv/bin/plan-units.py with --perspectives")
+    parser.add_argument("--units", required=True, help="unit plan from rv/bin/plan-units.py")
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
-    parser.add_argument("--perspectives", required=True, help="perspective method directory")
+    parser.add_argument("--design", required=True, help="design directory that design.py wrote for this unit plan")
+    parser.add_argument("--values", default=str(VALUES), help="value catalog directory the designs name sources from")
     parser.add_argument("--requirements", required=True, nargs="+", help="requirement copies")
     parser.add_argument("--out", required=True, help="round directory for task outputs and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")

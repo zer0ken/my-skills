@@ -1,7 +1,3 @@
----
-match-path: *prompt*
-match-line: (?i)\b(prompt|llm|completions?|response_format|json_schema|structured[_ ]output|messages\s*=|temperature|max_tokens|embedding|rerank\w*)\b
----
 # Method: model calls, prompts, and output contracts
 Apply `~/.agents/skills/llm-expert/SKILL.md` sections 2 (structured output and its contract), 4 (diagnosis of bad results), 5 (prompt engineering), and 9 (serving resources and repeated work).
 1. Each changed prompt and its output schema agree: every field the code reads is requested and constrained; nothing the prompt asks for is ignored by the code.

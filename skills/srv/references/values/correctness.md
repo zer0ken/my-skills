@@ -1,6 +1,3 @@
----
-match: always
----
 # Method: correctness, failure paths, and security
 Apply rv `~/.agents/skills/rv/SKILL.md` U3 steps 1-4 and its paragraphs on failure paths and security, and section 4.4.5 of `~/.agents/skills/python-expert/SKILL.md`.
 1. Name the one fact the change is safe because of, and check it at its file:line; trace each input from entry through state ownership, write, failure, and recovery.

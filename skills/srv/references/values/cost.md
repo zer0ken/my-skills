@@ -1,10 +1,3 @@
----
-match-path: *.sql
-match-path: *.cypher
-match-line: \b(SELECT|MATCH|WITH)\b\s
-match-line: (?i)\b(execute|executemany|session\.run|completions?|embed\w*|rerank\w*|requests\.|httpx\.|urlopen|batch\w*|bulk)\b
-match-line: ^\s*for\s.+\sin\s.+:\s*$
----
 # Method: implementation cost
 Apply rv `~/.agents/skills/rv/SKILL.md` U3's paragraph on implementation cost and `~/.agents/skills/prv/references/perspectives/perf.md` items 1-2 and 4-5, read for the code instead of a plan.
 1. Each computation the change adds or changes, in code or inside a query, is named as its known problem type with the known algorithms for it and their complexity; one of higher complexity than a known algorithm that meets the same requirement is a finding whatever the current input size, such as an all-pairs medoid where the member nearest the centroid takes one pass.

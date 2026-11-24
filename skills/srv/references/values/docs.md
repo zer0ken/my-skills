@@ -1,10 +1,3 @@
----
-match-path: *.md
-match-path: *.rst
-match-path: docs/*
-match-path: *.txt
-match-line: ^\s*("""|'''|//|#\s|/\*|\*\s)
----
 # Method: documents and user-facing text
 Apply rv `~/.agents/skills/rv/SKILL.md` `### Meaning and organization of documents` and `~/.agents/skills/sucks/SKILL.md` to changed documents, docstrings, and comments.
 1. Each changed passage is needed for its reader and states the current contract, not history.
