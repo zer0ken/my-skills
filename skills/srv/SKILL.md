@@ -61,7 +61,7 @@ prv reviews a plan before code exists; srv reviews a code change (a PR, a branch
 | round | One launch of inspector sessions: round 1 inspects every task (`bin/sweep.py`), round 2 answers routed questions (`bin/followup.py`) |
 | follow-up question | A routed question (`references/deepen.md`) |
 | verdict | The judgment J that `bin/verdict.py` decides from `verdict.json`: 차단, 증거 부족, 조건부 수용, or 수용, with the confirmed clusters, the questions to people, and the residual risk |
-| residual risk | What the review did not establish: PLAUSIBLE clusters and perspectives the judge left undecided |
+| residual risk | What the review did not establish: PLAUSIBLE clusters, perspectives the judge left undecided, and perspectives with an `execute` check whose inspectors never called `sandbox_run` (`team.decided`) |
 | review document | The one Markdown file srv returns to the caller |
 
 ## Inputs
@@ -173,6 +173,8 @@ Target for one review: on PR #1470 of graphai-repository/enterprise-memory (head
 | 10d | #1726, 32 units, same code as 10c | 1,942 s (design 344, inspect 630, judge 117, route 361, merge 105, verify 323); decision 차단, 20 CONFIRMED and 17 PLAUSIBLE clusters; 7 of the 13 rv items found, R-004 only in part (record status decided by a string prefix in the queries, PLAUSIBLE; the uniqueness the database cannot enforce and the full scan were not raised), and R-007 to R-010 and R-012 missed |
 
 Session time follows the tokens a session generates (inspectors about 150-250 tokens per second each), and the stages that send many calls at once (verify, merge) are bound by the server's total decode. The 540 s target is not reached. On #1726 the perspective step restated the head's representation as the value ("the record status is decided by one prefix definition"), so no yardstick asked whether a prefix should represent the identity at all.
+
+Not done by `team.py`, though the earlier operator procedure did them: questions to people are always empty, open issues are not searched before a finding is called OUT-OF-SCOPE (OUT-OF-SCOPE was 0 in every run), and verification rejected 1 of 47, 0 of 43, 0 of 19, and 1 of 38 findings, so how many CONFIRMED clusters outside the gold findings are true was not checked.
 
 Unmeasured: false approvals and false change requests of a blind operator; an omp session as the operator (every run here was launched by the building session); the inspectors' `sandbox_run` scripts re-run by `team.py`; more than one run per configuration.
 

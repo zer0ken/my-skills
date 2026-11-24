@@ -418,6 +418,26 @@ def round_results(directory: Path) -> dict[str, list[dict]]:
     return results
 
 
+def ran_counterexample(out: Path, questions: list[dict]) -> set[str]:
+    """Perspectives whose inspector sessions called `sandbox_run`, read from the rounds' session logs."""
+    owner = {f"change__{q['id']}": q["perspective"] for q in questions}
+    ran = set()
+    for log in (out / "round-1" / "sessions.jsonl", out / "round-2" / "sessions.jsonl"):
+        for line in log.read_text(encoding="utf-8").splitlines() if log.is_file() else []:
+            row = json.loads(line)
+            if row.get("event") == "session" and any(c.get("tool") == "sandbox_run" for c in row.get("tools", [])):
+                label = row["label"]
+                ran.add(owner.get(label, label.removeprefix("change__")))
+    return ran
+
+
+def decided(perspective: dict, judgment: dict, ran: set[str]) -> bool:
+    """A perspective is decided when the judge said holds or broken and, if a check's means is `execute`, an
+    inspector of it ran a counterexample: a value whose deciding run never happened is residual risk, not a pass."""
+    needs_run = any(c["means"] == "execute" for c in perspective["checks"])
+    return judgment.get("verdict") in ("holds", "broken") and (not needs_run or perspective["id"] in ran)
+
+
 def findings_of(results: dict[str, list[dict]]) -> list[dict]:
     return [{**f, "id": f"{r['task']}/{f['id']}", "perspective": pid}
             for pid, rows in results.items() for r in rows for f in r.get("findings", [])]
@@ -552,11 +572,12 @@ def run_team(options: argparse.Namespace) -> int:
     clusters = stages.run("merge", lambda: merge(candidates(findings), depth_of, verify_options))
     clusters = stages.run("verify", lambda: settle(clusters, repo, pack, changes, verify_options))
     (out / "clusters.json").write_text(json.dumps(clusters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    ran = ran_counterexample(out, questions)
     record = {
         "clusters": [{k: c[k] for k in ("id", "severity", "verdict", "evidence")} for c in clusters
                      if c["verdict"] in verdict.VERDICTS and "merged_into" not in c],
         "questions": [],
-        "perspectives": [{"id": pid, "decided": judgments.get(pid, {}).get("verdict") in ("holds", "broken"),
+        "perspectives": [{"id": pid, "decided": decided(by_id[pid], judgments.get(pid, {}), ran),
                           "note": "; ".join(judgments.get(pid, {}).get("reasons", [])[:1])} for pid in by_id],
         "risks": [],
     }

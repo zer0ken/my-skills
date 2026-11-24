@@ -64,6 +64,12 @@ class PureTest(unittest.TestCase):
         team.add_metrics(values, 'vllm:prompt_tokens_total{model_name="m",engine="0"} 3\n', "m")
         self.assertEqual(values, {"vllm:prompt_tokens_total": 8.0})
 
+    def test_an_execute_check_never_run_leaves_its_perspective_undecided(self) -> None:
+        p = {**perspective("K-1", ["U-1/E-1"]), "checks": [{"question": "c", "means": "execute"}]}
+        self.assertFalse(team.decided(p, {"verdict": "holds"}, set()))
+        self.assertTrue(team.decided(p, {"verdict": "holds"}, {"K-1"}))
+        self.assertTrue(team.decided(perspective("K-2", ["U-1/E-1"]), {"verdict": "broken"}, set()))
+
     def test_majority_needs_more_than_half(self) -> None:
         self.assertEqual(team.majority(["broken", "broken", "holds"]), "broken")
         self.assertEqual(team.majority(["broken", "holds", "undecided"]), "undecided")
