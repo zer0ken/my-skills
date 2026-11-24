@@ -35,7 +35,7 @@ VERDICTS = ("CONFIRMED", "PLAUSIBLE")
 
 
 def designed_perspectives(design_dir: Path) -> list[str]:
-    """The ids of the perspective set `design.py` built for the whole change."""
+    """The ids of the perspective set `design.py` picked for the whole change."""
     design = json.loads((design_dir / "perspectives.json").read_text(encoding="utf-8"))
     if not design.get("ok"):
         raise ValueError(f"{design_dir / 'perspectives.json'} holds no valid perspective set")

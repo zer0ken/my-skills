@@ -3,9 +3,9 @@
 # requires-python = ">=3.11"
 # dependencies = ["tqdm"]
 # ///
-"""srv design stage: derive the change set, then build the perspectives that cover it.
+"""srv design stage: derive the change set, then pick the perspectives that cover it from the catalog.
 
-A perspective is a value-theoretic yardstick built for this change: a core value
+A perspective is a value-theoretic yardstick picked for this change from the catalog: a core value
 that must hold, its breadth, the set of changes it judges, and its depth, the
 level of abstraction at which the value is judged: `high` (structure) or `low`
 (behaviour inside a function). The user's words (2026-11-24): "axiology에는 핵심

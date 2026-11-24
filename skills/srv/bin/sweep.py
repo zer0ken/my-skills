@@ -6,7 +6,7 @@
 """srv round 1: review every (unit, perspective) task with independent omp reviewer sessions.
 
 A task is one review unit of `rv/bin/plan-units.py` and one perspective that
-`design.py` built for it: a value, the changes it judges, its depth (the level of
+`design.py` picked for it from the catalog: a value, the changes it judges, its depth (the level of
 abstraction it judges at, high or low), and checks that each name their means.
 Each task is `--samples` independent reviewer sessions (samples, `reviewer.py`),
 whose findings are pooled, because one session misses causes another finds; all
