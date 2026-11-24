@@ -77,6 +77,10 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sweep import CatalogItem
 
 BIN = Path(__file__).resolve().parent
 CHANGES_BRIEF = BIN.parent / "references" / "changes.md"
@@ -126,7 +130,7 @@ CHANGES_SCHEMA = {
 PERSPECTIVES_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["perspectives", "dismissed"],
+    "required": ["perspectives", "dismissed", "rules"],
     "properties": {
         "perspectives": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
@@ -145,6 +149,13 @@ PERSPECTIVES_SCHEMA = {
         "dismissed": {"type": "array", "items": {
             "type": "object", "additionalProperties": False, "required": ["item", "reason"],
             "properties": {"item": {"type": "string"}, "reason": {"type": "string"}},
+        }},
+        "rules": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["rule", "kinds", "under", "reason"],
+            "properties": {
+                "rule": {"type": "string"}, "kinds": {"type": "array", "items": {"type": "string", "enum": list(CHANGE_KINDS)}},
+                "under": {"type": "string"}, "reason": {"type": "string"},
+            },
         }},
     },
 }
@@ -194,8 +205,10 @@ def check_changes(answer: object, hunks: list[str]) -> list[str]:
     return problems
 
 
-def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[str]) -> list[str]:
-    """Problems of the perspective set over the whole change set (`<unit>/E-<n>` ids); empty when coverage holds."""
+def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[str, CatalogItem],
+                       rules: list[str]) -> list[str]:
+    """Problems of the perspective set over the whole change set (`<unit>/E-<n>` ids, each with its `files`); empty
+    when coverage holds. `rules` are the repository rules (`rule: <path>:<line>`) the change-set step cited."""
     if not isinstance(answer, dict) or set(answer) != set(PERSPECTIVES_SCHEMA["required"]):
         return [f"the answer is not an object with exactly {PERSPECTIVES_SCHEMA['required']}"]
     problems: list[str] = []
@@ -204,7 +217,7 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
         problems.append("perspective ids are not unique")
     covered: dict[str, set[str]] = {depth: set() for depth in DEPTHS}
     executed: set[str] = set()
-    asked: set[str] = set()
+    asked: dict[str, set[str]] = {}  # source -> the changes in the breadth of a perspective with a check naming it
     for p in perspectives:
         pid = p.get("id")
         if not str(p.get("value", "")).strip():
@@ -228,13 +241,15 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
         elif any(c.get("means") not in MEANS or not str(c.get("question", "")).strip() for c in checks):
             problems.append(f"{pid} has a check without a question or with a means that is not one of {MEANS}")
         for check in checks:
-            source = check.get("source")
-            if item := sweep.catalog_id(source, catalog):
-                asked.add(item)
-            elif not str(source or "").startswith(sweep.RECORD_SOURCE_PREFIXES):
+            source = str(check.get("source") or "").strip()
+            key = sweep.catalog_id(source, catalog) or (source if source in rules else None)
+            if key:
+                asked.setdefault(key, set()).update(p.get("breadth", []))
+            elif not source.startswith("requirement:"):
                 problems.append(
-                    f"{pid} check source {source!r} is neither a catalog item `catalog: <file>#<n>` nor `requirement: "
-                    "...` / `rule: ...`; a whole catalog file is not a source, name the numbered item the check asks"
+                    f"{pid} check source {source!r} is neither a catalog item `catalog: <file>#<n>`, a rule of the "
+                    "request's rule list `rule: <path>:<line>`, nor `requirement: ...`; a whole catalog file is not a "
+                    "source, name the numbered item the check asks"
                 )
         if not p.get("breadth"):
             problems.append(f"{pid} has an empty breadth")
@@ -274,28 +289,85 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
             problems.append(f"catalog item {item!r} is dismissed without a reason")
         else:
             dismissed.add(item)
-    unasked = [item for item in catalog if item not in asked | dismissed]
+    stakes = {item: {cid for cid, c in changes.items() if c["kind"] in entry.stakes}
+              for item, entry in catalog.items() if entry.stakes}
+    for item, staked in stakes.items():
+        if staked and item in dismissed:
+            problems.append(f"catalog item {item!r} is dismissed but is at stake in changes {sorted(staked)} by its kinds")
+    unasked = [item for item in catalog if item not in asked and item not in dismissed and item not in stakes]
     if unasked:
         problems.append(
             f"catalog items {unasked} are asked by no check and not dismissed; an item left out is a defect class the "
             "review never looks for, so give each a check in the perspective whose value it serves (a new perspective "
             "when none fits, within the breadth caps), or dismiss it with the reason no change has it at stake"
         )
+    rows = {}
+    for row in answer["rules"]:
+        rule = str(row.get("rule", "")).strip() if isinstance(row, dict) else ""
+        if rule not in rules:
+            problems.append(f"rules row {row!r} does not name a rule of the request's rule list")
+            continue
+        rows[rule] = row
+        kinds, under = [k for k in row.get("kinds") or [] if k in CHANGE_KINDS], str(row.get("under") or "")
+        if len(kinds) != len(row.get("kinds") or []):
+            problems.append(f"{rule} names kinds outside {CHANGE_KINDS}")
+        if not kinds:
+            if not str(row.get("reason", "")).strip():
+                problems.append(f"{rule} has no kinds and no reason; give the change kinds it is at stake in, or why none")
+            elif rule in asked:
+                problems.append(f"{rule} is dismissed but a check asks it; give the kinds it is at stake in")
+            continue
+        staked = {cid for cid, c in changes.items()
+                  if c["kind"] in kinds and any(path.startswith(under) for path in c["files"])}
+        if not staked:
+            problems.append(f"{rule} is at stake in kinds {kinds} under {under!r}, but no change is; "
+                            "fix its kinds or scope, or give no kinds and the reason")
+        stakes[rule] = staked
+    missing_rules = [rule for rule in rules if rule not in rows]
+    if missing_rules:
+        problems.append(
+            f"rules {missing_rules} have no row in `rules`; a repository rule is a value source like a catalog item, "
+            "so give each the change kinds and the path prefix it is at stake in, or no kinds and the reason"
+        )
+    for source, staked in stakes.items():
+        unjudged = sorted(staked - asked.get(source, set()))
+        if unjudged:
+            problems.append(
+                f"{source} is at stake in changes {unjudged}, which are in the breadth of no perspective with a check "
+                "naming it; a source asked over some of its changes leaves the rest unreviewed, so add the check to the "
+                "perspectives that already hold those changes, or to a `high` perspective over all of them"
+            )
     return problems
 
 
-def change_set(designs: dict[str, dict]) -> dict[str, dict]:
-    """Every unit's changes under their global ids `<unit>/E-<n>`, in unit order."""
-    return {f"{uid}/{c['id']}": {**c, "unit": uid} for uid, d in designs.items() for c in d["changes"]}
+def read_checked_catalog(directory: Path) -> dict[str, CatalogItem]:
+    """The value catalog, with every stake a change kind; a misspelled kind would leave its changes unchecked."""
+    catalog = sweep.read_catalog(directory)
+    wrong = {item: entry.stakes for item, entry in catalog.items() if set(entry.stakes) - set(CHANGE_KINDS)}
+    if wrong:
+        raise ValueError(f"catalog items {wrong} name stakes outside the change kinds {CHANGE_KINDS}; fix the tag in "
+                         "the method file, since an unknown kind matches no change and silently drops the item's stake")
+    return catalog
 
 
-def change_set_text(changes: dict[str, dict], plan: dict) -> str:
-    files = {u["id"]: ", ".join(f["path"] for f in u["files"]) for u in plan["units"]}
+def change_set(designs: dict[str, dict], hunk_paths: dict[str, dict[str, str]]) -> dict[str, dict]:
+    """Every unit's changes under their global ids `<unit>/E-<n>`, in unit order, each with the files its hunks are in
+    (`hunk_paths`: per unit, hunk id to path)."""
+    return {f"{uid}/{c['id']}": {**c, "unit": uid, "files": sorted({hunk_paths[uid][h] for h in c["hunks"]})}
+            for uid, d in designs.items() for c in d["changes"]}
+
+
+def rule_ids(designs: dict[str, dict]) -> list[str]:
+    """The repository rules the change-set step cited, once each."""
+    return sorted({r["source"] for d in designs.values() for r in d["rules"]})
+
+
+def change_set_text(changes: dict[str, dict]) -> str:
     rows = []
     for gid, c in changes.items():
         structure = ("alters: " if c["structure"]["alters"] else "no structure: ") + c["structure"]["what"]
         rows.append(f"- {gid} [{c['kind']}] {c['subject']}: {c['before']} -> {c['after']} "
-                    f"(hunks {', '.join(c['hunks'])} of {files[c['unit']]}; {structure})")
+                    f"(hunks {', '.join(c['hunks'])} of {', '.join(c['files'])}; {structure})")
     return "\n".join(rows)
 
 
@@ -311,15 +383,15 @@ def build_change_messages(unit: dict, context: dict) -> list[dict]:
     return [{"role": "system", "content": context["changes_brief"]}, {"role": "user", "content": user}]
 
 
-def build_perspective_messages(designs: dict[str, dict], plan: dict, context: dict) -> list[dict]:
+def build_perspective_messages(designs: dict[str, dict], changes: dict[str, dict], context: dict) -> list[dict]:
     catalog = sweep.catalog_text(context["catalog"], context["catalog"])
     rules = sorted({(r["source"], r["text"]) for d in designs.values() for r in d["rules"]})
     user = "\n\n".join([
         context["pack"],
         "# Value catalog (universal value sources; a check names an item as `catalog: <file>#<n>`)\n\n" + catalog,
-        "# Repository rules the change-set step cited\n\n"
+        "# Repository rules the change-set step cited (each needs a `rules` row)\n\n"
         + ("\n".join(f"- {source}: {text}" for source, text in rules) or "(none read)"),
-        "# Change set of the whole change (`<unit>/E-<n>`)\n\n" + change_set_text(change_set(designs), plan),
+        "# Change set of the whole change (`<unit>/E-<n>`)\n\n" + change_set_text(changes),
         "# Output JSON Schema\n\n```json\n" + json.dumps(PERSPECTIVES_SCHEMA, indent=1) + "\n```",
     ])
     return [{"role": "system", "content": context["perspectives_brief"]}, {"role": "user", "content": user}]
@@ -361,7 +433,7 @@ def run_design(options: argparse.Namespace) -> int:
     context = {
         "changes_brief": CHANGES_BRIEF.read_text(encoding="utf-8"),
         "perspectives_brief": PERSPECTIVES_BRIEF.read_text(encoding="utf-8"),
-        "catalog": sweep.read_catalog(Path(options.values)),
+        "catalog": read_checked_catalog(Path(options.values)),
         "pack": sweep.read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
@@ -388,10 +460,12 @@ def run_design(options: argparse.Namespace) -> int:
         perspectives = None
         if not failed_units:
             # The perspective call works from the pack, the change set, and the rules the unit calls cited.
-            all_changes = change_set(designs)
+            ready = {uid: d for uid, d in designs.items() if d is not None}
+            all_changes = change_set(ready, {u["id"]: sweep.hunk_files(changes, u) for u in plan["units"]})
             try:
-                perspectives = ask(build_perspective_messages(designs, plan, context),
-                                   functools.partial(check_perspectives, changes=all_changes, catalog=list(context["catalog"])),
+                perspectives = ask(build_perspective_messages(ready, all_changes, context),
+                                   functools.partial(check_perspectives, changes=all_changes, catalog=context["catalog"],
+                                                     rules=rule_ids(ready)),
                                    PERSPECTIVES_SCHEMA, "srv-perspectives", options, sweep.call_model)
             except Exception as error:  # noqa: BLE001 - recorded as the step's failure
                 perspectives = failed(error)
@@ -455,7 +529,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--api-key-env", help="environment variable holding the API key")
     parser.add_argument("--max-concurrency", type=int, default=128, help="requests this client keeps in flight")
-    parser.add_argument("--max-tokens", type=int, default=65536, help="covers reasoning and answer tokens")
+    # On PR #1726 the perspective answer with item stakes stopped at 65,536 tokens (replay 13a, 2026-11-25); the
+    # server's context holds 393,216.
+    parser.add_argument("--max-tokens", type=int, default=131072, help="covers reasoning and answer tokens")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
     parser.add_argument("--only", nargs="+", help="unit ids whose change set to run again; units with a valid change set "

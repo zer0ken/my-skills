@@ -181,18 +181,20 @@ class Task:
 
 
 RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
-CATALOG_ITEM_RE = re.compile(r"^(\d+)\. ")
+CATALOG_ITEM_RE = re.compile(r"^(\d+)\. (?:\(stake: ([a-z_, ]+)\) )?")
 
 
 @dataclass(frozen=True)
 class CatalogItem:
     """One numbered check of a value catalog method file, named `<file>#<n>`: the file's header (its title and the
-    method it applies) and the check's line. A perspective check names the item it asks about, so coverage is decided
-    per item: a file whose one item became a value says nothing about its other items (PR #1726, 2026-11-25: `growth`
-    was used for added routers only, and the reuse item that held two missed defects was never asked)."""
+    method it applies), the check's text, and its stake, the change kinds it is at stake in whenever the change set
+    holds them (written `(stake: <kind>, ...)` after the item number). A perspective check names the item it asks, and
+    an item with a stake must be asked over every change of its kinds: on PR #1726 (2026-11-25, replays 13a and 13b)
+    the reuse item was asked over one unit only, and the defects it holds in two other units were never looked for."""
 
     header: str
     text: str
+    stakes: tuple[str, ...] = ()
 
 
 def read_catalog(directory: Path = VALUES) -> dict[str, CatalogItem]:
@@ -203,7 +205,8 @@ def read_catalog(directory: Path = VALUES) -> dict[str, CatalogItem]:
         header = "\n".join(line for line in lines if not CATALOG_ITEM_RE.match(line)).strip()
         for line in lines:
             if match := CATALOG_ITEM_RE.match(line):
-                items[f"{path.stem}#{match[1]}"] = CatalogItem(header, line[match.end():])
+                stakes = tuple(kind.strip() for kind in (match[2] or "").split(",") if kind.strip())
+                items[f"{path.stem}#{match[1]}"] = CatalogItem(header, line[match.end():], stakes)
     return items
 
 
@@ -211,7 +214,9 @@ def catalog_text(catalog: dict[str, CatalogItem], item_ids) -> str:
     """The named catalog items as a request shows them: each method file's header once, then its items with their ids."""
     by_header: dict[str, list[str]] = {}
     for item_id in item_ids:
-        by_header.setdefault(catalog[item_id].header, []).append(f"- {item_id}: {catalog[item_id].text}")
+        item = catalog[item_id]
+        stake = f" (at stake in every change of kind {', '.join(item.stakes)})" if item.stakes else ""
+        by_header.setdefault(item.header, []).append(f"- {item_id}{stake}: {item.text}")
     return "\n\n".join(f"{header}\n" + "\n".join(items) for header, items in by_header.items())
 
 
@@ -269,6 +274,12 @@ def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_
 def hunk_ids(changes: dict, unit: dict) -> list[str]:
     """`H1`, `H2`, ... for the unit's hunks, in file then hunk order."""
     return [f"H{n}" for n in range(1, sum(len(changes[f["path"]].hunks) for f in unit["files"]) + 1)]
+
+
+def hunk_files(changes: dict, unit: dict) -> dict[str, str]:
+    """The file each of the unit's hunk ids (`hunk_ids`) belongs to."""
+    paths = [f["path"] for f in unit["files"] for _ in changes[f["path"]].hunks]
+    return {f"H{n}": path for n, path in enumerate(paths, 1)}
 
 
 def labelled_diff(changes: dict, unit: dict, keep: set[str] | None = None, prefix: str = "") -> str:
