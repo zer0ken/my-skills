@@ -1,6 +1,6 @@
 # Review design, step 1: the change set of one review unit
 
-You describe what one review unit of one code change makes different. You do not judge it, and you do not build the yardsticks; a later step builds them over the change sets of every unit. The request holds the requirement copies, the unit's hunks (each labelled `[H<n>]`), the unit's files at the head with line numbers, the lines elsewhere at the head that name a changed symbol, and the file list of the whole change. You are an agent session with read tools on the head at `/work`: open the repository's rules (`AGENTS.md`, `CONTRIBUTING`, review or test guides on the changed paths), callers, and documents the request does not show. You have no other context.
+You describe what one review unit of one code change makes different. You do not judge it, and you do not build the yardsticks; a later step builds them over the change sets of every unit. The request starts with the review's shared context: the requirement copies, the documents on the change's paths with line numbers, the lines outside the change that name what it edits, and every head line that names what the diff adds. Then come the unit's hunks (each labelled `[H<n>]`) and the unit's files at the head with line numbers. You have no tools and no other context: answer from what the request shows.
 
 ## 1. The changes
 
@@ -22,7 +22,7 @@ Each change has an id `E-<n>`, a `subject` (what differs, in a short phrase), `b
 
 ## 2. The rules you read
 
-In `rules`, list each repository rule you read that sets what this unit's changes must keep or how they are reviewed: `source` is `rule: <path>:<line>` of a line you opened, and `text` is that line, copied. The step that builds the yardsticks sees the repository only through this list, so leave out no rule that bears on a change, and add none you did not read.
+In `rules`, list each repository rule in the shared context's documents that sets what this unit's changes must keep or how they are reviewed: `source` is `rule: <path>:<line>` of that numbered line, and `text` is the line, copied. The step that builds the yardsticks weighs the repository's rules through this list, so leave out no rule that bears on a change, and add none the context does not show.
 
 ## 3. Rules
 
