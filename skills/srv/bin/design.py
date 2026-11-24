@@ -55,7 +55,10 @@ Coverage is checked here, in code, not trusted to the model:
   file: on PR #1726 the `growth` file counted as used for added routers alone, and its reuse item, which held two
   missed defects, was never asked (2026-11-25 attribution, ~/agent-assets/rebot/REPORT-srv-team.md).
 
-An answer that fails a check is sent back once with the problems listed. A unit or a
+Before the checks, a `high` perspective that asks a source with a stake is widened in code to the changes of that
+stake no perspective asking it holds (`widen_to_stakes`): a `high` breadth has no cap, so the addition is bookkeeping
+the model has shown it does not finish over a hundred changes (run 13f). An answer that fails a check is sent back
+once with the problems listed. A unit or a
 perspective set without a valid answer leaves changes nobody will review, so the
 script exits 1.
 
@@ -289,12 +292,11 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
             problems.append(f"catalog item {item!r} is dismissed without a reason")
         else:
             dismissed.add(item)
-    stakes = {item: {cid for cid, c in changes.items() if c["kind"] in entry.stakes}
-              for item, entry in catalog.items() if entry.stakes}
+    stakes = source_stakes(answer, changes, catalog, rules)
     for item, staked in stakes.items():
         if staked and item in dismissed:
             problems.append(f"catalog item {item!r} is dismissed but is at stake in changes {sorted(staked)} by its kinds")
-    unasked = [item for item in catalog if item not in asked and item not in dismissed and item not in stakes]
+    unasked = [item for item in catalog if item not in asked and item not in dismissed and not catalog[item].stakes]
     if unasked:
         problems.append(
             f"catalog items {unasked} are asked by no check and not dismissed; an item left out is a defect class the "
@@ -317,12 +319,9 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
             elif rule in asked:
                 problems.append(f"{rule} is dismissed but a check asks it; give the kinds it is at stake in")
             continue
-        staked = {cid for cid, c in changes.items()
-                  if c["kind"] in kinds and any(path.startswith(under) for path in c["files"])}
-        if not staked:
+        if not stakes.get(rule):
             problems.append(f"{rule} is at stake in kinds {kinds} under {under!r}, but no change is; "
                             "fix its kinds or scope, or give no kinds and the reason")
-        stakes[rule] = staked
     missing_rules = [rule for rule in rules if rule not in rows]
     if missing_rules:
         problems.append(
@@ -338,6 +337,50 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
                 "perspectives that already hold those changes, or to a `high` perspective over all of them"
             )
     return problems
+
+
+def source_stakes(answer: dict, changes: dict[str, dict], catalog: dict[str, CatalogItem],
+                  rules: list[str]) -> dict[str, set[str]]:
+    """The stake of every source that has one: for a catalog item with stake kinds, every change of those kinds; for a
+    rule whose `rules` row gives kinds, every change of those kinds with a file under the row's path prefix."""
+    stakes = {item: {cid for cid, c in changes.items() if c["kind"] in entry.stakes}
+              for item, entry in catalog.items() if entry.stakes}
+    for row in answer.get("rules") or []:
+        rule = rule_id(row.get("rule") if isinstance(row, dict) else None, rules)
+        kinds = set(row.get("kinds") or []) & set(CHANGE_KINDS) if rule else set()
+        if rule and kinds:
+            under = str(row.get("under") or "")
+            stakes[rule] = {cid for cid, c in changes.items()
+                            if c["kind"] in kinds and any(path.startswith(under) for path in c["files"])}
+    return stakes
+
+
+def widen_to_stakes(answer: object, changes: dict[str, dict], catalog: dict[str, CatalogItem],
+                    rules: list[str]) -> list[dict]:
+    """Add to a `high` perspective that asks a source the changes of the source's stake that no perspective asking it
+    holds, and return what was added. A `high` breadth has no cap, so this is bookkeeping, not a judgment: the model
+    chose the value and the check, and the stake is fixed by kinds. On PR #1726 (run 13f, 2026-11-25) the perspective
+    answer failed twice because a reuse check and a repository rule, each asked in a `high` perspective, left 15 and
+    28 of their changes out of its breadth."""
+    if not isinstance(answer, dict) or not isinstance(answer.get("perspectives"), list):
+        return []
+    asking: dict[str, list[dict]] = {}
+    for p in answer["perspectives"]:
+        if isinstance(p, dict) and isinstance(p.get("breadth"), list) and isinstance(p.get("checks"), list):
+            for check in p["checks"]:
+                source = check.get("source") if isinstance(check, dict) else None
+                if key := sweep.catalog_id(source, catalog) or rule_id(source, rules):
+                    asking.setdefault(key, []).append(p)
+    widened = []
+    for source, staked in source_stakes(answer, changes, catalog, rules).items():
+        holders = list({id(p): p for p in asking.get(source, [])}.values())
+        unjudged = sorted(staked - {cid for p in holders for cid in p["breadth"]})
+        high = [p for p in holders if p.get("depth") == "high"]
+        if unjudged and high:
+            target = max(high, key=lambda p: len(p["breadth"]))
+            target["breadth"].extend(unjudged)
+            widened.append({"perspective": target.get("id"), "source": source, "changes": unjudged})
+    return widened
 
 
 def rule_id(source: object, rules: list[str]) -> str | None:
@@ -469,11 +512,17 @@ def run_design(options: argparse.Namespace) -> int:
             # The perspective call works from the pack, the change set, and the rules the unit calls cited.
             ready = {uid: d for uid, d in designs.items() if d is not None}
             all_changes = change_set(ready, {u["id"]: sweep.hunk_files(changes, u) for u in plan["units"]})
+            rules = rule_ids(ready)
+            widened: list[dict] = []
+
+            def validate(answer: object) -> list[str]:
+                widened[:] = widen_to_stakes(answer, all_changes, context["catalog"], rules)
+                return check_perspectives(answer, all_changes, context["catalog"], rules)
+
             try:
-                perspectives = ask(build_perspective_messages(ready, all_changes, context),
-                                   functools.partial(check_perspectives, changes=all_changes, catalog=context["catalog"],
-                                                     rules=rule_ids(ready)),
+                perspectives = ask(build_perspective_messages(ready, all_changes, context), validate,
                                    PERSPECTIVES_SCHEMA, "srv-perspectives", options, sweep.call_model)
+                perspectives["widened"] = widened
             except Exception as error:  # noqa: BLE001 - recorded as the step's failure
                 perspectives = failed(error)
             perspectives["source_sha256"] = diff_sha256

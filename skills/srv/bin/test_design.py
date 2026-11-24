@@ -203,6 +203,25 @@ class CheckPerspectivesTest(unittest.TestCase):
         self.assertIn("catalog item 'growth#2' is dismissed but a check asks it; keep one of the two",
                       design.check_perspectives(answer, changes, items, []))
 
+    def test_a_high_perspective_asking_a_source_is_widened_to_its_stake(self) -> None:
+        # Run 13f (PR #1726): the answer failed twice on changes a high reuse check had left out of its breadth.
+        changes = {f"U-{n}/E-1": change("E-1", unit=f"U-{n}") for n in (1, 2, 3)}
+        items = catalog("db#1", "growth#2", stakes={"growth#2": ("returned_value",)})
+        answer = valid_perspectives()
+        answer["dismissed"] = []
+        answer["perspectives"] = [
+            perspective("K-1", list(changes), means="execute"),
+            {**perspective("K-2", ["U-1/E-1"], depth="high"),
+             "checks": [{"question": "q", "means": "read", "source": "growth#2"}]},
+        ]
+        self.assertEqual(design.widen_to_stakes(answer, changes, items, []),
+                         [{"perspective": "K-2", "source": "growth#2", "changes": ["U-2/E-1", "U-3/E-1"]}])
+        self.assertEqual(design.check_perspectives(answer, changes, items, []), [])
+        answer["perspectives"][1]["depth"] = "low"
+        answer["perspectives"][1]["breadth"] = ["U-1/E-1"]
+        self.assertEqual(design.widen_to_stakes(answer, changes, items, []), [],
+                         "a low perspective is not widened: its breadth is capped and judged line by line")
+
     def test_a_rule_states_its_stake_and_is_asked_over_it(self) -> None:
         # Coordinator, 2026-11-25: "규칙마다 걸리는 변경 종류를 설계 답에 적게 하고 코드가 같은 방식으로 덮음을 확인하게 하라".
         changes = {"U-1/E-1": change("E-1", kind="test_contract"),
