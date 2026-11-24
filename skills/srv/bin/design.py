@@ -242,7 +242,7 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
             problems.append(f"{pid} has a check without a question or with a means that is not one of {MEANS}")
         for check in checks:
             source = str(check.get("source") or "").strip()
-            key = sweep.catalog_id(source, catalog) or (source if source in rules else None)
+            key = sweep.catalog_id(source, catalog) or rule_id(source, rules)
             if key:
                 asked.setdefault(key, set()).update(p.get("breadth", []))
             elif not source.startswith("requirement:"):
@@ -303,8 +303,8 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
         )
     rows = {}
     for row in answer["rules"]:
-        rule = str(row.get("rule", "")).strip() if isinstance(row, dict) else ""
-        if rule not in rules:
+        rule = rule_id(row.get("rule") if isinstance(row, dict) else None, rules)
+        if rule is None:
             problems.append(f"rules row {row!r} does not name a rule of the request's rule list")
             continue
         rows[rule] = row
@@ -338,6 +338,13 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
                 "perspectives that already hold those changes, or to a `high` perspective over all of them"
             )
     return problems
+
+
+def rule_id(source: object, rules: list[str]) -> str | None:
+    """The rule of the request's list a source names, as `rule: <path>:<line>` or the bare `<path>:<line>`."""
+    text = str(source or "").strip()
+    rule = text if text.startswith("rule:") else f"rule: {text}"
+    return rule if rule in rules else None
 
 
 def read_checked_catalog(directory: Path) -> dict[str, CatalogItem]:

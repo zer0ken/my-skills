@@ -225,6 +225,9 @@ class CheckPerspectivesTest(unittest.TestCase):
         )
         answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": rule})
         self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]), [])
+        answer["rules"][0]["rule"] = "tests/integration/AGENTS.md:7"
+        self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]), [],
+                         "a bare `<path>:<line>` names the same rule, as a bare item id names a catalog item")
         answer["perspectives"][0]["checks"].pop()
         answer["rules"] = [{"rule": rule, "kinds": [], "under": "", "reason": " "}]
         self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]),
