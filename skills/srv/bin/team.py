@@ -612,7 +612,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                         help="a Prometheus metrics URL of the model server; repeat it for each replica behind a load "
                         "balancer (default: the base URL's /metrics)")
     parser.add_argument("--design-effort", default="high")
-    parser.add_argument("--inspect-effort", default="high", help="omp --thinking of the inspector sessions")
+    parser.add_argument("--inspect-effort", default="medium", help="omp --thinking of the inspector sessions; on PR #1470 "
+                        "medium held eight of eight in 201 s of inspection (run 10c) where high took 438 s (run 11b)")
     parser.add_argument("--inspect-timeout", type=float, default=900, help="omp --max-time of each inspector session")
     parser.add_argument("--judge-effort", default="", help="reasoning effort of judge, verify, and merge calls; empty "
                         "omits it, as in the judge replay that decided 5 of 5 in 3.7 s per call")
