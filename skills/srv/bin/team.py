@@ -300,28 +300,56 @@ def decide_cluster(group: list[dict], answers: list[dict]) -> tuple[str, str]:
     return decided, severity
 
 
-def verify(findings: list[dict], repo: Path, pack: str, changes: dict, options) -> list[dict]:
-    brief = strip((REFERENCES / "verify.md").read_text(encoding="utf-8"))
-    # Each finding is verified on its own: two defects at neighbouring lines are different defects, so grouping by
-    # place would hide one behind the other (run 10a: a wording defect and a missing-result defect two lines apart
-    # became one cluster). Duplicates are removed afterwards by `merge`, which compares meaning, not lines.
-    groups = [[f] for f in findings]
+def candidates(findings: list[dict]) -> list[dict]:
+    """One unverified cluster per finding. Two defects at neighbouring lines are different defects, so findings are
+    not grouped by place (run 10a: a wording defect and a missing-result defect two lines apart became one cluster);
+    `merge` joins duplicates by meaning."""
+    return [{"id": f"R-{n:03d}", "verdict": "PENDING", "severity": f["severity"], "evidence": "read",
+             "file": f["file"], "line": f["line"], "anchor": f["anchor"],
+             "members": [f"{f.get('perspective', '')}:{f['id']}"], "finding": f,
+             "condition": f["condition"], "fix": f["fix"], "reasons": []} for n, f in enumerate(findings, 1)]
 
-    def one(group: list[dict]) -> list[dict]:
-        messages = verify_messages(group, repo, pack, brief, changes)
+
+def verify(clusters: list[dict], repo: Path, pack: str, changes: dict, options) -> None:
+    """Set each given cluster's verdict and severity from `VERIFY_SAMPLES` calls on its finding, all at once."""
+    brief = strip((REFERENCES / "verify.md").read_text(encoding="utf-8"))
+
+    def one(cluster: dict) -> list[dict]:
+        messages = verify_messages([cluster["finding"]], repo, pack, brief, changes)
         return [r.answer for r in parallel(lambda: sweep.request_json(messages, options, lambda a: [], VERIFY_SCHEMA,
                                                                       "srv-verify"), VERIFY_SAMPLES) if r.answer]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(groups))) as pool:
-        all_answers = list(pool.map(one, groups))
-    clusters = []
-    for number, (group, answers) in enumerate(zip(groups, all_answers), 1):
-        decided, severity = decide_cluster(group, answers)
-        clusters.append({"id": f"R-{number:03d}", "verdict": decided, "severity": severity, "evidence": "read",
-                         "file": group[0]["file"], "line": group[0]["line"], "anchor": group[0]["anchor"],
-                         "members": [f"{f.get('perspective', '')}:{f['id']}" for f in group],
-                         "condition": group[0]["condition"], "fix": next((f["fix"] for f in group if f["fix"]), ""),
-                         "reasons": [a["reason"] for a in answers]})
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(clusters))) as pool:
+        for cluster, answers in zip(clusters, pool.map(one, clusters)):
+            cluster["verdict"], cluster["severity"] = decide_cluster([cluster["finding"]], answers)
+            cluster["reasons"] = [a["reason"] for a in answers]
+
+
+def settle(clusters: list[dict], repo: Path, pack: str, changes: dict, options) -> list[dict]:
+    """Verify the clusters `merge` kept; a kept cluster that is not CONFIRMED has its merged findings verified too,
+    because one of them may state the same defect so that the head lines confirm it. A confirmed duplicate confirms
+    the defect it joined and lends it its severity; under a REJECTED or OUT-OF-SCOPE cluster it stands on its own."""
+    kept = [c for c in clusters if "merged_into" not in c]
+    verify(kept, repo, pack, changes, options)
+    by_id = {c["id"]: c for c in clusters}
+    unsettled = [by_id[m] for c in kept if c["verdict"] != "CONFIRMED" for m in c.get("symptoms", [])]
+    verify(unsettled, repo, pack, changes, options)
+    for member in unsettled:
+        owner = by_id[member["merged_into"]]
+        if member["verdict"] != "CONFIRMED":
+            continue
+        if owner["verdict"] == "PLAUSIBLE":
+            owner["verdict"], owner["severity"] = "CONFIRMED", member["severity"]
+        elif owner["verdict"] in ("REJECTED", "OUT-OF-SCOPE"):
+            del member["merged_into"]
+            owner["symptoms"].remove(member["id"])
+    for c in kept:
+        for m in c.get("symptoms", []):
+            if by_id[m]["verdict"] == "CONFIRMED" and c["verdict"] == "CONFIRMED" and \
+                    sweep.SEVERITIES.index(by_id[m]["severity"]) < sweep.SEVERITIES.index(c["severity"]):
+                c["severity"] = by_id[m]["severity"]
+    for c in clusters:
+        c.pop("finding", None)
     return clusters
 
 
@@ -341,7 +369,7 @@ MERGE_BRIEF = (
 def merge_order(clusters: list[dict], depth_of: dict[str, str]) -> list[dict]:
     """Clusters to keep, high-level first: a cluster is high when a member comes from a `high` perspective. Only
     CONFIRMED and PLAUSIBLE clusters take part; within a level the more severe come first."""
-    live = [c for c in clusters if c["verdict"] in verdict.VERDICTS]
+    live = [c for c in clusters if c["verdict"] not in ("REJECTED", "OUT-OF-SCOPE")]
     level = lambda c: 0 if any(depth_of.get(m.split(":", 1)[0]) == "high" for m in c["members"]) else 1  # noqa: E731
     return sorted(live, key=lambda c: (level(c), sweep.SEVERITIES.index(c["severity"]), c["verdict"] != "CONFIRMED"))
 
@@ -373,15 +401,7 @@ def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]
             target = by_id[target]["merged_into"]
         if target:
             cluster["merged_into"] = target
-            kept = by_id[target]
-            kept.setdefault("symptoms", []).append(cluster["id"])
-            # A duplicate that was itself confirmed confirms the defect it joins, and the defect is as severe as its
-            # most severe confirmed part.
-            if cluster["verdict"] == "CONFIRMED":
-                if kept["verdict"] != "CONFIRMED":
-                    kept["verdict"], kept["severity"] = "CONFIRMED", cluster["severity"]
-                elif sweep.SEVERITIES.index(cluster["severity"]) < sweep.SEVERITIES.index(kept["severity"]):
-                    kept["severity"] = cluster["severity"]
+            by_id[target].setdefault("symptoms", []).append(cluster["id"])
     return clusters
 
 
@@ -526,9 +546,11 @@ def run_team(options: argparse.Namespace) -> int:
     findings = findings_of(results) + judged_findings(by_id, judgments, repo)
     verify_options = argparse.Namespace(**{**vars(judge_options), "reasoning_effort": options.verify_effort})
     changes = {c.path: c for c in sweep.plan_units.parse_diff(Path(options.diff).read_text(encoding="utf-8"))}
-    clusters = stages.run("verify", lambda: verify(findings, repo, pack, changes, verify_options))
+    # The user's order (2026-11-24, "끝나고 하이레벨 -> 로우레벨 순으로 검토해서 중복 없는 지적사항만 남겨"): merge
+    # first, so verification runs once per remaining defect instead of once per duplicate.
     depth_of = {p["id"]: p["depth"] for p in perspectives}
-    clusters = stages.run("merge", lambda: merge(clusters, depth_of, verify_options))
+    clusters = stages.run("merge", lambda: merge(candidates(findings), depth_of, verify_options))
+    clusters = stages.run("verify", lambda: settle(clusters, repo, pack, changes, verify_options))
     (out / "clusters.json").write_text(json.dumps(clusters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     record = {
         "clusters": [{k: c[k] for k in ("id", "severity", "verdict", "evidence")} for c in clusters

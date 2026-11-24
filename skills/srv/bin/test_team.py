@@ -121,13 +121,26 @@ class ModelTest(unittest.TestCase):
         team.merge(clusters, {"K-1": "high", "K-2": "low"}, self.options)
         self.assertEqual({c["id"]: c.get("merged_into") for c in clusters}, {"R-001": None, "R-002": "R-001", "R-003": "R-001"},
                          "the high cluster is kept first even when a low one is more severe")
-        self.assertEqual(clusters[1]["severity"], "BLOCKER", "the kept defect takes the severity of its confirmed duplicate")
 
     def test_verify_confirms_only_by_unanimous_calls(self) -> None:
         FakeEndpoint.respond = staticmethod(lambda body: json.dumps({"verdict": "CONFIRMED", "severity": "BLOCKER", "reason": "r"}))
-        clusters = team.verify([finding("a", "q.py", 2)], self.repo, "# pack", {}, self.options)
+        clusters = team.candidates([finding("a", "q.py", 2)])
+        team.verify(clusters, self.repo, "# pack", {}, self.options)
         self.assertEqual([(c["id"], c["verdict"], c["severity"]) for c in clusters], [("R-001", "CONFIRMED", "BLOCKER")])
         self.assertIn("    2| filter_one()", FakeEndpoint.requests[0]["messages"][1]["content"])
+
+    def test_a_confirmed_duplicate_confirms_the_unsettled_defect_it_joined(self) -> None:
+        def respond(body: dict) -> str:
+            plausible = "`kept`" in body["messages"][1]["content"]
+            return json.dumps({"verdict": "PLAUSIBLE" if plausible else "CONFIRMED", "severity": "MINOR" if plausible
+                               else "BLOCKER", "reason": "r"})
+
+        FakeEndpoint.respond = staticmethod(respond)
+        clusters = team.candidates([{**finding("a", "q.py", 1), "anchor": "kept"}, finding("b", "q.py", 2)])
+        clusters[1]["merged_into"], clusters[0]["symptoms"] = "R-001", ["R-002"]
+        team.settle(clusters, self.repo, "# pack", {}, self.options)
+        self.assertEqual((clusters[0]["verdict"], clusters[0]["severity"]), ("CONFIRMED", "BLOCKER"))
+        self.assertNotIn("finding", clusters[0], "the raw finding is not written into clusters.json twice")
 
 
 if __name__ == "__main__":
