@@ -243,9 +243,11 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
             problems.append(f"{pid} has no checks, or a check that is not a question with its means and source")
         elif any(c.get("means") not in MEANS or not str(c.get("question", "")).strip() for c in checks):
             problems.append(f"{pid} has a check without a question or with a means that is not one of {MEANS}")
+        named = set()
         for check in checks:
             source = str(check.get("source") or "").strip()
             key = sweep.catalog_id(source, catalog) or rule_id(source, rules)
+            named.add(key or source)
             if key:
                 asked.setdefault(key, set()).update(p.get("breadth", []))
             elif not source.startswith("requirement:"):
@@ -254,6 +256,13 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
                     "request's rule list `rule: <path>:<line>`, nor `requirement: ...`; a whole catalog file is not a "
                     "source, name the numbered item the check asks"
                 )
+        if len(named) > 1:
+            problems.append(
+                f"{pid} asks {len(named)} sources {sorted(named)}: a perspective is one core value with its breadth "
+                "and depth, and one source is one value, so give each source its own perspective (a value at stake "
+                "in many changes is one `high` perspective, wide and shallow) instead of one perspective that asks "
+                "several values, which no reviewer can judge both widely and deeply"
+            )
         if not p.get("breadth"):
             problems.append(f"{pid} has an empty breadth")
         unknown = sorted(set(p.get("breadth", [])) - set(changes))

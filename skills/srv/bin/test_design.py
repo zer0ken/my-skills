@@ -255,12 +255,13 @@ class CheckPerspectivesTest(unittest.TestCase):
              "perspectives that already hold those changes, or to a `high` perspective over all of them")],
             "the path prefix keeps U-1/E-1, outside tests/integration/, out of the rule's stake",
         )
-        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": rule})
+        answer["perspectives"].append({**perspective("K-2", ["U-2/E-1"]),
+                                       "checks": [{"question": "q", "means": "read", "source": rule}]})
         self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]), [])
         answer["rules"][0]["rule"] = "tests/integration/AGENTS.md:7"
         self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]), [],
                          "a bare `<path>:<line>` names the same rule, as a bare item id names a catalog item")
-        answer["perspectives"][0]["checks"].pop()
+        answer["perspectives"].pop()
         answer["rules"] = [{"rule": rule, "kinds": [], "under": "", "reason": " "}]
         self.assertEqual(design.check_perspectives(answer, changes, CATALOG, [rule]),
                          [f"{rule} has no kinds and no reason; give the change kinds it is at stake in, or why none"])
@@ -271,15 +272,20 @@ class CheckPerspectivesTest(unittest.TestCase):
 
     def test_a_check_source_is_a_catalog_item_or_a_record(self) -> None:
         answer = valid_perspectives()
-        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": "catalog: db"})
-        self.assertEqual(len(self.check(answer)), 1, "a whole catalog file is not a source")
-        answer["perspectives"][0]["checks"][1]["source"] = "taste"
-        self.assertEqual(len(self.check(answer)), 1)
-        answer["perspectives"][0]["checks"][1]["source"] = "rule: AGENTS.md:3"
-        self.assertEqual(len(self.check(answer)), 1, "a rule outside the request's rule list is not a source")
-        for source in ("db#1", "requirement: rows load"):
-            answer["perspectives"][0]["checks"][1]["source"] = source
-            self.assertEqual(self.check(answer), [], source)
+        answer["dismissed"].append({"item": "db#1", "reason": "r"})
+        for source, problems in (("catalog: db", 1), ("taste", 1), ("rule: AGENTS.md:3", 1), ("requirement: rows load", 0)):
+            answer["perspectives"][0]["checks"][0]["source"] = source
+            self.assertEqual(len(self.check(answer)), problems, f"{source}: a whole catalog file, an unknown name, or a "
+                             "rule outside the request's rule list is not a source")
+
+    def test_a_perspective_asks_one_source(self) -> None:
+        # Coordinator, 2026-11-25: "관점 하나는 핵심 가치 하나만 묻는다 ... 가치 여럿을 broken_if 한 문장에 묶거나 변경
+        # 전부를 맡는 포괄 관점은 코드 검사로 거부하라". Run 13h: one high perspective asked 49 sources over all 172 changes.
+        answer = valid_perspectives()
+        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": "db#1"})
+        self.assertEqual(self.check(answer), [], "several checks of one source are one value")
+        answer["perspectives"][0]["checks"][1]["source"] = "requirement: rows load"
+        self.assertTrue(self.check(answer)[0].startswith("K-1 asks 2 sources ['db#1', 'requirement: rows load']"))
 
 
 def step(body: dict) -> str:
