@@ -112,6 +112,21 @@ class ModelTest(unittest.TestCase):
         self.assertEqual((found[0]["id"], found[0]["file"], found[0]["line"], found[0]["anchor"]),
                          ("J-K-1", "q.py", 2, "filter_one()"))
 
+    def test_low_findings_merge_into_the_high_finding_they_are_a_symptom_of(self) -> None:
+        # User, 2026-11-24: "끝나고 하이레벨 -> 로우레벨 순으로 검토해서 중복 없는 지적사항만 남겨."
+        def respond(body: dict) -> str:
+            user = body["messages"][1]["content"]
+            return json.dumps({"same_as": "R-001" if "R-001" in user.split("Finding to decide")[0] else "", "reason": "r"})
+
+        FakeEndpoint.respond = staticmethod(respond)
+        def cluster(cid: str, member: str, severity: str = "MAJOR") -> dict:
+            return {"id": cid, "verdict": "CONFIRMED", "severity": severity, "members": [member], "file": "q.py",
+                    "line": 1, "condition": "c"}
+        clusters = [cluster("R-002", "K-2:F-1", "BLOCKER"), cluster("R-001", "K-1:J-K-1"), cluster("R-003", "K-2:F-2")]
+        team.merge(clusters, {"K-1": "high", "K-2": "low"}, self.options)
+        self.assertEqual({c["id"]: c.get("merged_into") for c in clusters}, {"R-001": None, "R-002": "R-001", "R-003": "R-001"},
+                         "the high cluster is kept first even when a low one is more severe")
+
     def test_verify_confirms_only_by_unanimous_calls(self) -> None:
         FakeEndpoint.respond = staticmethod(lambda body: json.dumps({"verdict": "CONFIRMED", "severity": "BLOCKER", "reason": "r"}))
         clusters = team.verify([finding("a", "q.py", 2)], self.repo, "# pack", {}, self.options)

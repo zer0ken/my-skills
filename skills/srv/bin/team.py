@@ -330,6 +330,58 @@ def verify(findings: list[dict], repo: Path, pack: str, changes: dict, options) 
     return clusters
 
 
+# ---------------------------------------------------------------- merge high to low
+
+MERGE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["same_as", "reason"],
+                "properties": {"same_as": {"type": "string"}, "reason": {"type": "string"}}}
+MERGE_BRIEF = (
+    "You decide whether one finding of a code review is already covered by findings kept before it. Covered means "
+    "it is a symptom of a kept finding (the kept finding names the structure or cause, this one a place where it "
+    "shows) or the same defect at another place; then `same_as` is that kept finding's id. A finding with its own "
+    "cause, one that fixing the kept finding would not remove, is not covered: `same_as` is the empty string. "
+    "Write `reason` in Korean. Answer with one JSON object."
+)
+
+
+def merge_order(clusters: list[dict], depth_of: dict[str, str]) -> list[dict]:
+    """Clusters to keep, high-level first: a cluster is high when a member comes from a `high` perspective. Only
+    CONFIRMED and PLAUSIBLE clusters take part; within a level the more severe come first."""
+    live = [c for c in clusters if c["verdict"] in verdict.VERDICTS]
+    level = lambda c: 0 if any(depth_of.get(m.split(":", 1)[0]) == "high" for m in c["members"]) else 1  # noqa: E731
+    return sorted(live, key=lambda c: (level(c), sweep.SEVERITIES.index(c["severity"]), c["verdict"] != "CONFIRMED"))
+
+
+def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]:
+    """The user's words (2026-11-24): "계획 이후 리뷰는 병렬로 수행하되, 끝나고 하이레벨 -> 로우레벨 순으로 검토해서
+    중복 없는 지적사항만 남겨." Clusters are ordered high-level first (`merge_order`); each is compared with every
+    cluster before it, all comparisons at once, by the majority of `JUDGE_SAMPLES` calls. A cluster that is a
+    symptom or a duplicate of an earlier one joins the cluster that earlier one finally belongs to
+    (`merged_into`), so only clusters with their own cause remain."""
+    ordered = merge_order(clusters, depth_of)
+
+    def compare(index: int) -> str:
+        cluster, earlier = ordered[index], ordered[:index]
+        listed = "\n".join(f"- {k['id']} [{k['severity']}] {k['file']}:{k['line']}: {k['condition']}" for k in earlier)
+        user = (f"Kept findings:\n{listed}\n\nFinding to decide:\n- {cluster['id']} [{cluster['severity']}] "
+                f"{cluster['file']}:{cluster['line']}: {cluster['condition']}")
+        messages = [{"role": "system", "content": MERGE_BRIEF}, {"role": "user", "content": user}]
+        replies = [sweep.request_json(messages, options, lambda a: [], MERGE_SCHEMA, "srv-merge") for _ in range(JUDGE_SAMPLES)]
+        ids = {k["id"] for k in earlier}
+        target = majority([r.answer["same_as"] if r.answer and r.answer["same_as"] in ids else "" for r in replies])
+        return target if target in ids else ""
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(ordered))) as pool:
+        targets = list(pool.map(compare, range(1, len(ordered))))
+    by_id = {c["id"]: c for c in ordered}
+    for cluster, target in zip(ordered[1:], targets):
+        while target and "merged_into" in by_id[target]:
+            target = by_id[target]["merged_into"]
+        if target:
+            cluster["merged_into"] = target
+            by_id[target].setdefault("symptoms", []).append(cluster["id"])
+    return clusters
+
+
 # ---------------------------------------------------------------- records and document
 
 
@@ -350,12 +402,12 @@ def findings_of(results: dict[str, list[dict]]) -> list[dict]:
 
 def write_document(out: Path, clusters: list[dict], judgment: dict, perspectives: list[dict], judgments: dict,
                    summary: dict, head: str) -> None:
-    confirmed = [c for c in clusters if c["verdict"] == "CONFIRMED"]
+    confirmed = [c for c in clusters if c["verdict"] == "CONFIRMED" and "merged_into" not in c]
     counts = Counter(c["severity"] for c in confirmed)
-    rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']} | {c['evidence']} | {c['fix']} |"
+    rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']}{' (같은 결함: ' + ', '.join(c['symptoms']) + ')' if c.get('symptoms') else ''} | {c['evidence']} | {c['fix']} |"
                      for c in confirmed)
     plausible = "\n".join(f"- {c['id']} [{c['severity']}] `{c['file']}:{c['line']}`: {c['condition']}"
-                          for c in clusters if c["verdict"] == "PLAUSIBLE")
+                          for c in clusters if c["verdict"] == "PLAUSIBLE" and "merged_into" not in c)
     rejected = "\n".join(f"- {c['id']} `{c['file']}:{c['line']}`: {c['reasons'][0] if c['reasons'] else ''}"
                          for c in clusters if c["verdict"] in ("REJECTED", "OUT-OF-SCOPE"))
     lenses = "\n".join(f"| {p['id']} | {p['depth']} | {p['value']} | {p['broken_if']} | {len(p['breadth'])} | "
@@ -472,10 +524,12 @@ def run_team(options: argparse.Namespace) -> int:
     verify_options = argparse.Namespace(**{**vars(judge_options), "reasoning_effort": options.verify_effort})
     changes = {c.path: c for c in sweep.plan_units.parse_diff(Path(options.diff).read_text(encoding="utf-8"))}
     clusters = stages.run("verify", lambda: verify(findings, repo, pack, changes, verify_options))
+    depth_of = {p["id"]: p["depth"] for p in perspectives}
+    clusters = stages.run("merge", lambda: merge(clusters, depth_of, verify_options))
     (out / "clusters.json").write_text(json.dumps(clusters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     record = {
         "clusters": [{k: c[k] for k in ("id", "severity", "verdict", "evidence")} for c in clusters
-                     if c["verdict"] in verdict.VERDICTS],
+                     if c["verdict"] in verdict.VERDICTS and "merged_into" not in c],
         "questions": [],
         "perspectives": [{"id": pid, "decided": judgments.get(pid, {}).get("verdict") in ("holds", "broken"),
                           "note": "; ".join(judgments.get(pid, {}).get("reasons", [])[:1])} for pid in by_id],
