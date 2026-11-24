@@ -32,24 +32,24 @@ NO_STRUCTURE = {"alters": False, "what": "함수 안의 분기만 바뀐다"}
 ALL_KINDS = list(design.CHANGE_KINDS)
 
 
-def entry(pid: str, depth: str, kinds: list[str], applies_when: str = "", execute: bool = False):
-    return design.sweep.CatalogPerspective(pid, "# Method", f"value of {pid}", f"broken {pid}", depth, tuple(kinds),
-                                           applies_when, execute, ("rv",))
+def entry(pid: str, depth: str, picks: list[str], execute: bool = False):
+    return design.sweep.CatalogPerspective(pid, f"title {pid}", f"value of {pid}", "when", f"broken {pid}", depth,
+                                           tuple(picks), execute, "rv")
 
 
-# A catalog that covers by construction: db#1 is the unconditional low execute perspective of every kind, trace#1
-# the high one of structure, and db#2 a conditional one.
-CATALOG = {"db#1": entry("db#1", "low", ALL_KINDS, execute=True), "trace#1": entry("trace#1", "high", ["structure"]),
-           "db#2": entry("db#2", "low", ["stored_data"], applies_when="the change writes a database")}
+# A catalog that covers by construction: L1 is the low execute perspective of every kind, H2 the high one of
+# structure, and L6 one picked by a tag.
+CATALOG = {"L1": entry("L1", "low", ALL_KINDS, execute=True), "H2": entry("H2", "high", ["structure"]),
+           "L6": entry("L6", "low", ["query"])}
 
 
 def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTURE, unit: str = "U-1",
-           files: tuple[str, ...] = ("pkg/store.py",)) -> dict:
-    return {"id": cid, "kind": kind, "subject": "s", "before": "b", "after": "a", "hunks": ["H1"],
+           files: tuple[str, ...] = ("pkg/store.py",), tags: tuple[str, ...] = ()) -> dict:
+    return {"id": cid, "kind": kind, "subject": "s", "before": "b", "after": "a", "hunks": ["H1"], "tags": list(tags),
             "structure": structure, "unit": unit, "files": list(files)}
 
 
-def perspective(pid: str, breadth: list[str], catalog: str = "db#1", means: str = "execute", rules: list[str] = ()) -> dict:
+def perspective(pid: str, breadth: list[str], catalog: str = "L1", means: str = "execute", rules: list[str] = ()) -> dict:
     picked = CATALOG[catalog]
     checks = [{"question": "c", "means": means, "source": catalog}] + [{"question": "r", "means": "read", "source": r} for r in rules]
     return {"id": pid, "catalog": catalog, "value": picked.value, "broken_if": "x", "breadth": breadth,
@@ -62,7 +62,7 @@ def valid_changes(hunk: str = "H1") -> dict:
 
 def valid_perspectives() -> dict:
     return {"perspectives": [perspective("K-1", ["U-1/E-1"])],
-            "unpicked": [{"catalog": "trace#1", "reason": "r"}, {"catalog": "db#2", "reason": "r"}], "rules": []}
+            "unpicked": [{"catalog": "H2", "reason": "r"}, {"catalog": "L6", "reason": "r"}], "rules": []}
 
 
 class CheckChangesTest(unittest.TestCase):
@@ -111,11 +111,11 @@ class CheckPerspectivesTest(unittest.TestCase):
     def test_a_perspective_is_picked_from_the_catalog_with_its_value_and_depth(self) -> None:
         # The user (2026-11-24): "관점은 코드에서 찾는게 아니라 미리 정해진 검토 관점 중에서 코드 변경에 관련된 걸 고르는거다."
         answer = valid_perspectives()
-        answer["perspectives"][0]["catalog"] = "made#1"
-        self.assertTrue(self.check(answer)[0].startswith("K-1 names 'made#1', which is not a catalog perspective"))
+        answer["perspectives"][0]["catalog"] = "made"
+        self.assertTrue(self.check(answer)[0].startswith("K-1 names 'made', which is not a catalog perspective"))
         answer = valid_perspectives()
         answer["perspectives"][0]["value"] = "a value written for this change"
-        self.assertIn("K-1 changes the value or depth of db#1; the catalog fixes both", self.check(answer))
+        self.assertIn("K-1 changes the value or depth of L1; the catalog fixes both", self.check(answer))
 
     def test_a_change_in_no_low_breadth_fails(self) -> None:
         self.assertEqual(
@@ -131,8 +131,8 @@ class CheckPerspectivesTest(unittest.TestCase):
         self.assertEqual(self.check(answer, change("E-1"), structural),
                          [("changes ['U-1/E-2'] alter a structure but are in no `high` perspective's breadth; a "
                           "structural defect judged only at low level shows as its symptoms")])
-        answer["perspectives"].append(perspective("K-2", ["U-1/E-2"], catalog="trace#1", means="read"))
-        answer["unpicked"] = [{"catalog": "db#2", "reason": "r"}]
+        answer["perspectives"].append(perspective("K-2", ["U-1/E-2"], catalog="H2", means="read"))
+        answer["unpicked"] = [{"catalog": "L6", "reason": "r"}]
         self.assertEqual(self.check(answer, change("E-1"), structural), [])
 
     def test_a_perspective_states_what_breaks_its_value(self) -> None:
@@ -157,16 +157,16 @@ class CheckPerspectivesTest(unittest.TestCase):
         rule = "rule: tests/integration/AGENTS.md:7"
         answer = valid_perspectives()
         answer["perspectives"][0] = perspective("K-1", ["U-1/E-1"], rules=[rule])
-        answer["rules"] = [{"rule": rule, "perspectives": ["db#1"], "reason": "r"}]
+        answer["rules"] = [{"rule": rule, "perspectives": ["L1"], "reason": "r"}]
         self.assertEqual(self.check(answer, rules=[rule]), [])
-        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": "trace#1"})
-        self.assertIn("K-1 has checks asking ['trace#1'], which are neither its catalog value db#1 nor a rule attached to "
+        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": "H2"})
+        self.assertIn("K-1 has checks asking ['H2'], which are neither its catalog value L1 nor a rule attached to "
                       "it; one perspective judges one value", self.check(answer, rules=[rule]))
 
     def test_every_catalog_perspective_is_picked_or_left_with_a_reason(self) -> None:
         answer = valid_perspectives()
-        answer["unpicked"] = [{"catalog": "trace#1", "reason": " "}]
-        self.assertIn("catalog perspectives ['trace#1', 'db#2'] are neither picked nor left with a reason", self.check(answer))
+        answer["unpicked"] = [{"catalog": "H2", "reason": " "}]
+        self.assertIn("catalog perspectives ['H2', 'L6'] are neither picked nor left with a reason", self.check(answer))
 
     def test_a_rule_whose_directory_holds_a_changed_file_is_attached(self) -> None:
         # Run 13i left out the one-backend docstring rule that rv R-007 rests on; a root rule may stay context (13l).
@@ -187,36 +187,30 @@ class CheckPerspectivesTest(unittest.TestCase):
 
 
 class PickTest(unittest.TestCase):
-    def test_a_perspective_is_at_stake_in_the_changes_of_its_kinds_in_change_order(self) -> None:
-        changes = {"U-1/E-1": change("E-1", "stored_data"), "U-1/E-2": change("E-2"),
+    def test_a_perspective_is_picked_by_kind_structure_or_tag_in_change_order(self) -> None:
+        changes = {"U-1/E-1": change("E-1", "stored_data", tags=("query",)), "U-1/E-2": change("E-2"),
                    "U-2/E-1": change("E-1", "documented_promise", {"alters": True, "what": "w"}, unit="U-2")}
-        stakes = design.stakes_by_kind(CATALOG, changes)
-        self.assertEqual(stakes, {"db#1": ["U-1/E-1", "U-1/E-2", "U-2/E-1"], "trace#1": ["U-2/E-1"], "db#2": ["U-1/E-1"]})
-
-    def test_a_condition_keeps_only_listed_changes(self) -> None:
-        self.assertEqual(design.check_select({"changes": ["U-1/E-1"], "reason": "r"}, ["U-1/E-1"]), [])
-        self.assertEqual(design.check_select({"changes": ["U-9/E-1"], "reason": " "}, ["U-1/E-1"]),
-                         ["changes ['U-9/E-1'] are not among the listed changes; keep only listed ids, copied exactly",
-                          "`reason` is empty"])
+        self.assertEqual(design.stakes_by_pick(CATALOG, changes),
+                         {"L1": ["U-1/E-1", "U-1/E-2", "U-2/E-1"], "H2": ["U-2/E-1"], "L6": ["U-1/E-1"]})
 
     def test_a_rule_names_only_picked_perspectives(self) -> None:
         rule = "rule: pkg/AGENTS.md:7"
         changes = {"U-1/E-1": change("E-1")}
-        self.assertEqual(design.check_rules({"rules": [{"rule": rule, "perspectives": ["db#1"], "reason": "r"}]},
-                                            [rule], ["db#1"], changes), [])
+        self.assertEqual(design.check_rules({"rules": [{"rule": rule, "perspectives": ["L1"], "reason": "r"}]},
+                                            [rule], ["L1"], changes), [])
         self.assertEqual(design.check_rules({"rules": [{"rule": "pkg/AGENTS.md:7", "perspectives": ["db#9"], "reason": "r"}]},
-                                            [rule], ["db#1"], changes),
+                                            [rule], ["L1"], changes),
                          [f"{rule} names ['db#9'], which are not picked perspective ids"])
         self.assertTrue(design.check_rules({"rules": [{"rule": rule, "perspectives": [], "reason": "r"}]},
-                                           [rule], ["db#1"], changes)[0].startswith(f"{rule} is attached to nothing, but"))
+                                           [rule], ["L1"], changes)[0].startswith(f"{rule} is attached to nothing, but"))
 
     def test_a_binding_asks_the_value_every_attached_rule_and_runs_when_required(self) -> None:
         rule = "rule: pkg/AGENTS.md:7"
-        good = {"broken_if": "b", "checks": [{"question": "q", "means": "execute", "source": "catalog: db#1"},
+        good = {"broken_if": "b", "checks": [{"question": "q", "means": "execute", "source": "catalog: L1"},
                                              {"question": "r", "means": "read", "source": "pkg/AGENTS.md:7"}]}
-        self.assertEqual(design.check_bind(good, CATALOG["db#1"], [rule]), [])
-        bad = {"broken_if": " ", "checks": [{"question": "q", "means": "read", "source": "db#1"}]}
-        self.assertEqual(design.check_bind(bad, CATALOG["db#1"], [rule]), [
+        self.assertEqual(design.check_bind(good, CATALOG["L1"], [rule]), [])
+        bad = {"broken_if": " ", "checks": [{"question": "q", "means": "read", "source": "L1"}]}
+        self.assertEqual(design.check_bind(bad, CATALOG["L1"], [rule]), [
             "`broken_if` is empty",
             (f"attached rules ['{rule}'] are asked by no check; give each its own check, so its observations stay apart "
             "from the value's"),
@@ -231,18 +225,18 @@ class CatalogTest(unittest.TestCase):
         self.assertTrue(all(p.sources for p in catalog.values()))
 
     def test_a_catalog_that_leaves_a_kind_unjudged_is_refused(self) -> None:
-        partial = {"db#1": entry("db#1", "low", ["returned_value"], execute=True), "trace#1": entry("trace#1", "high", ["structure"])}
+        partial = {"L1": entry("L1", "low", ["returned_value"], execute=True), "H2": entry("H2", "high", ["structure"])}
         problems = design.sweep.catalog_problems(partial)
         self.assertEqual(len(problems), 2)
         self.assertTrue(problems[0].startswith("change kinds ['stored_data', "), problems)
-        self.assertTrue(problems[1].startswith("no `execute` perspective without `applies_when` takes `external_contract`"))
+        self.assertTrue(problems[1].startswith("no `execute` perspective picks `external_contract`"))
 
 
 def step(body: dict) -> str:
     return body["response_format"]["json_schema"]["name"]
 
 
-BIND = {"broken_if": "b", "checks": [{"question": "q", "means": "execute", "source": "db#1"}]}
+BIND = {"broken_if": "b", "checks": [{"question": "q", "means": "execute", "source": "L1"}]}
 
 
 def respond_validly(body: dict) -> str:
@@ -261,8 +255,7 @@ class DesignRunTest(unittest.TestCase):
         (self.repo / "docs" / "a.md").write_text("new\n", encoding="utf-8")
         for command in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "head"]):
             subprocess.run(["git", "-C", str(self.repo), *command], check=True)
-        self.catalog = root / "perspectives.json"
-        self.catalog.write_text(json.dumps(fixtures.CATALOG), encoding="utf-8")
+        self.catalog = fixtures.write_catalog(root / "perspectives")
         self.diff = root / "diff.patch"
         self.diff.write_text(DIFF, encoding="utf-8")
         self.units = root / "units.json"
@@ -300,7 +293,7 @@ class DesignRunTest(unittest.TestCase):
     def test_change_sets_then_pick_bind_and_cut_by_depth(self) -> None:
         self.assertEqual(self.run_design(), 0)
         self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests), ["srv-bind", "srv-changes", "srv-changes"],
-                         "no structural change holds trace#1, and no condition or rule needs a call")
+                         "no structural change picks H2, and no rule needs a call")
         unit_body = next(b for b in FakeEndpoint.requests if step(b) == "srv-changes")
         self.assertEqual(unit_body["response_format"]["json_schema"]["schema"], design.CHANGES_SCHEMA)
         self.assertRegex(unit_body["messages"][1]["content"], r"@@ [^\n]*@@[^\n]*  \[H1\]")
@@ -308,33 +301,31 @@ class DesignRunTest(unittest.TestCase):
             self.assertTrue(body["messages"][1]["content"].startswith("# Repository context of this review"),
                             "every request starts with the shared pack, so the server reuses its prefix")
         bind = next(b for b in FakeEndpoint.requests if step(b) == "srv-bind")["messages"][1]["content"]
-        self.assertIn("- db#1 (low; returned_value, stored_data", bind)
+        self.assertIn("- L1 title L1 (low): value of db. Picked when: when L1.", bind)
         self.assertIn("Decided by a run.", bind)
         self.assertIn("- U-2/E-1 [returned_value] s: b -> a (pkg/store.py)", bind)
         perspectives = json.loads((self.out / "perspectives.json").read_text(encoding="utf-8"))
         self.assertEqual([(p["id"], p["catalog"], p["depth"], p["breadth"], p["checks"][0]["source"], p["value"])
                           for p in perspectives["perspectives"]],
-                         [("K-1", "db#1", "low", ["U-1/E-1", "U-2/E-1"], "db#1", "value of db")])
-        self.assertEqual(perspectives["unpicked"], [{"catalog": "trace#1", "reason": "no change of kinds structure"}])
+                         [("K-1", "L1", "low", ["U-1/E-1", "U-2/E-1"], "L1", "value of db")])
+        self.assertEqual(perspectives["unpicked"], [{"catalog": "H2", "reason": "no change is picked by structure"}])
         summary = json.loads((self.out / "summary.json").read_text())
         self.assertEqual((summary["depths"], summary["perspectives_ok"]), ({"high": 0, "low": 1}, True))
 
-    def test_a_condition_call_narrows_a_stake_and_a_rule_becomes_a_check_of_a_picked_perspective(self) -> None:
-        conditional = {"id": "db#2", "depth": "low", "kinds": ["returned_value"], "applies_when": "a query changes",
-                       "value": "value of db 2", "broken_if": "b", "sources": ["sql-expert"]}
-        self.catalog.write_text(json.dumps({**fixtures.CATALOG, "perspectives": [*fixtures.CATALOG["perspectives"], conditional]}),
-                                encoding="utf-8")
+    def test_a_tag_picks_a_perspective_and_a_scoped_rule_binds_only_the_tasks_under_it(self) -> None:
+        fixtures.write_catalog(self.catalog, {"L6": ("low", "query", False, "value of L6")})
         rule = "rule: docs/AGENTS.md:1"
 
         def respond(body: dict) -> str:
             name, user = step(body), body["messages"][1]["content"]
             if name == "srv-changes":
-                return json.dumps({**valid_changes(), "rules": [{"source": rule, "text": "Docs state the contract."}]})
-            if name == "srv-select":
-                return json.dumps({"changes": ["U-2/E-1"], "reason": "r"})
+                tagged = valid_changes()
+                if "docs/a.md" in user.split("# Unit files at the head", 1)[1]:
+                    tagged["changes"][0]["tags"] = ["query"]
+                return json.dumps({**tagged, "rules": [{"source": rule, "text": "Docs state the contract."}]})
             if name == "srv-rules":
-                return json.dumps({"rules": [{"rule": rule, "perspectives": ["db#1"], "reason": "r"}]})
-            source = "db#2" if "- db#2 (" in user else "db#1"
+                return json.dumps({"rules": [{"rule": rule, "perspectives": ["L1", "L6"], "reason": "r"}]})
+            source = "L6" if "- L6 title" in user else "L1"
             checks = [{"question": "q", "means": "execute", "source": source}]
             if "- rule: docs/AGENTS.md:1: Docs state the contract." in user:
                 checks.append({"question": "r", "means": "read", "source": rule})
@@ -343,11 +334,33 @@ class DesignRunTest(unittest.TestCase):
         FakeEndpoint.respond = staticmethod(respond)
         self.assertEqual(self.run_design(), 0)
         self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests),
-                         ["srv-bind", "srv-bind", "srv-changes", "srv-changes", "srv-rules", "srv-select"])
+                         ["srv-bind", "srv-bind", "srv-changes", "srv-changes", "srv-rules"])
         perspectives = {p["catalog"]: p for p in json.loads((self.out / "perspectives.json").read_text())["perspectives"]}
-        self.assertEqual(perspectives["db#2"]["breadth"], ["U-2/E-1"], "the condition kept one of the two changes")
-        self.assertEqual(perspectives["db#1"]["rules"], [{"rule": rule, "text": "Docs state the contract."}])
-        self.assertEqual([c["source"] for c in perspectives["db#1"]["checks"]], ["db#1", rule])
+        self.assertEqual(perspectives["L6"]["breadth"], ["U-1/E-1"], "the tag picks the docs change only")
+        self.assertEqual(perspectives["L6"]["rules"], [{"rule": rule, "text": "Docs state the contract."}])
+        self.assertEqual(perspectives["L1"]["breadth"], ["U-1/E-1", "U-2/E-1"])
+        self.assertEqual([c["source"] for c in perspectives["L1"]["checks"]], ["L1", rule])
+
+    def test_each_low_task_is_bound_to_its_own_changes(self) -> None:
+        # Run 14b bound one `broken_if` per perspective and copied it to every task, so tasks judged changes their
+        # `broken_if` did not name.
+        breadths = {}
+
+        def respond(body: dict) -> str:
+            name, user = step(body), body["messages"][1]["content"]
+            if name == "srv-changes":
+                many = {"changes": [{**change(f"E-{n}"), "hunks": ["H1"]} for n in range(1, 6)], "behaviour_free": [], "rules": []}
+                return json.dumps(many)
+            listed = [line.split(" ", 2)[1] for line in user.split("# Changes in its breadth", 1)[1].splitlines() if line.startswith("- U-")]
+            breadths.setdefault(len(breadths), listed)
+            return json.dumps({"broken_if": "b " + ",".join(listed), "checks": [{"question": "q", "means": "execute", "source": "L1"}]})
+
+        FakeEndpoint.respond = staticmethod(respond)
+        self.assertEqual(self.run_design(), 0)
+        perspectives = json.loads((self.out / "perspectives.json").read_text())["perspectives"]
+        self.assertEqual([len(p["breadth"]) for p in perspectives], [design.LOW_BREADTH_MAX, 10 - design.LOW_BREADTH_MAX])
+        for p in perspectives:
+            self.assertEqual(p["broken_if"], "b " + ",".join(p["breadth"]), "each task's binding saw its own changes only")
 
     def test_uncovered_answer_is_sent_back_with_its_problems(self) -> None:
         calls = []

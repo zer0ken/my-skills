@@ -528,7 +528,9 @@ def run_team(options: argparse.Namespace) -> int:
     try:
         stages.run("context", lambda: call_main(context_script.main, [*common, "--requirements", *options.requirements, "--out", context_dir]))
         stages.run("design", lambda: call_main(design.main, [*common, "--context", context_dir, "--out", design_dir,
-                                                             "--reasoning-effort", options.design_effort, *model]))
+                                                             "--reasoning-effort", options.design_effort,
+                                                             *(["--pick-effort", options.pick_effort] if options.pick_effort is not None else []),
+                                                             *model]))
         stages.run("inspect", lambda: call_main(sweep.main, [*common, "--design", design_dir, "--context", context_dir,
                                                              "--out", str(out / "round-1"), *inspect, *sandbox, *model]))
     except StageFailed as failure:
@@ -619,6 +621,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     # Measured on the rounds of run 11b (PR #1470, replays 12a and 12b, ~/agent-assets/rebot/srv-measure-11): with
     # reasoning off ("none"), judge and verify kept all eight findings and verify fell from 108 s to 5 s; merge without
     # reasoning joined defects with different causes and hid two findings, so merge keeps the server's default.
+    parser.add_argument("--pick-effort", help="reasoning effort of the perspective step's condition, rule, and "
+                        "binding calls; default the design effort")
     parser.add_argument("--judge-effort", default="none", help="reasoning effort of the judge calls; empty omits it")
     parser.add_argument("--verify-effort", default="none", help="reasoning effort of the verify calls")
     parser.add_argument("--merge-effort", default="", help="reasoning effort of the merge calls; empty omits it")

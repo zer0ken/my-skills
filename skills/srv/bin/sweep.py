@@ -59,7 +59,7 @@ from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "brief.md"
-CATALOG = Path(__file__).resolve().parents[1] / "references" / "perspectives.json"
+CATALOG = Path(__file__).resolve().parents[1] / "references" / "perspectives"
 # What a change makes different, for someone who uses the code (`references/changes.md`); every change set element has
 # one kind, and every catalog perspective names the kinds it is at stake in.
 CHANGE_KINDS = (
@@ -68,6 +68,13 @@ CHANGE_KINDS = (
 )
 # `structure` is a stake, not a change kind: the changes whose `structure.alters` is true, whatever their kind.
 STAKE_KINDS = (*CHANGE_KINDS, "structure")
+# What a change-set element touches beyond its kind, tagged by the change-set call so that code alone can decide which
+# catalog perspectives a change picks (REVIEW-TECHNIQUES.md 6.2, step 3); `references/changes.md` defines each tag.
+CHANGE_TAGS = (
+    "fix", "feature", "layout", "new_unit", "new_logic", "concurrency", "resource", "trust_boundary", "model_call",
+    "test_setup", "design_decision", "input", "io_or_parse", "serialized", "computation", "query", "sink",
+    "user_interface", "claim",
+)
 DEPTHS = ("high", "low")
 # A perspective's depth is the level of abstraction its value is judged at. The user's words (2026-11-24), after a lead
 # had read the depth as read, trace, and execute: "하이레벨 로우레벨을 말한거다."
@@ -194,87 +201,90 @@ RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
 
 @dataclass(frozen=True)
 class CatalogPerspective:
-    """One perspective of srv's catalog: a review yardstick fixed before any change is seen, from which each review
-    picks the ones its change is at stake in (the user, 2026-11-24, after a lead had let code build a perspective per
-    value source, 266 of them on PR #1726: "관점은 코드에서 찾는게 아니라 미리 정해진 검토 관점 중에서 코드 변경에
-    관련된 걸 고르는거다."). It holds one core `value`, the `depth` it is judged at (`high`: structure, wide and
-    shallow; `low`: behaviour inside functions, narrow and deep), the change `kinds` it is at stake in, the
-    `broken_if` frame a review binds to its change, an optional `applies_when` condition that a kind alone does not
-    decide, whether a review of it must run something (`execute`), its `sources` (rv items, `-expert` sections), and the
-    `method` of its area."""
+    """One perspective of srv's catalog (`references/perspectives/<id>.md`): a review yardstick fixed before any change
+    is seen, from which each review picks the ones its change has (the user, 2026-11-24, after a lead had let code
+    build a perspective per value source, 266 of them on PR #1726: "관점은 코드에서 찾는게 아니라 미리 정해진 검토
+    관점 중에서 코드 변경에 관련된 걸 고르는거다."). It holds one core `value`, the `depth` it is judged at (`high`:
+    structure, wide and shallow; `low`: behaviour inside functions, narrow and deep), the `picks` that select it (change
+    kinds, `structure`, and change tags), the `when` sentence those picks stand for, the `broken_if` frame whose 〈〉
+    slots a review fills with this change's names, whether a review of it must run something (`execute`), and its
+    `sources`. The list is REVIEW-TECHNIQUES.md section 4."""
 
     id: str
-    method: str
+    title: str
     value: str
+    when: str
     broken_if: str
     depth: str
-    kinds: tuple[str, ...]
-    applies_when: str = ""
+    picks: tuple[str, ...]
     execute: bool = False
-    sources: tuple[str, ...] = ()
+    sources: str = ""
 
 
 def catalog_problems(catalog: dict[str, CatalogPerspective]) -> list[str]:
     """What a catalog lacks for a review to cover every change by construction; empty when it is complete. A review
-    only picks from the catalog, so a kind no unconditional `low` perspective takes, a structure no unconditional
-    `high` one takes, or an external contract no unconditional `execute` one takes would leave changes nobody judges."""
+    only picks from the catalog, and a change always has a kind but not always a tag, so a kind that no `low`
+    perspective picks by kind, structure that no `high` one picks, or external contracts that no `execute` one picks
+    would leave changes nobody judges."""
     problems = []
-    unconditional = [p for p in catalog.values() if not p.applies_when]
-    low = {kind for p in unconditional if p.depth == "low" for kind in p.kinds}
+    low = {pick for p in catalog.values() if p.depth == "low" for pick in p.picks}
     if missing := [kind for kind in CHANGE_KINDS if kind not in low]:
-        problems.append(f"change kinds {missing} are taken by no `low` perspective without `applies_when`, so changes of "
-                        "those kinds would be judged line by line by nobody; give one perspective those kinds")
-    if not any(p.depth == "high" and "structure" in p.kinds for p in unconditional):
-        problems.append("no `high` perspective without `applies_when` takes `structure`, so a structural change would "
-                        "be judged only at low level, where a structural defect shows as its symptoms")
-    if not any(p.execute and "external_contract" in p.kinds for p in unconditional):
-        problems.append("no `execute` perspective without `applies_when` takes `external_contract`, so what an external "
-                        "program does with what the code builds would be decided by reading the code that assumes it")
+        problems.append(f"change kinds {missing} are picked by no `low` perspective, so changes of those kinds would be "
+                        "judged line by line by nobody; give a low perspective those kinds")
+    if not any(p.depth == "high" and "structure" in p.picks for p in catalog.values()):
+        problems.append("no `high` perspective picks `structure`, so a structural change would be judged only at low "
+                        "level, where a structural defect shows as its symptoms")
+    if not any(p.execute and "external_contract" in p.picks for p in catalog.values()):
+        problems.append("no `execute` perspective picks `external_contract`, so what an external program does with what "
+                        "the code builds would be decided by reading the code that assumes it")
     return problems
 
 
-def read_catalog(path: Path = CATALOG) -> dict[str, CatalogPerspective]:
-    """The perspective catalog (`references/perspectives.json`), checked field by field and for coverage; a catalog
-    that fails raises ValueError naming what to fix, since a review picks perspectives only from it."""
-    data = json.loads(path.read_text(encoding="utf-8"))
-    methods = data["methods"]
+CATALOG_FIELD_RE = re.compile(r"^(Value|Picked when|Broken if|Sources): (.+)$", re.MULTILINE)
+
+
+def read_catalog(directory: Path = CATALOG) -> dict[str, CatalogPerspective]:
+    """The perspective catalog, one file per perspective with `id`, `depth`, `picks`, and optional `execute` in its
+    front matter and `Value:`, `Picked when:`, `Broken if:`, `Sources:` lines in its body, checked field by field and
+    for coverage; a catalog that fails raises ValueError naming what to fix, since a review picks only from it."""
     catalog: dict[str, CatalogPerspective] = {}
     problems: list[str] = []
-    for row in data["perspectives"]:
-        pid = row.get("id", "")
-        area = pid.split("#", 1)[0]
-        kinds = tuple(row.get("kinds") or ())
-        wrong = [f"`{key}` is empty" for key in ("value", "broken_if") if not str(row.get(key, "")).strip()]
-        if pid in catalog or not re.fullmatch(r"[a-z]+#\d+", pid):
-            wrong.append("the id is not a unique `<area>#<n>`")
-        if area not in methods:
-            wrong.append(f"area {area!r} has no method in `methods`")
-        if row.get("depth") not in DEPTHS:
+    for path in sorted(directory.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        head, _, body = text.removeprefix("---\n").partition("\n---\n")
+        meta = dict(line.split(": ", 1) for line in head.splitlines() if ": " in line)
+        fields = dict(CATALOG_FIELD_RE.findall(body))
+        title = next((line[2:].strip() for line in body.splitlines() if line.startswith("# ")), "")
+        picks = tuple(pick.strip() for pick in meta.get("picks", "").split(",") if pick.strip())
+        wrong = [f"no `{key}:` line" for key in ("Value", "Picked when", "Broken if", "Sources") if not fields.get(key)]
+        if meta.get("id") != path.stem or path.stem in catalog:
+            wrong.append("`id` is not the file name")
+        if meta.get("depth") not in DEPTHS:
             wrong.append(f"depth is not one of {DEPTHS}")
-        if not kinds or set(kinds) - set(STAKE_KINDS):
-            wrong.append(f"kinds {list(kinds)} are not a non-empty list of {STAKE_KINDS}")
-        if not row.get("sources"):
-            wrong.append("it names no source (an rv item or an `-expert` section)")
+        if not picks or set(picks) - set(STAKE_KINDS) - set(CHANGE_TAGS):
+            wrong.append(f"picks {list(picks)} are not a non-empty list of change kinds, `structure`, or tags {CHANGE_TAGS}")
         if wrong:
-            problems.append(f"{pid or row}: " + "; ".join(wrong))
+            problems.append(f"{path.name}: " + "; ".join(wrong))
             continue
-        catalog[pid] = CatalogPerspective(pid, methods[area], row["value"], row["broken_if"], row["depth"], kinds,
-                                          row.get("applies_when", ""), bool(row.get("execute")), tuple(row["sources"]))
+        catalog[path.stem] = CatalogPerspective(path.stem, title.removeprefix(path.stem).strip(), fields["Value"], fields["Picked when"],
+                                                fields["Broken if"], meta["depth"], picks, meta.get("execute") == "true",
+                                                fields["Sources"])
+    if not catalog and not problems:
+        problems.append("no perspective file")
     problems += catalog_problems(catalog) if not problems else []
     if problems:
-        raise ValueError(f"{path}: " + " | ".join(problems))
+        raise ValueError(f"{directory}: " + " | ".join(problems))
     return catalog
 
 
 def catalog_text(catalog: dict[str, CatalogPerspective], perspective_ids) -> str:
-    """The named catalog perspectives as a request shows them: each area's method once, then its perspectives."""
-    by_method: dict[str, list[str]] = {}
+    """The named catalog perspectives as a request shows them."""
+    rows = []
     for pid in perspective_ids:
         p = catalog[pid]
-        when = (f" Applies when: {p.applies_when}." if p.applies_when else "") + (" Decided by a run." if p.execute else "")
-        by_method.setdefault(p.method, []).append(
-            f"- {pid} ({p.depth}; {', '.join(p.kinds)}): {p.value} Broken if: {p.broken_if}.{when}")
-    return "\n\n".join(f"{method}\n" + "\n".join(rows) for method, rows in by_method.items())
+        run = " Decided by a run." if p.execute else ""
+        rows.append(f"- {pid} {p.title} ({p.depth}): {p.value}. Picked when: {p.when}. Broken if: {p.broken_if}.{run}")
+    return "\n".join(rows)
 
 
 def catalog_id(source: object, catalog) -> str | None:
@@ -320,11 +330,11 @@ def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_
     picked = catalog[perspective["catalog"]]
     rules = "\n".join(f"- {row['rule']}: {row['text']}" for row in perspective.get("rules", []))
     return (
-        f"# Perspective: {perspective_id}\n\nPicked from the catalog as {picked.id}.\n\nValue: {perspective['value']}\n\n"
+        f"# Perspective: {perspective_id}\n\nPicked from the catalog as {picked.id} {picked.title}.\n\nValue: {perspective['value']}\n\n"
         f"The value is broken if: {perspective['broken_if']}\n\n"
         f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
         f"Breadth (the changes this perspective judges):\n{chr(10).join(rows)}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
-        f"Method: {picked.method} Sources: {'; '.join(picked.sources)}."
+        f"Sources of the perspective: {picked.sources}"
         + (f"\n\nRepository rules this perspective applies (each is also a check's source):\n{rules}" if rules else "")
     )
 

@@ -18,7 +18,31 @@ List every behaviour the hunks change. A change is not a changed line but what b
 | test_contract | what the tests pin and what they let through |
 | external_contract | what the code assumes an external program, service, or library returns or does (a CLI's output format, a template language, an API's error) |
 
-Each change has an id `E-<n>`, a `subject` (what differs, in a short phrase), `before` and `after` (the behaviour at the merge base and at the head; write `없음` for a behaviour the change adds or removes), the hunk ids that produce it, and its `structure`: `alters` is true when the change creates or alters a structure, that is a concept and how it is represented, a data model and the invariants it enforces, the placement of a responsibility, or a module boundary, and `what` names that structure in one sentence; when `alters` is false, `what` says why the change stays inside the functions it touches. A new field that holds an identity, a status kept as a string, a responsibility moved between modules, or a new public name is a structural change; a changed branch condition or a new boundary check usually is not. One hunk may produce several changes, and one change may span hunks. A hunk that builds something another program interprets, such as a command line, a format or template string, a query, a configuration value, or a request to a service, also produces an `external_contract` change for what the code assumes that program does with it (accepts the syntax, returns that shape, fails that way), because whether the assumption holds is decided by that program, not by the code. A hunk that changes no behaviour (whitespace, a comment that promises nothing, an import order) goes to `behaviour_free` with the reason; every hunk is either in a change or there.
+Each change has an id `E-<n>`, a `subject` (what differs, in a short phrase), `before` and `after` (the behaviour at the merge base and at the head; write `없음` for a behaviour the change adds or removes), the hunk ids that produce it, its `tags` (below), and its `structure`: `alters` is true when the change creates or alters a structure, that is a concept and how it is represented, a data model and the invariants it enforces, the placement of a responsibility, or a module boundary, and `what` names that structure in one sentence; when `alters` is false, `what` says why the change stays inside the functions it touches. A new field that holds an identity, a status kept as a string, a responsibility moved between modules, or a new public name is a structural change; a changed branch condition or a new boundary check usually is not. One hunk may produce several changes, and one change may span hunks. A hunk that builds something another program interprets, such as a command line, a format or template string, a query, a configuration value, or a request to a service, also produces an `external_contract` change for what the code assumes that program does with it (accepts the syntax, returns that shape, fails that way), because whether the assumption holds is decided by that program, not by the code. A hunk that changes no behaviour (whitespace, a comment that promises nothing, an import order) goes to `behaviour_free` with the reason; every hunk is either in a change or there.
+
+Give each change its `tags`: every tag below whose description holds for the change, and none other. The tags decide, in code, which review perspectives judge the change, so leave out no tag that holds; a change may hold none.
+
+| tag | the change |
+| --- | --- |
+| fix | fixes a defect |
+| feature | adds a capability |
+| layout | adds, moves, or removes a file or module, or changes an import |
+| new_unit | adds a file, function, class, public name, configuration key, or test |
+| new_logic | adds a function, class, method, or algorithm whose logic is new |
+| concurrency | adds or changes parallel execution, a lock, a queue, a retry, a wait, shared state, or a write in several steps |
+| resource | creates or deletes a container, file, process, lock, or other temporary resource |
+| trust_boundary | handles user input, files, model output, another service's response, credentials, or authentication and authorization |
+| model_call | adds or changes a model call, a prompt, an output schema, or the parsing of model output |
+| test_setup | adds or changes a test fixture or setup code, or a test that uses a database, container, model, or network |
+| design_decision | rests on a choice among alternatives or an invariant that the code alone does not show |
+| input | changes a function that receives input from its caller or from outside |
+| io_or_parse | changes an external call, I/O, parsing, or exception handling |
+| serialized | changes the format or name of a value that is stored or sent (a field, column, wire format, key, flag) |
+| computation | adds or changes an aggregation, selection, ranking, search, or numeric routine |
+| query | adds or changes a database query |
+| sink | changes a place where a query, command, or path is built, or where values reach logs, responses, or other output |
+| user_interface | changes a command-line argument, setting, default, output format, error message, or exit code |
+| claim | claims a number, a speed, or completion |
 
 ## 2. The rules you read
 

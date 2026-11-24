@@ -28,18 +28,17 @@ So the stage has two steps:
    No exploration is left to it: the pack already holds what a session would search
    for, so the call is one request, not an agent session (the user, 2026-11-24:
    "단발 구조화 출력은 좋지. 필요하면 그렇게 해.").
-2. Perspectives, picked from srv's catalog (`references/perspectives.json`), never built (the user, 2026-11-24, after
-   a lead had let code build a perspective per value source, 266 on PR #1726: "관점은 코드에서 찾는게 아니라 미리
-   정해진 검토 관점 중에서 코드 변경에 관련된 걸 고르는거다."). Code picks every catalog perspective whose change
-   kinds some change has (`stakes_by_kind`); a perspective with an `applies_when` condition gets one small call that
-   keeps the changes of its kinds the condition holds for (`references/select.md`); one call attaches each repository
-   rule the unit calls cited to the picked perspectives whose value it refines (`references/rules.md`), so a rule is a
-   criterion of a picked perspective, never a perspective; and one call per picked perspective binds it to this change:
-   the `broken_if` its frame takes here and the checks that decide it, one at least per attached rule
-   (`references/bind.md`). Code then fixes the breadth: a `high` perspective takes its whole stake, a `low` one is cut
-   into perspectives of at most `LOW_BREADTH_MAX` changes, because breadth and depth trade against each other (the
-   user, 2026-11-24: "넓게 보려면 앝게 봐야돼. 좁게 보려면 깊게 봐야돼. 넓고 깊게 보라고 해봤자 어차피 못본다",
-   "그러니까 관점이 필요한거라고").
+2. Perspectives, picked from srv's catalog (`references/perspectives/`, REVIEW-TECHNIQUES.md section 4), never
+   built (the user, 2026-11-24, after a lead had let code build a perspective per value source, 266 on PR #1726:
+   "관점은 코드에서 찾는게 아니라 미리 정해진 검토 관점 중에서 코드 변경에 관련된 걸 고르는거다."). Code picks
+   every catalog perspective one of whose picks (a change kind, `structure`, or a tag the change-set call gave) some
+   change has (`stakes_by_pick`), with no model call; code cuts the stake into tasks, a `high` perspective's whole
+   stake as one task and a `low` one's into tasks of at most `LOW_BREADTH_MAX` changes, because breadth and depth trade
+   against each other (the user, 2026-11-24: "넓게 보려면 앝게 봐야돼. 좁게 보려면 깊게 봐야돼. 넓고 깊게 보라고
+   해봤자 어차피 못본다", "그러니까 관점이 필요한거라고"); one call attaches each repository rule the unit calls cited
+   to the picked perspectives whose value it refines (`references/rules.md`), so a rule is a criterion of a picked
+   perspective, never a perspective; and one call per task, all at once, fills the perspective's `broken_if` frame
+   with the names of that task's changes and writes the checks that decide it (`references/bind.md`).
 
 Coverage is checked here, in code, not trusted to the model, and holds by construction because the catalog loader
 (`sweep.read_catalog`) refuses a catalog whose unconditional perspectives miss a change kind at low depth, structure
@@ -86,7 +85,6 @@ if TYPE_CHECKING:
 
 BIN = Path(__file__).resolve().parent
 CHANGES_BRIEF = BIN.parent / "references" / "changes.md"
-SELECT_BRIEF = BIN.parent / "references" / "select.md"
 RULES_BRIEF = BIN.parent / "references" / "rules.md"
 BIND_BRIEF = BIN.parent / "references" / "bind.md"
 MEANS = ("read", "trace", "execute")
@@ -119,9 +117,10 @@ CHANGES_SCHEMA = {
     "properties": {
         "changes": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
-            "required": ["id", "kind", "subject", "before", "after", "hunks", "structure"],
+            "required": ["id", "kind", "subject", "before", "after", "hunks", "tags", "structure"],
             "properties": {
                 "id": {"type": "string"}, "kind": {"type": "string", "enum": list(CHANGE_KINDS)},
+                "tags": {"type": "array", "items": {"type": "string", "enum": list(sweep.CHANGE_TAGS)}},
                 "subject": {"type": "string"}, "before": {"type": "string"}, "after": {"type": "string"},
                 "hunks": _STRINGS,
                 "structure": {
@@ -165,6 +164,9 @@ def check_changes(answer: object, hunks: list[str]) -> list[str]:
             "change it makes, or say why it changes no behaviour"
         )
     for cid, change in changes.items():
+        if not isinstance(change.get("tags"), list) or set(change["tags"]) - set(sweep.CHANGE_TAGS):
+            problems.append(f"{cid} has no `tags` list of {sweep.CHANGE_TAGS}; give every tag that holds for the change, "
+                            "since the tags decide which perspectives judge it")
         structure = change.get("structure")
         if not isinstance(structure, dict) or not isinstance(structure.get("alters"), bool) or not str(structure.get("what", "")).strip():
             problems.append(
@@ -216,8 +218,8 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
         if sources - {picked.id} - attached:
             problems.append(f"{pid} has checks asking {sorted(sources - {picked.id} - attached)}, which are neither its "
                             f"catalog value {picked.id} nor a rule attached to it; one perspective judges one value")
-        if attached - sources:
-            problems.append(f"{pid} has rules {sorted(attached - sources)} attached that no check asks")
+        if unasked := sorted(rule for rule in attached - sources if rule_scope(rule)):
+            problems.append(f"{pid} has rules {unasked} attached that no check asks")
         covered[p["depth"]].update(breadth)
         if any(c.get("means") == "execute" for c in p["checks"] if isinstance(c, dict)):
             executed.update(breadth)
@@ -295,10 +297,6 @@ _CHECKS = {"type": "array", "items": {
     "properties": {"question": {"type": "string"}, "means": {"type": "string", "enum": list(MEANS)},
                    "source": {"type": "string"}},
 }}
-SELECT_SCHEMA = {
-    "type": "object", "additionalProperties": False, "required": ["changes", "reason"],
-    "properties": {"changes": _STRINGS, "reason": {"type": "string"}},
-}
 RULES_SCHEMA = {
     "type": "object", "additionalProperties": False, "required": ["rules"],
     "properties": {"rules": {"type": "array", "items": {
@@ -338,30 +336,17 @@ def rule_scope(rule: str) -> str:
     return f"{directory}/" if directory else ""
 
 
-def stakes_by_kind(catalog: dict[str, CatalogPerspective], changes: dict[str, dict]) -> dict[str, list[str]]:
-    """Every catalog perspective's stake: the changes, in change-set order, whose kind is one of its kinds, or that alter
-    a structure when `structure` is one of them. The changes are indexed by kind once, so each perspective reads only
-    the lists of its own kinds."""
-    by_kind: dict[str, list[str]] = {kind: [] for kind in STAKE_KINDS}
+def stakes_by_pick(catalog: dict[str, CatalogPerspective], changes: dict[str, dict]) -> dict[str, list[str]]:
+    """Every catalog perspective's stake: the changes, in change-set order, that one of its picks selects: a change kind
+    the change has, `structure` when it alters a structure, or a tag the change carries. The changes are indexed by pick
+    once, so each perspective reads only the lists of its own picks."""
+    by_pick: dict[str, list[str]] = {}
     for cid, c in changes.items():
-        by_kind[c["kind"]].append(cid)
-        if c["structure"]["alters"]:
-            by_kind["structure"].append(cid)
+        for pick in {c["kind"], *c.get("tags", []), *(["structure"] if c["structure"]["alters"] else [])}:
+            by_pick.setdefault(pick, []).append(cid)
     order = {cid: n for n, cid in enumerate(changes)}
-    return {pid: sorted({cid for kind in p.kinds for cid in by_kind[kind]}, key=order.__getitem__)
+    return {pid: sorted({cid for pick in p.picks for cid in by_pick.get(pick, [])}, key=order.__getitem__)
             for pid, p in catalog.items()}
-
-
-def check_select(answer: object, stake: list[str]) -> list[str]:
-    """Problems of one condition answer: it keeps a subset of the perspective's stake, with a reason."""
-    if not isinstance(answer, dict) or set(answer) != set(SELECT_SCHEMA["required"]):
-        return [f"the answer is not an object with exactly {SELECT_SCHEMA['required']}"]
-    problems = []
-    if unknown := sorted(set(answer["changes"]) - set(stake)):
-        problems.append(f"changes {unknown} are not among the listed changes; keep only listed ids, copied exactly")
-    if not str(answer["reason"]).strip():
-        problems.append("`reason` is empty")
-    return problems
 
 
 def check_rules(answer: object, rules: list[str], picked: list[str], changes: dict[str, dict]) -> list[str]:
@@ -390,9 +375,10 @@ def check_rules(answer: object, rules: list[str], picked: list[str], changes: di
 
 
 def check_bind(answer: object, perspective: CatalogPerspective, attached: list[str]) -> list[str]:
-    """Problems of one binding: a `broken_if` for this change, checks that each ask the perspective's value or one
-    attached rule, at least one check per attached rule and one for the value, and an `execute` check when the
-    catalog perspective requires a run."""
+    """Problems of one binding: a `broken_if` for this task's changes, checks that each ask the perspective's value or
+    one attached rule, one check for the value, one per attached rule of a subdirectory's document (a root rule may go
+    unasked where it bears on none of the task's changes), and an `execute` check when the catalog perspective
+    requires a run."""
     if not isinstance(answer, dict) or set(answer) != set(BIND_SCHEMA["required"]):
         return [f"the answer is not an object with exactly {BIND_SCHEMA['required']}"]
     problems = [] if str(answer["broken_if"]).strip() else ["`broken_if` is empty"]
@@ -406,7 +392,7 @@ def check_bind(answer: object, perspective: CatalogPerspective, attached: list[s
         problems.append(f"a check's source is neither `{perspective.id}` nor one of the attached rules {attached}")
     if perspective.id not in sources:
         problems.append(f"no check asks the perspective's own value; give one with source `{perspective.id}`")
-    if missing := [rule for rule in attached if rule not in sources]:
+    if missing := [rule for rule in attached if rule not in sources and rule_scope(rule)]:
         problems.append(f"attached rules {missing} are asked by no check; give each its own check, so its observations "
                         "stay apart from the value's")
     if perspective.execute and not any(c["means"] == "execute" for c in checks):
@@ -431,11 +417,13 @@ def user_message(context: dict, *parts: str, schema: dict) -> str:
 
 def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], context: dict, options: argparse.Namespace,
                        pool: concurrent.futures.Executor) -> dict:
-    """The perspective set, picked from the catalog and bound to this change: code picks by change kind, one call per
-    conditional perspective keeps the changes its condition holds for, one call attaches the cited rules to the picked
-    perspectives, one call per picked perspective binds its `broken_if` and checks, and code fixes the breadth (a `high`
-    perspective over its whole stake, `low` ones over at most `LOW_BREADTH_MAX` changes each)."""
+    """The perspective set, picked from the catalog and bound to this change: code picks by the changes' kinds,
+    structure, and tags and fixes each task's breadth (a `high` perspective over its whole stake, `low` ones over at most
+    `LOW_BREADTH_MAX` changes each); one call attaches the cited rules to the picked perspectives; and one call per task
+    binds its `broken_if` and checks to the changes of that task alone, all at once."""
     catalog = context["catalog"]
+    if options.pick_effort is not None:  # the picking calls judge from the request alone, with nothing to explore
+        options = argparse.Namespace(**{**vars(options), "reasoning_effort": options.pick_effort})
     rule_text, aliases = distinct_rules(designs)
     rules = list(rule_text)
     started, calls = time.monotonic(), []
@@ -446,31 +434,16 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
         return result
 
     def listing(ids) -> str:
-        return "\n".join(f"- {cid} [{changes[cid]['kind']}{', alters structure' if changes[cid]['structure']['alters'] else ''}] "
+        return "\n".join(f"- {cid} [{changes[cid]['kind']}{', alters structure' if changes[cid]['structure']['alters'] else ''}"
+                         f"{''.join(', ' + tag for tag in changes[cid].get('tags', []))}] "
                          f"{changes[cid]['subject']}: {changes[cid]['before']} -> {changes[cid]['after']} "
                          f"({', '.join(changes[cid]['files'])})" for cid in ids)
 
     def message(brief: str, *parts: str, schema: dict) -> list[dict]:
         return [{"role": "system", "content": context[brief]}, {"role": "user", "content": user_message(context, *parts, schema=schema)}]
 
-    stakes = stakes_by_kind(catalog, changes)
-    unpicked = {pid: f"no change of kinds {', '.join(catalog[pid].kinds)}" for pid, ids in stakes.items() if not ids}
-    conditional = [pid for pid in catalog if pid not in unpicked and catalog[pid].applies_when]
-    futures = {pid: pool.submit(call, message("select_brief", "# Perspective\n\n" + sweep.catalog_text(catalog, [pid]),
-                                              "# Changes of its kinds\n\n" + listing(stakes[pid]), schema=SELECT_SCHEMA),
-                                functools.partial(check_select, stake=stakes[pid]), SELECT_SCHEMA, "srv-select")
-               for pid in conditional}
-    errors = []
-    for pid, future in futures.items():
-        answer = future.result()
-        if not answer["ok"]:
-            errors += [f"select {pid}: {e}" for e in answer["errors"]]
-        elif answer["changes"]:
-            stakes[pid] = [cid for cid in stakes[pid] if cid in set(answer["changes"])]
-        else:
-            unpicked[pid] = f"applies when {catalog[pid].applies_when}: {answer['reason']}"
-    if errors:
-        return {"ok": False, "errors": errors, "calls": calls}
+    stakes = stakes_by_pick(catalog, changes)
+    unpicked = {pid: f"no change is picked by {', '.join(catalog[pid].picks)}" for pid, ids in stakes.items() if not ids}
     picked = [pid for pid in catalog if pid not in unpicked]
     attached: dict[str, list[str]] = {pid: [] for pid in picked}
     rule_rows = []
@@ -485,41 +458,47 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
             rule_rows.append({"rule": rule, "perspectives": row["perspectives"], "reason": row["reason"]})
             for pid in row["perspectives"]:
                 attached[pid].append(rule)
+    tasks = [(pid, group, [rule for rule in attached[pid] if governs(rule, group, changes)])
+             for pid in picked
+             for group in ([stakes[pid]] if catalog[pid].depth == "high" else chunks(stakes[pid], LOW_BREADTH_MAX))]
 
-    def bind_messages(pid: str) -> list[dict]:
-        rule_part = "\n".join(f"- {rule}: {rule_text[rule]}" for rule in attached[pid]) or "(none)"
+    def bind_messages(pid: str, group: list[str], task_rules: list[str]) -> list[dict]:
+        rule_part = "\n".join(f"- {rule}: {rule_text[rule]}" for rule in task_rules) or "(none)"
         return message("bind_brief", "# Perspective\n\n" + sweep.catalog_text(catalog, [pid]),
                        "# Repository rules attached to it\n\n" + rule_part,
-                       "# Changes in its breadth\n\n" + listing(stakes[pid]), schema=BIND_SCHEMA)
+                       "# Changes in its breadth\n\n" + listing(group), schema=BIND_SCHEMA)
 
-    futures = {pid: pool.submit(call, bind_messages(pid),
-                                functools.partial(check_bind, perspective=catalog[pid], attached=attached[pid]),
-                                BIND_SCHEMA, "srv-bind")
-               for pid in picked}
-    perspectives = []
-    for pid, future in futures.items():
+    futures = [pool.submit(call, bind_messages(pid, group, task_rules),
+                           functools.partial(check_bind, perspective=catalog[pid], attached=task_rules), BIND_SCHEMA, "srv-bind")
+               for pid, group, task_rules in tasks]
+    perspectives, errors = [], []
+    for (pid, group, task_rules), future in zip(tasks, futures):
         answer = future.result()
         if not answer["ok"]:
-            errors += [f"bind {pid}: {e}" for e in answer["errors"]]
+            errors += [f"bind {pid} {group[0]}: {e}" for e in answer["errors"]]
             continue
         p = catalog[pid]
-        checks = [{"question": c["question"], "means": c["means"], "source": bind_source(c["source"], p, attached[pid])}
+        checks = [{"question": c["question"], "means": c["means"], "source": bind_source(c["source"], p, task_rules)}
                   for c in answer["checks"]]
-        groups = [stakes[pid]] if p.depth == "high" else chunks(stakes[pid], LOW_BREADTH_MAX)
-        perspectives += [{"catalog": pid, "value": p.value, "broken_if": answer["broken_if"], "breadth": group,
-                          "depth": p.depth, "checks": checks,
-                          "rules": [{"rule": rule, "text": rule_text[rule]} for rule in attached[pid]]} for group in groups]
+        perspectives.append({"catalog": pid, "value": p.value, "broken_if": answer["broken_if"], "breadth": group,
+                             "depth": p.depth, "checks": checks,
+                             "rules": [{"rule": rule, "text": rule_text[rule]} for rule in task_rules]})
     if errors:
         return {"ok": False, "errors": errors, "calls": calls}
     answer = {
-        "perspectives": [{"id": f"K-{n}", **p} for n, p in enumerate(perspectives, 1)],
+        "perspectives": [{key: ({"id": f"K-{n}", **p})[key] for key in PERSPECTIVE_KEYS} for n, p in enumerate(perspectives, 1)],
         "unpicked": [{"catalog": pid, "reason": reason} for pid, reason in unpicked.items()],
         "rules": rule_rows,
     }
-    answer["perspectives"] = [{key: p[key] for key in PERSPECTIVE_KEYS} for p in answer["perspectives"]]
     problems = check_perspectives(answer, changes, catalog, rules)
     return {"ok": not problems, "errors": problems, "calls": calls, **answer, "aliases": aliases,
             "seconds": round(time.monotonic() - started, 1)}
+
+
+def governs(rule: str, breadth: list[str], changes: dict[str, dict]) -> bool:
+    """A rule bears on a task when its document's directory holds a file of the task's changes (a root rule holds all)."""
+    scope = rule_scope(rule)
+    return any(path.startswith(scope) for cid in breadth for path in changes[cid]["files"])
 
 
 def retry_messages(messages: list[dict], content: str, problems: list[str]) -> list[dict]:
@@ -557,7 +536,6 @@ def run_design(options: argparse.Namespace) -> int:
     changes = {change.path: change for change in sweep.plan_units.parse_diff(diff_text)}
     context = {
         "changes_brief": CHANGES_BRIEF.read_text(encoding="utf-8"),
-        "select_brief": SELECT_BRIEF.read_text(encoding="utf-8"),
         "rules_brief": RULES_BRIEF.read_text(encoding="utf-8"),
         "bind_brief": BIND_BRIEF.read_text(encoding="utf-8"),
         "catalog": sweep.read_catalog(Path(options.catalog)),
@@ -660,6 +638,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=131072, help="covers reasoning and answer tokens")
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
+    parser.add_argument("--pick-effort", help="reasoning effort of the condition, rule, and binding calls of the "
+                        "perspective step; empty string to omit, default the --reasoning-effort")
     parser.add_argument("--only", nargs="+", help="unit ids whose change set to run again; units with a valid change set "
                         "for this diff are kept, and the perspective step always runs on the whole change set")
     return parser.parse_args(argv)
