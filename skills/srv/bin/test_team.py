@@ -37,11 +37,6 @@ def finding(fid: str, path: str, line: int, status: str = "exact") -> dict:
 
 
 class PureTest(unittest.TestCase):
-    def test_findings_close_in_one_file_form_one_cluster(self) -> None:
-        groups = team.cluster([finding("a", "f.py", 10), finding("b", "g.py", 11), finding("c", "f.py", 13),
-                               finding("d", "f.py", 30)])
-        self.assertEqual([[f["id"] for f in g] for g in groups], [["a", "c"], ["d"], ["b"]])
-
     def test_a_question_goes_to_the_perspectives_whose_breadth_holds_its_target(self) -> None:
         perspectives = [perspective("K-1", ["U-1/E-1"]), perspective("K-2", ["U-1/E-2"]), perspective("K-3", ["U-1/E-2"])]
         results = {"K-1": [{"questions": [{"about": "U-1/E-2", "question": "q"}]}]}

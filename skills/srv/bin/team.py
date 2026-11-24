@@ -59,7 +59,6 @@ BIN = Path(__file__).resolve().parent
 REFERENCES = BIN.parent / "references"
 JUDGE_SAMPLES = 3
 VERIFY_SAMPLES = 3
-CLUSTER_LINES = 3  # findings whose lines are this close in one file describe one place
 QUESTIONS_PER_PERSPECTIVE = 2  # a routed round answers at most this many questions per perspective
 WINDOW = 20
 METRICS = ("vllm:prompt_tokens_total", "vllm:generation_tokens_total", "vllm:request_prefill_time_seconds_sum",
@@ -99,6 +98,12 @@ JUDGE_BRIEF = (
     "does not give. `decisive` lists the numbers of the facts the verdict rests on. Write `reason` in Korean. "
     "Answer with one JSON object."
 )
+
+
+def parallel(call, times: int) -> list:
+    """`times` independent samples of one call, sent at once: the samples' wall time is one call's, not their sum."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=times) as pool:
+        return list(pool.map(lambda _: call(), range(times)))
 
 
 def strip(text: str) -> str:
@@ -185,8 +190,8 @@ def judge_perspectives(perspectives: list[dict], results: dict[str, list[dict]],
         facts = facts_of(results.get(perspective["id"], []))
         if not facts:
             return {"verdict": "undecided", "facts": [], "decisive": [], "reasons": ["관찰이 보고되지 않았다"]}
-        replies = [sweep.request_json(judge_messages(perspective, facts), options, lambda a: [], JUDGE_SCHEMA, "srv-judge")
-                   for _ in range(JUDGE_SAMPLES)]
+        messages = judge_messages(perspective, facts)
+        replies = parallel(lambda: sweep.request_json(messages, options, lambda a: [], JUDGE_SCHEMA, "srv-judge"), JUDGE_SAMPLES)
         answers = [r.answer for r in replies if r.answer]
         decided = majority([a["verdict"] for a in answers])
         decisive = sorted({n for a in answers if a["verdict"] == decided for n in a["decisive"] if 1 <= n <= len(facts)})
@@ -213,7 +218,7 @@ def judged_findings(perspectives: dict[str, dict], judgments: dict[str, dict], r
         anchor = lines[line - 1].strip() if 0 < line <= len(lines) else ""
         findings.append(sweep.anchor_findings.anchor_finding({
             "id": f"J-{pid}", "severity": "MAJOR", "file": path, "line": line, "anchor": anchor,
-            "condition": f"{perspectives[pid]['value']} 이 깨진다: {perspectives[pid]['broken_if']}",
+            "condition": judgment["reasons"][0] if judgment["reasons"] else perspectives[pid]["broken_if"],
             "evidence": "; ".join(f"{f['location']}: {f['observation']}" for f in decisive),
             "fix": "", "perspective": pid,
         }, repo))
@@ -253,19 +258,6 @@ def route_questions(perspectives: list[dict], results: dict[str, list[dict]], ju
 
 
 # ---------------------------------------------------------------- verify
-
-
-def cluster(findings: list[dict]) -> list[list[dict]]:
-    """Findings grouped by place: sorted by file and line, a finding joins the group before it when it is in the same
-    file within `CLUSTER_LINES` lines of that group's last line (one sweep, O(n log n))."""
-    groups: list[list[dict]] = []
-    for f in sorted(findings, key=lambda f: (f["file"], f["line"])):
-        last = groups[-1][-1] if groups else None
-        if last and last["file"] == f["file"] and f["line"] - last["line"] <= CLUSTER_LINES:
-            groups[-1].append(f)
-        else:
-            groups.append([f])
-    return groups
 
 
 def head_window(repo: Path, path: str, line: int, radius: int) -> str:
@@ -310,12 +302,15 @@ def decide_cluster(group: list[dict], answers: list[dict]) -> tuple[str, str]:
 
 def verify(findings: list[dict], repo: Path, pack: str, changes: dict, options) -> list[dict]:
     brief = strip((REFERENCES / "verify.md").read_text(encoding="utf-8"))
-    groups = cluster(findings)
+    # Each finding is verified on its own: two defects at neighbouring lines are different defects, so grouping by
+    # place would hide one behind the other (run 10a: a wording defect and a missing-result defect two lines apart
+    # became one cluster). Duplicates are removed afterwards by `merge`, which compares meaning, not lines.
+    groups = [[f] for f in findings]
 
     def one(group: list[dict]) -> list[dict]:
         messages = verify_messages(group, repo, pack, brief, changes)
-        return [r.answer for r in (sweep.request_json(messages, options, lambda a: [], VERIFY_SCHEMA, "srv-verify")
-                                   for _ in range(VERIFY_SAMPLES)) if r.answer]
+        return [r.answer for r in parallel(lambda: sweep.request_json(messages, options, lambda a: [], VERIFY_SCHEMA,
+                                                                      "srv-verify"), VERIFY_SAMPLES) if r.answer]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(groups))) as pool:
         all_answers = list(pool.map(one, groups))
@@ -365,7 +360,7 @@ def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]
         user = (f"Kept findings:\n{listed}\n\nFinding to decide:\n- {cluster['id']} [{cluster['severity']}] "
                 f"{cluster['file']}:{cluster['line']}: {cluster['condition']}")
         messages = [{"role": "system", "content": MERGE_BRIEF}, {"role": "user", "content": user}]
-        replies = [sweep.request_json(messages, options, lambda a: [], MERGE_SCHEMA, "srv-merge") for _ in range(JUDGE_SAMPLES)]
+        replies = parallel(lambda: sweep.request_json(messages, options, lambda a: [], MERGE_SCHEMA, "srv-merge"), JUDGE_SAMPLES)
         ids = {k["id"] for k in earlier}
         target = majority([r.answer["same_as"] if r.answer and r.answer["same_as"] in ids else "" for r in replies])
         return target if target in ids else ""
@@ -568,8 +563,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--design-effort", default="high")
     parser.add_argument("--inspect-effort", default="high", help="omp --thinking of the inspector sessions")
     parser.add_argument("--inspect-timeout", type=float, default=900, help="omp --max-time of each inspector session")
-    parser.add_argument("--judge-effort", default="high")
-    parser.add_argument("--verify-effort", default="high")
+    parser.add_argument("--judge-effort", default="", help="reasoning effort of judge, verify, and merge calls; empty "
+                        "omits it, as in the judge replay that decided 5 of 5 in 3.7 s per call")
+    parser.add_argument("--verify-effort", default="")
     return parser.parse_args(argv)
 
 
