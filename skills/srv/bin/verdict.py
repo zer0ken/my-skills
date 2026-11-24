@@ -18,7 +18,7 @@ true (every check decided by its means) or false, so a perspective nobody accoun
 Usage: python3 -I verdict.py --design DESIGN_DIR --verdict verdict.json [--out judgment.json]
 verdict.json: {"clusters": [{"id", "severity", "verdict": "CONFIRMED"|"PLAUSIBLE", "evidence"}],
                "questions": [{"id", "question", "options"}],
-               "perspectives": [{"id": "<unit>/<perspective>", "decided": bool, "note"}],
+               "perspectives": [{"id": "<perspective>", "decided": bool, "note"}],
                "risks": [str]}
 Exit codes: 0 judged, 2 the verdict file does not account for every perspective or is malformed.
 """
@@ -35,12 +35,11 @@ VERDICTS = ("CONFIRMED", "PLAUSIBLE")
 
 
 def designed_perspectives(design_dir: Path) -> list[str]:
-    ids = []
-    for path in sorted(design_dir.glob("*.json")):
-        design = json.loads(path.read_text(encoding="utf-8"))
-        if "unit" in design and design.get("ok"):
-            ids += [f"{design['unit']}/{p['id']}" for p in design["perspectives"]]
-    return ids
+    """The ids of the perspective set `design.py` built for the whole change."""
+    design = json.loads((design_dir / "perspectives.json").read_text(encoding="utf-8"))
+    if not design.get("ok"):
+        raise ValueError(f"{design_dir / 'perspectives.json'} holds no valid perspective set")
+    return [p["id"] for p in design["perspectives"]]
 
 
 def problems_of(verdict: dict, designed: list[str]) -> list[str]:

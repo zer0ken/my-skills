@@ -143,7 +143,7 @@ class AdmissionTest(unittest.TestCase):
              mock.patch.object(reviewer, "user_threads", return_value=1292):
             self.assertEqual(reviewer.session_slots(), (8192 - 1292) * 4 // 5 // reviewer.THREADS_PER_SESSION)
         with mock.patch.object(reviewer.resource, "getrlimit", return_value=(8192, 8192)), \
-             mock.patch.object(reviewer, "user_threads", return_value=8000):
+             mock.patch.object(reviewer, "user_threads", return_value=8192 - reviewer.THREADS_PER_SESSION):
             self.assertEqual(reviewer.session_slots(), 1, "a full budget still admits one session, one at a time")
 
 

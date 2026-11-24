@@ -68,7 +68,9 @@ SYSTEM_DIRS = ("/usr", "/etc")
 # relay add a few; every thread counts against the user's process limit (RLIMIT_NPROC). On that day 39 sessions at
 # once met a limit of 8192 with 6,600 threads already in use, and sessions failed with "Failed to start HTTP Client
 # thread: EAGAIN" and "bwrap: Can't fork".
-THREADS_PER_SESSION = 230
+# Pinned to SESSION_CPUS CPUs (below), a session peaked at 28 threads over the 18 sessions of a PR #1470 round
+# (2026-11-24, sampled every 2 s); the jail, shell, and relay add a few, so a session is counted as 40.
+THREADS_PER_SESSION = 40
 # omp sizes its thread pools to the CPUs it may use: a session on 64 CPUs ran 129 `tokio-rt-worker` and 64
 # `pi-fs-worker` threads, and the same omp started with the affinity of 4 CPUs peaked at 16 threads and of 8 at 26
 # (2026-11-24). So every session runs pinned to SESSION_CPUS CPUs, taken in turn from the CPUs this process may use,
@@ -362,7 +364,7 @@ class Jail:
                                         timeout=options.timeout + 60, check=False)
             except subprocess.TimeoutExpired as error:
                 raise TimeoutError(f"the omp session ran past {options.timeout + 60:.0f} s") from error
-        row = {"event": "session", "label": label, "schema": schema_name, "tools": list(tools),
+        row = {"event": "session", "label": label, "schema": schema_name, "toolset": list(tools),
                "seconds": round(time.monotonic() - started, 1), "exit": result.returncode}
         if result.returncode:
             self.record({**row, "error": result.stderr.strip()[-800:]})

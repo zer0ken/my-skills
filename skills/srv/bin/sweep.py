@@ -163,31 +163,82 @@ class Task:
         return f"{self.unit['id']}__{self.perspective}"
 
 
-def list_tasks(plan: dict, designs: dict[str, dict]) -> list[Task]:
-    """One task per unit and perspective its design built."""
-    return [Task(unit, p["id"]) for unit in plan["units"] for p in designs[unit["id"]]["perspectives"]]
+RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
 
 
-def perspective_block(design: dict, perspective_id: str, catalog: dict[str, str]) -> str:
+def catalog_id(source: object, catalog) -> str | None:
+    """The catalog entry a perspective source names, as `catalog: <id>` or the bare id; None for any other source."""
+    text = str(source or "").strip()
+    if text.startswith("catalog:"):
+        text = text[len("catalog:"):].strip()
+    return text if text in catalog else None
+
+
+def perspective_view(plan: dict, designs: dict[str, dict], perspective: dict) -> dict:
+    """The part of the change a perspective's breadth spans, shaped as a unit: the files of every unit its changes
+    come from, and per unit the hunks of those changes. Breadth is not bound to the review units."""
+    hunks: dict[str, set[str]] = {}
+    for gid in perspective["breadth"]:
+        uid, cid = gid.split("/", 1)
+        change = next(c for c in designs[uid]["changes"] if c["id"] == cid)
+        hunks.setdefault(uid, set()).update(change["hunks"])
+    files = [f for unit in plan["units"] if unit["id"] in hunks for f in unit["files"]]
+    return {"id": "change", "rule": f"breadth of {perspective['id']}", "files": files, "hunks": hunks}
+
+
+def list_tasks(plan: dict, designs: dict[str, dict], perspectives: dict) -> list[Task]:
+    """One task per perspective of the whole change."""
+    return [Task(perspective_view(plan, designs, p), p["id"]) for p in perspectives["perspectives"]]
+
+
+def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_id: str, catalog: dict[str, str]) -> str:
     """The perspective as the reviewer reads it: value, depth, the changes it judges, checks with their means, and
     its sources."""
-    perspective = next(p for p in design["perspectives"] if p["id"] == perspective_id)
-    changes = {c["id"]: c for c in design["changes"]}
-    breadth = "\n".join(
-        f"- {cid} [{changes[cid]['kind']}] {changes[cid]['subject']}: {changes[cid]['before']} -> {changes[cid]['after']} "
-        f"(hunks {', '.join(changes[cid]['hunks'])})"
-        for cid in perspective["breadth"]
-    )
+    perspective = next(p for p in perspectives["perspectives"] if p["id"] == perspective_id)
+    rows = []
+    for gid in perspective["breadth"]:
+        uid, cid = gid.split("/", 1)
+        c = next(c for c in designs[uid]["changes"] if c["id"] == cid)
+        structure = f"; structure: {c['structure']['what']}" if c["structure"]["alters"] else ""
+        rows.append(f"- {gid} [{c['kind']}] {c['subject']}: {c['before']} -> {c['after']} "
+                    f"(hunks {', '.join(f'{uid}/{h}' for h in c['hunks'])}{structure})")
     checks = "\n".join(f"{n}. [{check['means']}] {check['question']}" for n, check in enumerate(perspective["checks"], 1))
     sources = "\n\n".join(
-        f"## {source}\n\n{catalog[source]}" if source in catalog else f"- {source}" for source in perspective["sources"]
+        f"## {entry}\n\n{catalog[entry]}" if (entry := catalog_id(source, catalog)) else f"- {source}"
+        for source in perspective["sources"]
     )
     return (
         f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
         f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
-        f"Breadth (the changes this perspective judges):\n{breadth}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
+        f"Breadth (the changes this perspective judges):\n{chr(10).join(rows)}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
         f"Sources of the value:\n\n{sources}"
     )
+
+
+def hunk_ids(changes: dict, unit: dict) -> list[str]:
+    """`H1`, `H2`, ... for the unit's hunks, in file then hunk order."""
+    return [f"H{n}" for n in range(1, sum(len(changes[f["path"]].hunks) for f in unit["files"]) + 1)]
+
+
+def labelled_diff(changes: dict, unit: dict, keep: set[str] | None = None, prefix: str = "") -> str:
+    """The unit's hunks as a unified diff, each hunk header followed by `[<prefix>H<n>]`; with `keep`, only those."""
+    parts, number = [], 0
+    for file in unit["files"]:
+        change = changes[file["path"]]
+        shown = []
+        for hunk in change.hunks:
+            number += 1
+            if keep is None or f"H{number}" in keep:
+                shown += [f"{hunk.header}  [{prefix}H{number}]", *hunk.lines]
+        if shown:
+            parts += [f"--- a/{change.old_path}\n+++ b/{change.path}  ({change.status})", *shown]
+    return "\n".join(parts)
+
+
+def breadth_diff(changes: dict, plan: dict, view: dict) -> str:
+    """The hunks of a perspective's breadth, labelled `<unit>/H<n>`, unit by unit."""
+    return "\n".join(labelled_diff(changes, unit, view["hunks"][unit["id"]], f"{unit['id']}/")
+                     for unit in plan["units"] if unit["id"] in view["hunks"])
 
 
 def strip_frontmatter(text: str) -> str:
@@ -197,18 +248,6 @@ def strip_frontmatter(text: str) -> str:
             if line.strip() == "---":
                 return "\n".join(lines[index + 1 :]).lstrip("\n")
     return text
-
-
-def unit_diff(changes: dict, unit: dict) -> str:
-    """The unit's hunks as a unified diff."""
-    parts = []
-    for file in unit["files"]:
-        change = changes[file["path"]]
-        parts.append(f"--- a/{change.old_path}\n+++ b/{change.path}  ({change.status})")
-        for hunk in change.hunks:
-            parts.append(hunk.header)
-            parts.extend(hunk.lines)
-    return "\n".join(parts)
 
 
 def numbered_head_files(repo: Path, changes: dict, unit: dict) -> str:
@@ -372,14 +411,15 @@ def find_callers(repo: Path, unit: dict, symbols: list[str]) -> str:
 
 
 def build_messages(task: Task, context: dict) -> list[dict]:
-    unit = task.unit
+    view = task.unit
     user = "\n\n".join(
         [
-            perspective_block(context["designs"][unit["id"]], task.perspective, context["catalog"]),
+            perspective_block(context["perspectives"], context["designs"], task.perspective, context["catalog"]),
             "# Requirement copies (what the change answers)\n\n" + context["requirements"],
-            f"# Unit {unit['id']} ({unit['rule']}): its hunks\n\n```diff\n{unit_diff(context['changes'], unit)}\n```",
-            "# Unit files at the head (line number, `|`, then the line)\n\n" + numbered_head_files(context["repo"], context["changes"], unit),
-            "# Lines elsewhere at the head that name a changed symbol\n\n" + context["callers"][unit["id"]],
+            f"# The hunks of the breadth (`<unit>/H<n>`)\n\n```diff\n{breadth_diff(context['changes'], context['plan'], view)}\n```",
+            "# Their files at the head (line number, `|`, then the line)\n\n" + numbered_head_files(context["repo"], context["changes"], view),
+            "# Lines elsewhere at the head that name a changed symbol\n\n"
+            + find_callers(context["repo"], view, changed_symbols(context["repo"], context["changes"], view)),
             change_files(context["changes"]),
             "# Output JSON Schema\n\n```json\n" + json.dumps(FINDINGS_SCHEMA, indent=1) + "\n```",
         ]
@@ -646,6 +686,22 @@ def failed_result(task: Task, error: BaseException) -> dict:
     }
 
 
+def load_design(directory: Path, plan: dict, source_sha256: str) -> tuple[dict[str, dict], dict] | str:
+    """Every unit's change set and the perspective set `design.py` wrote for this diff, or what is missing."""
+    def valid(path: Path) -> dict | None:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+        return data if data and data.get("ok") and data.get("source_sha256") == source_sha256 else None
+
+    designs = {u["id"]: valid(directory / f"{u['id']}.json") for u in plan["units"]}
+    bare = [uid for uid, d in designs.items() if d is None]
+    if bare:
+        return f"units {bare} have no valid change set for this diff in {directory}, so no perspective judges their changes"
+    perspectives = valid(directory / "perspectives.json")
+    if perspectives is None:
+        return f"{directory / 'perspectives.json'} holds no valid perspective set for this diff"
+    return designs, perspectives
+
+
 def run_sweep(options: argparse.Namespace) -> int:
     started = time.monotonic()
     plan = json.loads(Path(options.units).read_text(encoding="utf-8"))
@@ -654,37 +710,27 @@ def run_sweep(options: argparse.Namespace) -> int:
     if diff_sha256 != plan["diff_sha256"]:
         print("sweep: the diff is not the one the unit plan was made from; rerun plan-units.py on this diff", file=sys.stderr)
         return 2
-    designs = {}
-    for unit in plan["units"]:
-        path = Path(options.design) / f"{unit['id']}.json"
-        design = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
-        if design and design.get("ok") and design.get("source_sha256") == diff_sha256:
-            designs[unit["id"]] = design
-    bare = [unit["id"] for unit in plan["units"] if unit["id"] not in designs]
-    if bare:
-        print(
-            f"sweep: units {bare} have no valid design for this diff in {options.design}, so no perspective would "
-            "review them. Run `design.py` on this unit plan and diff until it exits 0; do not run the round without "
-            "those units or give them perspectives that skipped its coverage check.",
-            file=sys.stderr,
-        )
+    loaded = load_design(Path(options.design), plan, diff_sha256)
+    if isinstance(loaded, str):
+        print(f"sweep: {loaded}. Run `design.py` on this unit plan and diff until it exits 0; do not run the round "
+              "without them or write perspectives that skipped its coverage check.", file=sys.stderr)
         return 2
+    designs, perspectives = loaded
     repo, out = Path(options.repo), Path(options.out)
     out.mkdir(parents=True, exist_ok=True)
     changes = {change.path: change for change in plan_units.parse_diff(diff_text)}
     context = {
         "brief": BRIEF_PATH.read_text(encoding="utf-8"),
-        "designs": designs,
+        "plan": plan, "designs": designs, "perspectives": perspectives,
         "catalog": {path.stem: path.read_text(encoding="utf-8").strip() for path in sorted(Path(options.values).glob("*.md"))},
         "requirements": "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements),
         "changes": changes,
         "repo": repo,
-        "callers": {u["id"]: find_callers(repo, u, changed_symbols(repo, changes, u)) for u in plan["units"]},
     }
-    all_tasks = list_tasks(plan, designs)
+    all_tasks = list_tasks(plan, designs, perspectives)
     tasks = [task for task in all_tasks if not options.only or task.name in options.only]
-    missing = sorted({s for d in designs.values() for p in d["perspectives"] for s in p["sources"]
-                      if not s.startswith(("requirement:", "rule:")) and s not in context["catalog"]})
+    missing = sorted({s for p in perspectives["perspectives"] for s in p["sources"]
+                      if not s.startswith(RECORD_SOURCE_PREFIXES) and not catalog_id(s, context["catalog"])})
     if missing:
         print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
         return 2

@@ -15,7 +15,7 @@ verdict = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = verdict
 SPEC.loader.exec_module(verdict)
 
-DECIDED = [{"id": "U-1/K-1", "decided": True}, {"id": "U-1/K-2", "decided": True}]
+DECIDED = [{"id": "K-1", "decided": True}, {"id": "K-2", "decided": True}]
 
 
 def cluster(severity: str, state: str = "CONFIRMED") -> dict:
@@ -33,9 +33,9 @@ class JudgeTest(unittest.TestCase):
         self.assertEqual(self.decide([cluster("BLOCKER", "PLAUSIBLE")]), "증거 부족")
 
     def test_undecided_perspective_is_never_acceptance(self) -> None:
-        judgment = verdict.judge({"perspectives": [{"id": "U-1/K-1", "decided": False, "note": "격리 실행 불가"}]})
+        judgment = verdict.judge({"perspectives": [{"id": "K-1", "decided": False, "note": "격리 실행 불가"}]})
         self.assertEqual(judgment["decision"], "증거 부족")
-        self.assertEqual(judgment["residual_risk"], ["관점 U-1/K-1 는 점검을 정한 수단으로 다 판정하지 못했다: 격리 실행 불가"])
+        self.assertEqual(judgment["residual_risk"], ["관점 K-1 는 점검을 정한 수단으로 다 판정하지 못했다: 격리 실행 불가"])
 
     def test_question_or_minor_is_conditional(self) -> None:
         self.assertEqual(self.decide(questions=[{"id": "Q-1"}]), "조건부 수용")
@@ -49,9 +49,10 @@ class FileTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        design = {"unit": "U-1", "ok": True, "perspectives": [{"id": "K-1"}, {"id": "K-2"}]}
+        design = {"ok": True, "perspectives": [{"id": "K-1"}, {"id": "K-2"}]}
         (self.root / "design").mkdir()
-        (self.root / "design" / "U-1.json").write_text(json.dumps(design), encoding="utf-8")
+        (self.root / "design" / "perspectives.json").write_text(json.dumps(design), encoding="utf-8")
+        (self.root / "design" / "U-1.json").write_text(json.dumps({"unit": "U-1", "ok": True, "changes": []}), encoding="utf-8")
         (self.root / "design" / "summary.json").write_text("{}", encoding="utf-8")
 
     def tearDown(self) -> None:
@@ -68,7 +69,7 @@ class FileTest(unittest.TestCase):
 
     def test_a_perspective_left_out_stops_the_verdict(self) -> None:
         self.assertEqual(self.run_verdict({"perspectives": DECIDED[:1]}), 2)
-        self.assertIn("perspectives ['U-1/K-2'] are not in the verdict file", self.stderr)
+        self.assertIn("perspectives ['K-2'] are not in the verdict file", self.stderr)
 
     def test_every_perspective_accounted_for_is_judged(self) -> None:
         self.assertEqual(self.run_verdict({"clusters": [cluster("BLOCKER")], "perspectives": DECIDED}), 0)

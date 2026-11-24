@@ -6,15 +6,15 @@
 """srv rounds 2 and later: one omp reviewer session per follow-up question, answered in round 1's schema.
 
 The operator writes the round's questions to `questions.json` after verifying the
-previous round (`references/deepen.md`): each names the unit and the perspective it
+previous round (`references/deepen.md`): each names the perspective it
 serves and asks one narrow thing. Each question gets one session (`reviewer.py`), with
 read tools on the head and `sandbox_run`, as every review session has; the
 request is the follow-up brief, the perspective as round 1 showed it, the question,
-the requirement copies, and the unit's hunks. The answer is round 1's findings schema,
+the requirement copies, and the hunks of the perspective's breadth. The answer is round 1's findings schema,
 so its lines are re-located from their anchors and the operator verifies it the same
 way (`references/consolidate.md`).
 
-questions.json: [{"id": "Q1", "unit": "U-1", "perspective": "K-3", "question": "..."}]
+questions.json: [{"id": "Q1", "perspective": "K-3", "question": "..."}]
 
 Usage:
   uv run followup.py --questions questions.json --units units.json --diff diff.patch --repo HEAD_WORKTREE \
@@ -57,33 +57,33 @@ def follow_up_brief() -> str:
 
 
 def build_messages(question: dict, context: dict) -> list[dict]:
-    unit = context["units"][question["unit"]]
+    perspective = next(p for p in context["perspectives"]["perspectives"] if p["id"] == question["perspective"])
+    view = sweep.perspective_view(context["plan"], context["designs"], perspective)
     user = "\n\n".join([
-        sweep.perspective_block(context["designs"][unit["id"]], question["perspective"], context["catalog"]),
+        sweep.perspective_block(context["perspectives"], context["designs"], question["perspective"], context["catalog"]),
         f"# Question {question['id']}\n\n{question['question']}",
         "# Requirement copies (what the change answers)\n\n" + context["requirements"],
-        f"# Unit {unit['id']} ({unit['rule']}): its hunks\n\n```diff\n{sweep.unit_diff(context['changes'], unit)}\n```",
+        f"# The hunks of the breadth (`<unit>/H<n>`)\n\n```diff\n{sweep.breadth_diff(context['changes'], context['plan'], view)}\n```",
+        sweep.change_files(context["changes"]),
         "# Output JSON Schema\n\n```json\n" + json.dumps(sweep.FINDINGS_SCHEMA, indent=1) + "\n```",
     ])
     return [{"role": "system", "content": context["brief"]}, {"role": "user", "content": user}]
 
 
-def read_questions(path: Path, units: dict, designs: dict) -> list[dict]:
+def read_questions(path: Path, perspectives: dict) -> list[dict]:
     questions = json.loads(path.read_text(encoding="utf-8"))
+    built = {p["id"] for p in perspectives["perspectives"]}
     problems = []
     for q in questions:
-        design = designs.get(q.get("unit"))
-        if design is None:
-            problems.append(f"{q.get('id')}: unit {q.get('unit')!r} has no valid design")
-        elif q.get("perspective") not in {p["id"] for p in design["perspectives"]}:
-            problems.append(f"{q.get('id')}: perspective {q.get('perspective')!r} is not one design.py built for {q['unit']}")
+        if q.get("perspective") not in built:
+            problems.append(f"{q.get('id')}: perspective {q.get('perspective')!r} is not one design.py built")
         if not str(q.get("question", "")).strip():
             problems.append(f"{q.get('id')}: empty question")
     if len({q.get("id") for q in questions}) != len(questions):
         problems.append("question ids are not unique")
     if problems:
         raise ValueError("questions.json: " + "; ".join(problems) + ". A question serves one designed perspective; "
-                         "write it against the design files, not a perspective of your own")
+                         "write it against design/perspectives.json, not a perspective of your own")
     return questions
 
 
@@ -95,18 +95,16 @@ def run_followup(options: argparse.Namespace) -> int:
     if diff_sha256 != plan["diff_sha256"]:
         print("followup: the diff is not the one the unit plan was made from", file=sys.stderr)
         return 2
-    units = {u["id"]: u for u in plan["units"]}
-    designs = {}
-    for unit_id in units:
-        path = Path(options.design) / f"{unit_id}.json"
-        design = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
-        if design and design.get("ok") and design.get("source_sha256") == diff_sha256:
-            designs[unit_id] = design
-    questions = read_questions(Path(options.questions), units, designs)
+    loaded = sweep.load_design(Path(options.design), plan, diff_sha256)
+    if isinstance(loaded, str):
+        print(f"followup: {loaded}; run design.py until it exits 0", file=sys.stderr)
+        return 2
+    designs, perspectives = loaded
+    questions = read_questions(Path(options.questions), perspectives)
     repo, out = Path(options.repo), Path(options.out)
     out.mkdir(parents=True, exist_ok=True)
     context = {
-        "brief": follow_up_brief(), "units": units, "designs": designs,
+        "brief": follow_up_brief(), "plan": plan, "designs": designs, "perspectives": perspectives,
         "catalog": {p.stem: p.read_text(encoding="utf-8").strip() for p in sorted(sweep.VALUES.glob("*.md"))},
         "requirements": "\n\n".join(Path(p).read_text(encoding="utf-8") for p in options.requirements),
         "changes": {c.path: c for c in sweep.plan_units.parse_diff(diff_text)},
@@ -114,7 +112,8 @@ def run_followup(options: argparse.Namespace) -> int:
     by_task = {}
     tasks = []
     for q in questions:
-        task = sweep.Task(units[q["unit"]], q["id"])
+        perspective = next(p for p in perspectives["perspectives"] if p["id"] == q["perspective"])
+        task = sweep.Task(sweep.perspective_view(plan, designs, perspective), q["id"])
         by_task[task.name] = q
         tasks.append(task)
     only = [t for t in tasks if not options.only or t.perspective in options.only]
