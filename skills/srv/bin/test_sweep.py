@@ -44,6 +44,19 @@ def answer(findings=None, checked=None, questions=None) -> str:
     )
 
 
+# A catalog that covers by construction: one unconditional low `execute` perspective takes every change kind, one high
+# perspective takes structure.
+CATALOG = {
+    "methods": {"trace": "Trace the requirement to the change.", "db": "Check queries."},
+    "perspectives": [
+        {"id": "trace#1", "depth": "high", "kinds": ["structure"], "value": "value of trace",
+         "broken_if": "a requirement nothing produces", "sources": ["rv U0"]},
+        {"id": "db#1", "depth": "low", "kinds": list(sweep.CHANGE_KINDS), "execute": True, "value": "value of db",
+         "broken_if": "a query with a condition its rows do not need", "sources": ["sql-expert"]},
+    ],
+}
+
+
 class FakeEndpoint(http.server.BaseHTTPRequestHandler):
     """Answers chat completions with `respond(request_body) -> content`, and records requests."""
 
@@ -114,11 +127,8 @@ class SweepTest(unittest.TestCase):
         (self.repo / "docs" / "a.md").write_text("new\n", encoding="utf-8")
         for command in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "head"]):
             subprocess.run(["git", "-C", str(self.repo), *command], check=True)
-        self.values = root / "values"
-        self.values.mkdir()
-        (self.values / "trace.md").write_text("# Method: trace\nApply U0.\n1. Trace the requirement.\n2. Name the rule.\n",
-                                              encoding="utf-8")
-        (self.values / "db.md").write_text("# Method: db\n1. Check queries.\n", encoding="utf-8")
+        self.catalog = root / "perspectives.json"
+        self.catalog.write_text(json.dumps(CATALOG), encoding="utf-8")
         self.diff = root / "diff.patch"
         self.diff.write_text(DIFF, encoding="utf-8")
         plan = sweep.plan_units.plan_units(DIFF)
@@ -158,8 +168,9 @@ class SweepTest(unittest.TestCase):
         design = {
             "ok": True, "source_sha256": hashlib.sha256(DIFF.encode()).hexdigest(),
             "perspectives": [
-                {"id": p, "value": f"value of {p}", "broken_if": f"broken {p}", "breadth": b, "depth": depth,
-                 "checks": [{"question": "c", "means": "execute", "source": f"catalog: {p}#1"}]}
+                {"id": p, "catalog": f"{p}#1", "value": f"value of {p}", "broken_if": f"broken {p}", "breadth": b,
+                 "depth": depth, "checks": [{"question": "c", "means": "execute", "source": f"{p}#1"}],
+                 "rules": [{"rule": "rule: AGENTS.md:3", "text": "Name every query."}] if p == "trace" else []}
                 for p, b in breadths.items()
             ],
             "sources": [],
@@ -174,7 +185,7 @@ class SweepTest(unittest.TestCase):
     def run_sweep(self, *extra: str) -> int:
         argv = [
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
-            "--design", str(self.design), "--values", str(self.values), "--context", str(self.context),
+            "--design", str(self.design), "--catalog", str(self.catalog), "--context", str(self.context),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
             "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
@@ -211,9 +222,12 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(self.run_sweep(), 0)
         user = next(b for b in FakeEndpoint.requests if task_of(b) == "change__trace")["messages"][1]["content"]
         self.assertIn("Depth: high (the value is judged on structure:", user)
-        self.assertIn("1. [execute] c (source: catalog: trace#1)", user)
-        self.assertIn("Sources of the value:\n\n# Method: trace\nApply U0.\n- trace#1: Trace the requirement.", user)
-        self.assertNotIn("Name the rule", user, "a reviewer gets the catalog items its checks ask, not the whole file")
+        self.assertIn("# Perspective: trace\n\nPicked from the catalog as trace#1.", user)
+        self.assertIn("1. [execute] c (source: trace#1)", user)
+        self.assertIn("Method: Trace the requirement to the change. Sources: rv U0.", user)
+        self.assertIn("Repository rules this perspective applies (each is also a check's source):\n"
+                      "- rule: AGENTS.md:3: Name every query.", user)
+        self.assertNotIn("Check queries", user, "a reviewer gets the method of its own perspective, not the catalog")
         self.assertIn("# Files of the whole change", user)
         self.assertIn("- pkg/store.py (modified)", user)
 
@@ -275,7 +289,7 @@ class SweepTest(unittest.TestCase):
         user = next(b for b in FakeEndpoint.requests if task_of(b) == "change__db")["messages"][1]["content"]
         self.assertIn("    2|     query = 'SELECT 1'", user)
         self.assertIn("pkg/api.py:3:load([])", user)
-        self.assertIn("- db#1: Check queries.", user)
+        self.assertIn("Method: Check queries. Sources: sql-expert.", user)
         self.assertIn("Value: value of db", user)
         self.assertIn("- U-2/E-1 [returned_value] s: b -> a (hunks U-2/H1)", user)
 

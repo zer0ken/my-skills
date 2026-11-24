@@ -12,7 +12,7 @@ Each task is `--samples` independent reviewer sessions (samples, `reviewer.py`),
 whose findings are pooled, because one session misses causes another finds; all
 samples of all tasks run at once, so the round takes about as long as its slowest
 session. A session gets the brief (`references/brief.md`), the perspective with the
-catalog items its checks ask about, the requirement copies, the unit's hunks, the unit's
+catalog perspective it was picked as and the rules attached to it, the requirement copies, the unit's hunks, the unit's
 files at the head with line numbers, and the lines elsewhere in the head that name a
 symbol the hunks define or change, and opens the rest of the head with its read
 tools, and runs counterexamples with `sandbox_run` where a check's means is `execute`. The
@@ -59,7 +59,16 @@ from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "brief.md"
-VALUES = Path(__file__).resolve().parents[1] / "references" / "values"
+CATALOG = Path(__file__).resolve().parents[1] / "references" / "perspectives.json"
+# What a change makes different, for someone who uses the code (`references/changes.md`); every change set element has
+# one kind, and every catalog perspective names the kinds it is at stake in.
+CHANGE_KINDS = (
+    "returned_value", "stored_data", "state_and_ownership", "failure_result", "resource_use",
+    "interface_and_name", "documented_promise", "test_contract", "external_contract",
+)
+# `structure` is a stake, not a change kind: the changes whose `structure.alters` is true, whatever their kind.
+STAKE_KINDS = (*CHANGE_KINDS, "structure")
+DEPTHS = ("high", "low")
 # A perspective's depth is the level of abstraction its value is judged at. The user's words (2026-11-24), after a lead
 # had read the depth as read, trace, and execute: "하이레벨 로우레벨을 말한거다."
 DEPTH_MEANINGS = {
@@ -181,47 +190,95 @@ class Task:
 
 
 RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
-CATALOG_ITEM_RE = re.compile(r"^(\d+)\. (?:\(stake: ([a-z_, ]+)\) )?")
 
 
 @dataclass(frozen=True)
-class CatalogItem:
-    """One numbered check of a value catalog method file, named `<file>#<n>`: the file's header (its title and the
-    method it applies), the check's text, and its stake, the change kinds it is at stake in whenever the change set
-    holds them (written `(stake: <kind>, ...)` after the item number). A perspective check names the item it asks, and
-    an item with a stake must be asked over every change of its kinds: on PR #1726 (2026-11-25, replays 13a and 13b)
-    the reuse item was asked over one unit only, and the defects it holds in two other units were never looked for."""
+class CatalogPerspective:
+    """One perspective of srv's catalog: a review yardstick fixed before any change is seen, from which each review
+    picks the ones its change is at stake in (the user, 2026-11-24, after a lead had let code build a perspective per
+    value source, 266 of them on PR #1726: "관점은 코드에서 찾는게 아니라 미리 정해진 검토 관점 중에서 코드 변경에
+    관련된 걸 고르는거다."). It holds one core `value`, the `depth` it is judged at (`high`: structure, wide and
+    shallow; `low`: behaviour inside functions, narrow and deep), the change `kinds` it is at stake in, the
+    `broken_if` frame a review binds to its change, an optional `applies_when` condition that a kind alone does not
+    decide, whether a review of it must run something (`execute`), its `sources` (rv items, `-expert` sections), and the
+    `method` of its area."""
 
-    header: str
-    text: str
-    stakes: tuple[str, ...] = ()
-
-
-def read_catalog(directory: Path = VALUES) -> dict[str, CatalogItem]:
-    """Every item of every method file in the value catalog directory, by item id `<file>#<n>`."""
-    items: dict[str, CatalogItem] = {}
-    for path in sorted(directory.glob("*.md")):
-        lines = path.read_text(encoding="utf-8").strip().splitlines()
-        header = "\n".join(line for line in lines if not CATALOG_ITEM_RE.match(line)).strip()
-        for line in lines:
-            if match := CATALOG_ITEM_RE.match(line):
-                stakes = tuple(kind.strip() for kind in (match[2] or "").split(",") if kind.strip())
-                items[f"{path.stem}#{match[1]}"] = CatalogItem(header, line[match.end():], stakes)
-    return items
+    id: str
+    method: str
+    value: str
+    broken_if: str
+    depth: str
+    kinds: tuple[str, ...]
+    applies_when: str = ""
+    execute: bool = False
+    sources: tuple[str, ...] = ()
 
 
-def catalog_text(catalog: dict[str, CatalogItem], item_ids) -> str:
-    """The named catalog items as a request shows them: each method file's header once, then its items with their ids."""
-    by_header: dict[str, list[str]] = {}
-    for item_id in item_ids:
-        item = catalog[item_id]
-        stake = f" (at stake in every change of kind {', '.join(item.stakes)})" if item.stakes else ""
-        by_header.setdefault(item.header, []).append(f"- {item_id}{stake}: {item.text}")
-    return "\n\n".join(f"{header}\n" + "\n".join(items) for header, items in by_header.items())
+def catalog_problems(catalog: dict[str, CatalogPerspective]) -> list[str]:
+    """What a catalog lacks for a review to cover every change by construction; empty when it is complete. A review
+    only picks from the catalog, so a kind no unconditional `low` perspective takes, a structure no unconditional
+    `high` one takes, or an external contract no unconditional `execute` one takes would leave changes nobody judges."""
+    problems = []
+    unconditional = [p for p in catalog.values() if not p.applies_when]
+    low = {kind for p in unconditional if p.depth == "low" for kind in p.kinds}
+    if missing := [kind for kind in CHANGE_KINDS if kind not in low]:
+        problems.append(f"change kinds {missing} are taken by no `low` perspective without `applies_when`, so changes of "
+                        "those kinds would be judged line by line by nobody; give one perspective those kinds")
+    if not any(p.depth == "high" and "structure" in p.kinds for p in unconditional):
+        problems.append("no `high` perspective without `applies_when` takes `structure`, so a structural change would "
+                        "be judged only at low level, where a structural defect shows as its symptoms")
+    if not any(p.execute and "external_contract" in p.kinds for p in unconditional):
+        problems.append("no `execute` perspective without `applies_when` takes `external_contract`, so what an external "
+                        "program does with what the code builds would be decided by reading the code that assumes it")
+    return problems
+
+
+def read_catalog(path: Path = CATALOG) -> dict[str, CatalogPerspective]:
+    """The perspective catalog (`references/perspectives.json`), checked field by field and for coverage; a catalog
+    that fails raises ValueError naming what to fix, since a review picks perspectives only from it."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    methods = data["methods"]
+    catalog: dict[str, CatalogPerspective] = {}
+    problems: list[str] = []
+    for row in data["perspectives"]:
+        pid = row.get("id", "")
+        area = pid.split("#", 1)[0]
+        kinds = tuple(row.get("kinds") or ())
+        wrong = [f"`{key}` is empty" for key in ("value", "broken_if") if not str(row.get(key, "")).strip()]
+        if pid in catalog or not re.fullmatch(r"[a-z]+#\d+", pid):
+            wrong.append("the id is not a unique `<area>#<n>`")
+        if area not in methods:
+            wrong.append(f"area {area!r} has no method in `methods`")
+        if row.get("depth") not in DEPTHS:
+            wrong.append(f"depth is not one of {DEPTHS}")
+        if not kinds or set(kinds) - set(STAKE_KINDS):
+            wrong.append(f"kinds {list(kinds)} are not a non-empty list of {STAKE_KINDS}")
+        if not row.get("sources"):
+            wrong.append("it names no source (an rv item or an `-expert` section)")
+        if wrong:
+            problems.append(f"{pid or row}: " + "; ".join(wrong))
+            continue
+        catalog[pid] = CatalogPerspective(pid, methods[area], row["value"], row["broken_if"], row["depth"], kinds,
+                                          row.get("applies_when", ""), bool(row.get("execute")), tuple(row["sources"]))
+    problems += catalog_problems(catalog) if not problems else []
+    if problems:
+        raise ValueError(f"{path}: " + " | ".join(problems))
+    return catalog
+
+
+def catalog_text(catalog: dict[str, CatalogPerspective], perspective_ids) -> str:
+    """The named catalog perspectives as a request shows them: each area's method once, then its perspectives."""
+    by_method: dict[str, list[str]] = {}
+    for pid in perspective_ids:
+        p = catalog[pid]
+        when = (f" Applies when: {p.applies_when}." if p.applies_when else "") + (" Decided by a run." if p.execute else "")
+        by_method.setdefault(p.method, []).append(
+            f"- {pid} ({p.depth}; {', '.join(p.kinds)}): {p.value} Broken if: {p.broken_if}.{when}")
+    return "\n\n".join(f"{method}\n" + "\n".join(rows) for method, rows in by_method.items())
 
 
 def catalog_id(source: object, catalog) -> str | None:
-    """The catalog item a check's source names, as `catalog: <file>#<n>` or the bare id; None for any other source."""
+    """The catalog perspective a check's source names, as `catalog: <id>` or the bare id; None for any other source."""
     text = str(source or "").strip()
     if text.startswith("catalog:"):
         text = text[len("catalog:"):].strip()
@@ -245,9 +302,11 @@ def list_tasks(plan: dict, designs: dict[str, dict], perspectives: dict) -> list
     return [Task(perspective_view(plan, designs, p), p["id"]) for p in perspectives["perspectives"]]
 
 
-def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_id: str, catalog: dict[str, CatalogItem]) -> str:
-    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks with their means and the
-    source each asks about, and those sources, catalog items under their method file's header."""
+def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_id: str,
+                      catalog: dict[str, CatalogPerspective]) -> str:
+    """The perspective as the reviewer reads it: the catalog perspective it was picked as (value, method, sources), the
+    `broken_if` bound to this change, depth, the changes it judges, checks with their means and the source each asks,
+    and the repository rules attached to it with their text."""
     perspective = next(p for p in perspectives["perspectives"] if p["id"] == perspective_id)
     rows = []
     for gid in perspective["breadth"]:
@@ -258,16 +317,15 @@ def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_
                     f"(hunks {', '.join(f'{uid}/{h}' for h in c['hunks'])}{structure})")
     checks = "\n".join(f"{n}. [{check['means']}] {check['question']} (source: {check['source']})"
                        for n, check in enumerate(perspective["checks"], 1))
-    cited = list(dict.fromkeys(check["source"] for check in perspective["checks"]))
-    items = [item for source in cited if (item := catalog_id(source, catalog))]
-    records = [f"- {source}" for source in cited if not catalog_id(source, catalog)]
-    sources = "\n\n".join(part for part in ("\n".join(records), catalog_text(catalog, items)) if part)
+    picked = catalog[perspective["catalog"]]
+    rules = "\n".join(f"- {row['rule']}: {row['text']}" for row in perspective.get("rules", []))
     return (
-        f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
-        f"The value is broken if: {perspective.get('broken_if', '(not stated)')}\n\n"
+        f"# Perspective: {perspective_id}\n\nPicked from the catalog as {picked.id}.\n\nValue: {perspective['value']}\n\n"
+        f"The value is broken if: {perspective['broken_if']}\n\n"
         f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
         f"Breadth (the changes this perspective judges):\n{chr(10).join(rows)}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
-        f"Sources of the value:\n\n{sources}"
+        f"Method: {picked.method} Sources: {'; '.join(picked.sources)}."
+        + (f"\n\nRepository rules this perspective applies (each is also a check's source):\n{rules}" if rules else "")
     )
 
 
@@ -805,17 +863,17 @@ def run_sweep(options: argparse.Namespace) -> int:
     context = {
         "brief": BRIEF_PATH.read_text(encoding="utf-8"),
         "plan": plan, "designs": designs, "perspectives": perspectives,
-        "catalog": read_catalog(Path(options.values)),
+        "catalog": read_catalog(Path(options.catalog)),
         "pack": read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
     }
     all_tasks = list_tasks(plan, designs, perspectives)
     tasks = [task for task in all_tasks if not options.only or task.name in options.only]
-    missing = sorted({c["source"] for p in perspectives["perspectives"] for c in p["checks"]
-                      if not c["source"].startswith(RECORD_SOURCE_PREFIXES) and not catalog_id(c["source"], context["catalog"])})
+    missing = sorted({p["catalog"] for p in perspectives["perspectives"] if p["catalog"] not in context["catalog"]})
     if missing:
-        print(f"sweep: perspective checks name catalog items {missing} that are not in {options.values}", file=sys.stderr)
+        print(f"sweep: perspectives were picked as catalog perspectives {missing} that are not in {options.catalog}; "
+              "run design.py again with the same catalog", file=sys.stderr)
         return 2
     with reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = run_round(
@@ -909,7 +967,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
     parser.add_argument("--design", required=True, help="design directory that design.py wrote for this unit plan")
-    parser.add_argument("--values", default=str(VALUES), help="value catalog directory the designs name sources from")
+    parser.add_argument("--catalog", default=str(CATALOG), help="perspective catalog the design picked its perspectives from")
     parser.add_argument("--context", required=True, help="context directory that context.py wrote for this diff")
     parser.add_argument("--out", required=True, help="round directory for task outputs and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
