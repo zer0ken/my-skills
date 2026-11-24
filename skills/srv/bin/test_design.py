@@ -1,6 +1,7 @@
 """Pin the srv design stage: hunk ids, the coverage checks, the retry with problems, and the unit files."""
 
 import contextlib
+import functools
 import http.server
 import importlib.util
 import io
@@ -203,37 +204,38 @@ class CheckPerspectivesTest(unittest.TestCase):
         self.assertIn("catalog item 'growth#2' is dismissed but a check asks it; keep one of the two",
                       design.check_perspectives(answer, changes, items, []))
 
-    def test_a_high_perspective_asking_a_source_is_widened_to_its_stake(self) -> None:
-        # Run 13f (PR #1726): the answer failed twice on changes a high reuse check had left out of its breadth.
-        changes = {f"U-{n}/E-1": change("E-1", unit=f"U-{n}") for n in (1, 2, 3)}
-        items = catalog("db#1", "growth#2", stakes={"growth#2": ("returned_value",)})
-        answer = valid_perspectives()
-        answer["dismissed"] = []
-        answer["perspectives"] = [
-            perspective("K-1", list(changes), means="execute"),
-            {**perspective("K-2", ["U-1/E-1"], depth="high"),
-             "checks": [{"question": "q", "means": "read", "source": "growth#2"}]},
-        ]
-        self.assertEqual(design.widen_to_stakes(answer, changes, items, []),
-                         [{"perspective": "K-2", "source": "growth#2", "changes": ["U-2/E-1", "U-3/E-1"]}])
-        self.assertEqual(design.check_perspectives(answer, changes, items, []), [])
-        answer["perspectives"][1]["depth"] = "low"
-        answer["perspectives"][1]["breadth"] = ["U-1/E-1"]
-        self.assertEqual(design.widen_to_stakes(answer, changes, items, []), [],
-                         "a low perspective is not widened: its breadth is capped and judged line by line")
+    def test_a_dismissed_rule_whose_document_governs_a_changed_file_is_sent_back(self) -> None:
+        # Run 13i dismissed the one-backend docstring rule (rv R-007) with a reason that judged the change.
+        changes = {"U-1/E-1": {**change("E-1", kind="test_contract"), "files": ["tests/integration/t.py"]}}
+        rule, root, other = "rule: tests/integration/AGENTS.md:7", "rule: AGENTS.md:17", "rule: services/AGENTS.md:2"
+        rows = {"stakes": [{"source": rule, "kinds": [], "under": "", "reason": "r"},
+                           {"source": root, "kinds": [], "under": "", "reason": "r"},
+                           {"source": other, "kinds": [], "under": "", "reason": "r"},
+                           {"source": "db#1", "kinds": [], "under": "", "reason": "r"}]}
+        problems = design.check_stakes(rows, ["db#1", rule, root, other], [rule, root, other], changes)
+        self.assertEqual([p.split(" is dismissed")[0] for p in problems], [rule, root],
+                         "a rule whose directory holds no changed file, and a catalog item, may be dismissed")
+        rows["stakes"][0]["kinds"], rows["stakes"][1]["kinds"] = ["test_contract"], ["structure"]
+        self.assertEqual(design.check_stakes(rows, ["db#1", rule, root, other], [rule, root, other], changes),
+                         [f"{root} is at stake in kinds ['structure'] under '', but no change is"])
 
-    def test_a_mistyped_breadth_id_is_dropped_and_coverage_still_decides(self) -> None:
-        # Run 13g (PR #1726): the second answer failed on `U-5/E/5` alone.
-        changes = {"U-1/E-1": change("E-1"), "U-2/E-1": change("E-1", unit="U-2")}
-        answer = valid_perspectives()
-        answer["perspectives"] = [perspective("K-1", ["U-1/E-1", "U-2/E-1", "U-2/E/1"], means="execute")]
-        self.assertEqual(design.drop_unknown_breadth(answer, changes), [{"perspective": "K-1", "entries": ["U-2/E/1"]}])
-        self.assertEqual(design.check_perspectives(answer, changes, CATALOG, []), [],
-                         "a typo whose change another entry holds leaves coverage whole")
-        answer["perspectives"] = [perspective("K-1", ["U-1/E-1", "U-2/E/1"], means="execute")]
-        design.drop_unknown_breadth(answer, changes)
-        self.assertTrue(any("['U-2/E-1'] are in no `low`-depth" in p for p in design.check_perspectives(answer, changes, CATALOG, [])),
-                        "a typo that was the only holder of a change still fails coverage")
+    def test_one_rule_text_cited_under_two_ids_is_one_source(self) -> None:
+        designs = {"U-1": {"rules": [{"source": "rule: emem/AGENTS.md:3", "text": "keep it simple"},
+                                     {"source": "rule: AGENTS.md:3", "text": "keep it simple "},
+                                     {"source": "rule: AGENTS.md:4", "text": "other"}]}}
+        self.assertEqual(design.distinct_rules(designs),
+                         ({"rule: AGENTS.md:3": "keep it simple", "rule: AGENTS.md:4": "other"},
+                          {"rule: emem/AGENTS.md:3": "rule: AGENTS.md:3"}))
+
+    def test_a_unit_answer_covers_its_marked_changes_with_one_source_each(self) -> None:
+        good = {"value": "v", "broken_if": "b", "source": "catalog: db#1", "breadth": ["U-1/E-1"],
+                "checks": [{"question": "q", "means": "execute"}]}
+        check = functools.partial(design.check_low, unit_changes=["U-1/E-1", "U-1/E-2"], low={"U-1/E-1", "U-1/E-2"},
+                                  execute={"U-1/E-1"}, catalog=CATALOG, rules=[])
+        self.assertEqual(check({"perspectives": [good]}), ["changes ['U-1/E-2'] are in no perspective's breadth"])
+        read = {**good, "breadth": ["U-1/E-1", "U-1/E-2"], "checks": [{"question": "q", "means": "read"}]}
+        self.assertEqual(check({"perspectives": [read]}), ["external contracts ['U-1/E-1'] are under no `execute` check"])
+        self.assertEqual(check({"perspectives": [{**good, "breadth": ["U-1/E-1", "U-1/E-2"]}]}), [])
 
     def test_a_rule_states_its_stake_and_is_asked_over_it(self) -> None:
         # Coordinator, 2026-11-25: "규칙마다 걸리는 변경 종류를 설계 답에 적게 하고 코드가 같은 방식으로 덮음을 확인하게 하라".
@@ -292,14 +294,13 @@ def step(body: dict) -> str:
     return body["response_format"]["json_schema"]["name"]
 
 
-def both_units_perspectives() -> dict:
-    answer = valid_perspectives()
-    answer["perspectives"][0]["breadth"] = ["U-1/E-1", "U-2/E-1"]
-    return answer
+VALUE = {"value": "v", "broken_if": "b", "depth": "low", "checks": [{"question": "q", "means": "execute"}]}
+STAKES = {"stakes": [{"source": "db#1", "kinds": ["returned_value"], "under": "", "reason": "r"},
+                     {"source": "trace#1", "kinds": [], "under": "", "reason": "r"}]}
 
 
 def respond_validly(body: dict) -> str:
-    return json.dumps(valid_changes() if step(body) == "srv-changes" else both_units_perspectives())
+    return json.dumps({"srv-changes": valid_changes(), "srv-stakes": STAKES, "srv-value": VALUE}[step(body)])
 
 
 class DesignRunTest(unittest.TestCase):
@@ -352,33 +353,50 @@ class DesignRunTest(unittest.TestCase):
         self.stderr = stderr.getvalue()
         return code
 
-    def test_one_change_set_per_unit_then_one_perspective_set(self) -> None:
+    def test_change_sets_then_stakes_then_one_value_per_staked_source(self) -> None:
         self.assertEqual(self.run_design(), 0)
-        self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests), ["srv-changes", "srv-changes", "srv-perspectives"])
+        self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests), ["srv-changes", "srv-changes", "srv-stakes", "srv-value"])
         unit_body = next(b for b in FakeEndpoint.requests if step(b) == "srv-changes")
         self.assertEqual(unit_body["response_format"]["json_schema"]["schema"], design.CHANGES_SCHEMA)
         self.assertRegex(unit_body["messages"][1]["content"], r"@@ [^\n]*@@[^\n]*  \[H1\]")
-        self.assertTrue(unit_body["messages"][1]["content"].startswith("# Repository context of this review"),
-                        "every request starts with the shared pack, so the server reuses its prefix")
+        for body in FakeEndpoint.requests:
+            self.assertTrue(body["messages"][1]["content"].startswith("# Repository context of this review"),
+                            "every request starts with the shared pack, so the server reuses its prefix")
         self.assertIn("Load rows.", unit_body["messages"][1]["content"])
-        whole = next(b for b in FakeEndpoint.requests if step(b) == "srv-perspectives")["messages"][1]["content"]
-        self.assertIn("# Method: db\n- db#1: Check queries.", whole)
-        self.assertIn("- U-1/E-1 [returned_value]", whole)
-        self.assertIn("- U-2/E-1 [returned_value]", whole)
-        unit = json.loads((self.out / "U-2.json").read_text(encoding="utf-8"))
-        self.assertEqual((unit["ok"], unit["hunks"]), (True, ["H1"]))
+        stakes = next(b for b in FakeEndpoint.requests if step(b) == "srv-stakes")["messages"][1]["content"]
+        self.assertIn("# Method: db\n- db#1: Check queries.", stakes)
+        self.assertIn("- U-2/E-1 [returned_value]", stakes)
+        value = next(b for b in FakeEndpoint.requests if step(b) == "srv-value")["messages"][1]["content"]
+        self.assertIn("# Source\n\n# Method: db\n- db#1: Check queries.", value)
         perspectives = json.loads((self.out / "perspectives.json").read_text(encoding="utf-8"))
-        self.assertEqual(perspectives["perspectives"][0]["breadth"], ["U-1/E-1", "U-2/E-1"])
+        self.assertEqual([(p["id"], p["depth"], p["breadth"], p["checks"][0]["source"]) for p in perspectives["perspectives"]],
+                         [("K-1", "low", ["U-1/E-1", "U-2/E-1"], "db#1")])
+        self.assertEqual(perspectives["dismissed"], [{"item": "trace#1", "reason": "r"}])
         summary = json.loads((self.out / "summary.json").read_text())
-        self.assertEqual((summary["depths"], summary["structural_changes"], summary["perspectives_ok"]), ({"high": 0, "low": 1}, 0, True))
+        self.assertEqual((summary["depths"], summary["perspectives_ok"]), ({"high": 0, "low": 1}, True))
+
+    def test_changes_no_staked_source_holds_get_low_perspectives_per_unit(self) -> None:
+        def respond(body: dict) -> str:
+            if step(body) == "srv-low":
+                unit = "U-1" if "U-1/E-1" in body["messages"][1]["content"].split("# Changes of unit")[1] else "U-2"
+                return json.dumps({"perspectives": [{"value": "v", "broken_if": "b", "source": "requirement: rows load",
+                                                     "breadth": [f"{unit}/E-1"], "checks": [{"question": "q", "means": "read"}]}]})
+            dismissed = {"stakes": [{**row, "kinds": []} for row in STAKES["stakes"]]}
+            return json.dumps({"srv-changes": valid_changes(), "srv-stakes": dismissed}[step(body)])
+
+        FakeEndpoint.respond = staticmethod(respond)
+        self.assertEqual(self.run_design(), 0)
+        self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests).count("srv-low"), 2)
+        perspectives = json.loads((self.out / "perspectives.json").read_text(encoding="utf-8"))["perspectives"]
+        self.assertEqual(sorted(p["breadth"][0] for p in perspectives), ["U-1/E-1", "U-2/E-1"])
 
     def test_uncovered_answer_is_sent_back_with_its_problems(self) -> None:
         calls = []
 
         def respond(body: dict) -> str:
             calls.append(body)
-            if step(body) == "srv-perspectives":
-                return json.dumps(both_units_perspectives())
+            if step(body) != "srv-changes":
+                return respond_validly(body)
             return json.dumps(valid_changes() if len(body["messages"]) == 4 else valid_changes(hunk="H9"))
 
         FakeEndpoint.respond = staticmethod(respond)
@@ -392,17 +410,17 @@ class DesignRunTest(unittest.TestCase):
         self.assertEqual(self.run_design(), 1)
         self.assertEqual(json.loads((self.out / "summary.json").read_text())["failed"], ["U-1", "U-2"])
         self.assertIn("rerun with --only U-1 U-2", self.stderr)
-        self.assertNotIn("srv-perspectives", [step(b) for b in FakeEndpoint.requests],
+        self.assertNotIn("srv-stakes", [step(b) for b in FakeEndpoint.requests],
                          "perspectives over a partial change set would leave the missing unit's changes unjudged")
 
     def test_perspectives_that_leave_a_unit_unjudged_fail_and_keep_the_change_sets(self) -> None:
-        FakeEndpoint.respond = staticmethod(lambda body: json.dumps(valid_changes() if step(body) == "srv-changes" else valid_perspectives()))
+        FakeEndpoint.respond = staticmethod(lambda body: json.dumps(valid_changes() if step(body) == "srv-changes" else {"stakes": []}))
         self.assertEqual(self.run_design(), 1)
         self.assertIn("no valid perspective set", self.stderr)
         FakeEndpoint.requests = []
         FakeEndpoint.respond = staticmethod(respond_validly)
         self.assertEqual(self.run_design(), 0)
-        self.assertEqual([step(b) for b in FakeEndpoint.requests], ["srv-perspectives"], "valid change sets are reused")
+        self.assertEqual(sorted(step(b) for b in FakeEndpoint.requests), ["srv-stakes", "srv-value"], "valid change sets are reused")
 
     def test_diff_that_is_not_the_plan_source_is_rejected(self) -> None:
         self.diff.write_text(DIFF + "diff --git a/x b/x\n", encoding="utf-8")
