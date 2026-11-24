@@ -29,7 +29,7 @@ The coordinator starts subagents with the Agent tool. Whether the coordinator ed
 
 ## Claude reviewer
 
-The Claude reviewer session runs the review units assigned to it. When split execution is needed, the coordinator starts workers with Paseo `create_agent` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated worker does not re-delegate without explicit permission.
+The Claude reviewer session runs the review units assigned to it. When split execution is needed, the coordinator starts workers with Paseo `create_agent` or Orca `orca orchestration worker-start` according to the shared division-of-labor criteria, and gives one worker only one unit. A delegated worker does not re-delegate without explicit permission.
 
 | Unit | Execution |
 |---|---|
