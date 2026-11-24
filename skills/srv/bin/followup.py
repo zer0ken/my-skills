@@ -5,14 +5,13 @@
 # ///
 """srv rounds 2 and later: one omp reviewer session per follow-up question, answered in round 1's schema.
 
-The operator writes the round's questions to `questions.json` after verifying the
+`team.py` writes the round's questions to `questions.json` after judging the
 previous round (`references/deepen.md`): each names the perspective it
 serves and asks one narrow thing. Each question gets one session (`reviewer.py`), with
 read tools on the head and `sandbox_run`, as every review session has; the
-request is the follow-up brief, the perspective as round 1 showed it, the question,
-the requirement copies, and the hunks of the perspective's breadth. The answer is round 1's findings schema,
-so its lines are re-located from their anchors and the operator verifies it the same
-way (`references/consolidate.md`).
+request is the shared context pack, the follow-up brief, the perspective as round 1 showed it, the
+question, and the hunks of the perspective's breadth. The answer is round 1's inspection schema,
+so its lines are re-located from their anchors and team.py judges and verifies it the same way.
 
 questions.json: [{"id": "Q1", "perspective": "K-3", "question": "..."}]
 
