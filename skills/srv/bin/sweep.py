@@ -3,21 +3,26 @@
 # requires-python = ">=3.11"
 # dependencies = ["tqdm"]
 # ///
-"""srv round 1: review every (unit, perspective) task with independent structured-output model calls.
+"""srv round 1: review every (unit, perspective) task with independent omp reviewer sessions.
 
 A task is one review unit of `rv/bin/plan-units.py` and one perspective that
-`design.py` built for it: a value, the changes it judges, and the depth it reaches. Each task is `--samples` independent requests (samples) to an
-OpenAI-compatible endpoint, whose findings are pooled, because one call misses
-causes another finds; all samples of all tasks run in parallel, so the round
-takes about as long as its slowest call.
-The request carries everything the reviewer needs: the brief
-(`references/brief.md`), the perspective with the catalog entries it rests on, the requirement copies, the
-unit's hunks, the unit's files at the head with line numbers, and the lines
-elsewhere in the head that name a symbol the hunks define or change. The answer
-is held to a JSON Schema, validated here, retried once when invalid, and its
-finding lines are re-located from their anchors (`anchor-findings.py`). A call the
-server refuses (overload, an open circuit breaker, a dropped connection) waits and
-is sent again (`run_task`).
+`design.py` built for it: a value, the changes it judges, and the depth it reaches.
+Each task is `--samples` independent reviewer sessions (samples, `reviewer.py`),
+whose findings are pooled, because one session misses causes another finds; all
+samples of all tasks run at once, so the round takes about as long as its slowest
+session. A session gets the brief (`references/brief.md`), the perspective with the
+catalog entries it rests on, the requirement copies, the unit's hunks, the unit's
+files at the head with line numbers, and the lines elsewhere in the head that name a
+symbol the hunks define or change, and opens the rest of the head with its read
+tools; at `execute` depth it also runs counterexamples with `sandbox_run`. The
+answer is held to a JSON Schema, validated here, retried once when invalid, and its
+finding lines are re-located from their anchors (`anchor-findings.py`).
+
+`request_json` and `run_round` take the call that sends a request as a parameter:
+srv passes the reviewer session, and prv (`~/.agents/skills/prv/bin/sweep.py`) keeps
+the default, one HTTP structured-output call (`call_model`), whose refusals (an
+overloaded server, an open circuit breaker, a dropped connection) wait and are sent
+again.
 
 Coverage is this script's job: it exits 1 when any task has no valid output,
 because a task without output is a unit the swarm did not review.
@@ -33,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import functools
 import hashlib
 import http.client
 import importlib.util
@@ -80,6 +86,8 @@ REFUSED_STATUSES = frozenset({429, 502, 503, 504})
 REFUSAL_WINDOW_S = 900.0
 BACKOFF_BASE_S = 2.0
 BACKOFF_CAP_S = 60.0
+# What a call reports and the round sums; `tool_calls` comes only from reviewer sessions.
+USAGE_KEYS = ("prompt_tokens", "completion_tokens", "tool_calls")
 
 FINDINGS_SCHEMA = {
     "type": "object",
@@ -132,6 +140,7 @@ def load_module(name: str, path: Path):
 
 plan_units = load_module("plan_units", SKILLS / "rv" / "bin" / "plan-units.py")
 anchor_findings = load_module("anchor_findings", Path(__file__).resolve().with_name("anchor-findings.py"))
+reviewer = load_module("srv_reviewer", Path(__file__).resolve().with_name("reviewer.py"))
 
 
 @dataclass(frozen=True)
@@ -462,20 +471,23 @@ def request_json(
     messages: list[dict], options: argparse.Namespace, validate: Callable[[object], list[str]],
     schema: dict = FINDINGS_SCHEMA, schema_name: str = "srv-findings",
     on_invalid: Callable[[list[dict], str, list[str]], list[dict]] | None = None,
+    call: Callable[..., tuple[str, dict, str]] = call_model,
 ) -> Reply:
     """Send one structured-output request; one retry when the call fails or the answer is invalid.
 
     A call the server refuses is sent again after a wait, capped exponential backoff with full jitter or the
     server's Retry-After, until it answers or `REFUSAL_WINDOW_S` passes; the wait uses no attempt.
     `validate` returns the problems of a parsed answer; `on_invalid` builds the retry's messages from the invalid
-    content and its problems (by default the same messages are sent again).
+    content and its problems (by default the same messages are sent again). `call` sends the messages and returns
+    the content, usage, and finish reason: `call_model` (one HTTP call, prv) or an omp reviewer session
+    (`reviewer.Jail.call`, srv).
     """
     attempts, errors, usage_total = 0, [], {"prompt_tokens": 0, "completion_tokens": 0}
     started = time.monotonic()
     refused_since, refusals = None, 0
     while attempts < 2:
         try:
-            content, usage, finish_reason = call_model(messages, options, schema, schema_name)
+            content, usage, finish_reason = call(messages, options, schema, schema_name)
         except ServerRefused as refusal:
             now = time.monotonic()
             refused_since = now if refused_since is None else refused_since
@@ -498,8 +510,9 @@ def request_json(
             continue
         attempts += 1
         refused_since, refusals = None, 0
-        for key in usage_total:
-            usage_total[key] += int(usage.get(key) or 0)
+        for key in USAGE_KEYS:
+            if key in usage or key in usage_total:
+                usage_total[key] = usage_total.get(key, 0) + int(usage.get(key) or 0)
         if finish_reason == "length":
             errors.append(
                 f"attempt {attempts}: the answer stopped at --max-tokens {options.max_tokens} (finish_reason length); "
@@ -521,9 +534,10 @@ def request_json(
     return Reply(None, attempts, errors, usage_total, round(time.monotonic() - started, 1))
 
 
-def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace) -> dict:
+def run_task(task: Task, messages: list[dict], anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace,
+             call: Callable[..., tuple[str, dict, str]] = call_model) -> dict:
     """Review one task once (one sample) with `request_json`; `anchor` re-locates the answer's finding lines."""
-    reply = request_json(messages, options, validate_answer)
+    reply = request_json(messages, options, validate_answer, call=call)
     result = {
         "task": task.name, "unit": task.unit["id"], "perspective": task.perspective, "ok": reply.answer is not None,
         "attempts": reply.attempts, "errors": reply.errors, "seconds": reply.seconds, "usage": reply.usage,
@@ -595,7 +609,8 @@ def merge_samples(task: Task, samples: list[dict]) -> dict:
         "attempts": sum(sample["attempts"] for sample in samples),
         "errors": [f"sample {n}: {error}" for n, sample in enumerate(samples, 1) for error in sample["errors"]],
         "seconds": max(sample["seconds"] for sample in samples),
-        "usage": {key: sum(sample["usage"][key] for sample in samples) for key in ("prompt_tokens", "completion_tokens")},
+        "usage": {key: sum(sample["usage"].get(key, 0) for sample in samples)
+                  for key in USAGE_KEYS if any(key in sample["usage"] for sample in samples)},
     }
     if merged["ok"]:
         merged["findings"] = [{**finding, "sample": n} for n, sample in enumerate(samples, 1) for finding in sample["findings"]]
@@ -654,24 +669,31 @@ def run_sweep(options: argparse.Namespace) -> int:
     if missing:
         print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
         return 2
-    return run_round(
-        all_tasks, tasks,
-        lambda task: build_messages(task, context),
-        lambda findings: anchor_findings.anchor_findings(findings, repo),
-        options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
-    )
+    depth = {(u, p["id"]): p["depth"] for u, d in designs.items() for p in d["perspectives"]}
+    with reviewer.Jail(options) as jail:
+        code = run_round(
+            all_tasks, tasks,
+            lambda task: build_messages(task, context),
+            lambda findings: anchor_findings.anchor_findings(findings, repo),
+            options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
+            lambda task: functools.partial(jail.call, sandbox=depth[(task.unit["id"], task.perspective)] == "execute"),
+        )
+        jail.write_log(out / "sessions.json")
+    return code
 
 
 def run_round(
     all_tasks: list[Task], tasks: list[Task], build: Callable[[Task], list[dict]],
     anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
     label: str, only_arg: Callable[[Task], str],
+    call_for: Callable[[Task], Callable[..., tuple[str, dict, str]]] = lambda task: call_model,
 ) -> int:
     """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
 
     Shared by srv round 1 and prv (`~/.agents/skills/prv/bin/sweep.py`); the caller decides the tasks, how a
     task's messages are built, how its findings are anchored, which input `source_sha256` names, the round's `label`
-    for progress and messages, and `only_arg`, the `--only` value that reruns a task in the caller's command.
+    for progress and messages, `only_arg`, the `--only` value that reruns a task in the caller's command, and
+    `call_for`, what sends a task's messages (by default one HTTP call per sample).
     Exit 0 when every task of `all_tasks` has a valid output for this input, 1 otherwise.
     """
     messages = {task.name: build(task) for task in tasks}
@@ -679,7 +701,7 @@ def run_round(
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {
-            pool.submit(run_task, task, messages[task.name], anchor, options): (task, number)
+            pool.submit(run_task, task, messages[task.name], anchor, options, call_for(task)): (task, number)
             for task in tasks
             for number in range(1, options.samples + 1)
         }
@@ -714,6 +736,7 @@ def run_round(
         "samples": options.samples,
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in results),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in results),
+        "tool_calls": sum(r["usage"].get("tool_calls", 0) for r in results),
         "findings_by_severity": severities,
         "model": options.model,
         "base_url": options.base_url,
@@ -733,7 +756,7 @@ def run_round(
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="srv round 1: --samples structured-output calls per (unit, perspective), pooled.")
+    parser = argparse.ArgumentParser(description="srv round 1: --samples omp reviewer sessions per (unit, perspective), pooled.")
     parser.add_argument("--units", required=True, help="unit plan from rv/bin/plan-units.py")
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
@@ -750,13 +773,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-concurrency", type=int, default=128,
-        help="requests this client keeps in flight, not the server's capacity: the server queues or refuses what it "
-        "cannot take, and a refused call waits and is sent again; at 128 round 1 on #1415 sent all 117 calls at once",
+        help="sessions (srv) or requests (prv) this client keeps in flight, not the server's capacity: the server "
+        "queues what it cannot take; at 128 round 1 on #1415 sent all 117 calls at once",
     )
     parser.add_argument("--max-tokens", type=int, default=65536, help="covers reasoning and answer tokens")
-    parser.add_argument("--timeout", type=float, default=900, help="seconds per call")
+    parser.add_argument("--timeout", type=float, default=900, help="seconds per call or session (omp --max-time)")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
     parser.add_argument("--only", nargs="+", help="task names `<unit>__<perspective>` to run, for a rerun of failed tasks")
+    parser.add_argument("--sandbox-ro", action="append", default=[],
+                        help="prepared dependency directory mounted read-only into execute-depth counterexample runs")
     options = parser.parse_args(argv)
     if options.samples < 1:
         parser.error("--samples must be 1 or more: a task with no sample is a unit perspective nobody reviewed")

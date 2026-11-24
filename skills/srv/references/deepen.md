@@ -1,6 +1,6 @@
 # Follow-up questions
 
-After verifying a round, the operator writes follow-up questions so the next round digs where the swarm was weak. Each question is one sentence or a short paragraph about one place, answerable by reading code at the head; it names the perspective (unit, id, value, depth) it serves and the catalog files of its sources.
+After verifying a round, the operator writes follow-up questions so the next round digs where the swarm was weak. Each question is one sentence or a short paragraph about one place, answerable by reading or running code at the head; it serves one perspective of the design files, named by its unit and id.
 
 Write a question for each of these:
 
@@ -11,7 +11,7 @@ Write a question for each of these:
 5. Each cluster whose cause spans two units, since round 1 saw each unit alone: whether the other unit's side holds the same assumption.
 6. Each check of a `trace` perspective that round 1 could not decide from its request: the place to follow and the end of the behaviour to reach, so the perspective reaches its depth.
 
-A question may name the counter-argument the reviewer must also weigh (example: "check whether the exception is intended"), but it does not carry the operator's verdict, the cluster text, or other reviewers' suggestions. Each question file holds the question, the follow-up brief below, the perspective as `sweep.py` showed it, the output path `round-<k>/Q<n>-result.md`, and a length limit for the output (140 lines in the first run). The reviewer reads only what the question needs and does not repeat the perspective sweep.
+A question may name the counter-argument the reviewer must also weigh (example: "check whether the exception is intended"), but it does not carry the operator's verdict, the cluster text, or other reviewers' suggestions. The operator writes the round's questions to `round-<k>/questions.json`, `[{"id": "Q1", "unit": "U-1", "perspective": "K-3", "question": "..."}]`, and runs `bin/followup.py`, which gives each question one omp reviewer session with the brief below, the perspective as round 1 showed it, the question, the requirement copies, and the unit's hunks, and writes round 1's schema to `round-<k>/<unit>__Q<n>.json`. The reviewer reads only what the question needs and does not repeat the perspective sweep.
 
 One session per question, launched together. In the first run the seven round-2 questions, one session each, reached 77.8% precision against 34.1% for the perspective sweep.
 
@@ -19,11 +19,11 @@ A question whose answer repeats a REJECTED suggestion is closed with the line th
 
 ## Follow-up brief
 
-A follow-up reviewer is a session with tools, so its brief fixes what it may read and do:
+A follow-up reviewer is an omp session in the reviewer jail (`bin/reviewer.py`), so its brief fixes what it may read and do:
 
-- Allowed inputs: the change (`diff.patch` with its sha256, from the merge base to the head), the requirement copies, the project at the head (the head worktree: code, callers, tests, AGENTS.md files and docs; `git show <merge base>:<path>` shows a file before the change), the perspective and its catalog files, and the question. No other path under `~/.agents`, other worktrees, PR pages, or session logs.
+- Inputs: the request (the perspective, the question, the requirement copies, the unit's hunks) and the head, read-only at `/work` (code, callers, tests, `AGENTS.md` files and documents). Nothing else is mounted, and the head's git history is not reachable; the hunks show what the change removed.
 - Report only defects inside the perspective and the scope of the change, as `references/brief.md` defines both.
-- Find definitions, callers, and references with LSP or Serena first; text search supplements them for strings, config keys, SQL, and documents.
-- Read; do not run tests, scripts, or the product. The operator runs the checks that decide a verdict, in the sandbox, and a finding that only a run decides says so and names the input to run.
-- Every finding needs evidence checked in the code: the changed line and the location it conflicts with, as `file:line` at the head, with the verbatim line as its anchor.
-- Write the answer in Korean to the output file named in the question: each finding with id, severity, `file:line`, anchor, condition and result, and fix; then what was checked and found satisfied, each with its location. End the turn with the finding count per severity and the output path. Edit no other file; no commits, pushes, PRs, issues, comments, or messages; do not start other sessions.
+- Find definitions, callers, and references with grep and glob on `/work`, and read each place you cite.
+- At `execute` depth, run the counterexample with `sandbox_run`, which runs a bash script on a fresh writable copy of the head with no network; drive the head's own code into the question's situation, with a fake for an external program or service that returns what its official documentation says. At other depths, read; a finding that only a run decides says so and names the input to run.
+- Every finding needs evidence checked in the code or in a run: the changed line and the location or output it conflicts with, as `file:line` at the head, with the verbatim line as its anchor.
+- Write `condition`, `evidence`, and `fix` in Korean; `checked` holds what was checked and found satisfied, each with its location. End with one JSON object that matches the output JSON Schema at the end of the request, and nothing after it.

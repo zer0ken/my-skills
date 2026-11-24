@@ -77,6 +77,15 @@ class SandboxTest(unittest.TestCase):
         record = json.loads((self.out / "run.json").read_text())
         self.assertEqual((record["exit_code"], record["timed_out"], record["files_copied"]), (0, False, 1))
 
+    def test_a_file_list_replaces_git_ls_files(self) -> None:
+        # Inside the reviewer jail the head's .git is masked, so the jail passes the list `git ls-files -z` gave outside.
+        (self.repo / "extra.txt").write_text("listed\n", encoding="utf-8")
+        listed = Path(self.tmp.name) / "tracked.txt"
+        listed.write_bytes(b"extra.txt\0")
+        self.assertEqual(self.run_in_sandbox("cat extra.txt && ! test -e app.txt", "--files", str(listed)), 0,
+                         "only the listed paths are copied: the list, not git, decides what the run sees")
+        self.assertEqual(json.loads((self.out / "run.json").read_text())["files_copied"], 1)
+
     def test_the_commands_exit_code_is_returned(self) -> None:
         self.assertEqual(self.run_in_sandbox("exit 3"), 3)
 

@@ -10,6 +10,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -61,6 +62,21 @@ class CheckDesignTest(unittest.TestCase):
             ["changes ['E-2'] are in no perspective's breadth; every change needs a perspective that judges it"],
         )
 
+    def test_an_external_contract_needs_an_execute_perspective(self) -> None:
+        answer = valid()
+        answer["changes"].append({"id": "E-2", "kind": "external_contract", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]})
+        answer["perspectives"].append(
+            {"id": "K-2", "value": "v", "sources": ["db"], "breadth": ["E-1", "E-2"], "depth": "read", "checks": ["c"]}
+        )
+        self.assertEqual(
+            design.check_design(answer, ["H1"], ["db", "trace"]),
+            ["external contracts ['E-2'] are in no `execute` perspective's breadth; what an external program, service, "
+             "or library does is decided by running it against a fake built from its documentation, not by reading "
+             "the code that assumes it"],
+        )
+        answer["perspectives"][0]["breadth"].append("E-2")
+        self.assertEqual(design.check_design(answer, ["H1"], ["db", "trace"]), [])
+
     def test_every_catalog_entry_is_used_or_dismissed_with_a_reason(self) -> None:
         answer = valid()
         answer["sources"] = [{"source": "db", "use": "used", "reason": ""}, {"source": "trace", "use": "dismissed", "reason": ""}]
@@ -107,6 +123,9 @@ class DesignRunTest(unittest.TestCase):
         self.requirement = root / "issue.md"
         self.requirement.write_text("Load rows.\n", encoding="utf-8")
         self.out = root / "design"
+        jail = mock.patch.object(design.sweep.reviewer, "Jail", fixtures.FakeJail)  # one HTTP call per session, no omp
+        jail.start()
+        self.addCleanup(jail.stop)
         self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeEndpoint)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         FakeEndpoint.requests = []

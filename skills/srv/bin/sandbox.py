@@ -20,7 +20,7 @@ change's own build or install scripts (for example `uv sync --frozen --no-build`
 `npm ci --ignore-scripts`, `cargo fetch`), and mounted with `--ro`.
 
 Usage:
-  python3 -I sandbox.py --repo HEAD_WORKTREE --out RUN_DIR [--ro SRC[:DEST] ...] [--timeout S] -- COMMAND ...
+  python3 -I sandbox.py --repo HEAD_WORKTREE --out RUN_DIR [--files LIST] [--ro SRC[:DEST] ...] [--timeout S] -- COMMAND ...
 The command runs in /work, the copy of the head. RUN_DIR receives stdout.txt,
 stderr.txt, and run.json. Exit codes: the command's own, 124 when it ran past
 --timeout, 125 when the sandbox could not start or the input is invalid.
@@ -52,9 +52,9 @@ def tracked_files(repo: Path) -> list[str]:
     return [p for p in result.stdout.decode("utf-8").split("\0") if p]
 
 
-def copy_head(repo: Path, work: Path) -> int:
+def copy_head(repo: Path, work: Path, files: list[str]) -> int:
     count = 0
-    for relative in tracked_files(repo):
+    for relative in files:
         source = repo / relative
         target = work / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -120,7 +120,9 @@ def run(options: argparse.Namespace) -> int:
     with tempfile.TemporaryDirectory(prefix="srv-sandbox-", dir=options.scratch) as scratch:
         work = Path(scratch) / "work"
         work.mkdir()
-        record["files_copied"] = copy_head(Path(options.repo), work)
+        files = (Path(options.files).read_bytes().decode("utf-8").split("\0") if options.files
+                 else tracked_files(Path(options.repo)))
+        record["files_copied"] = copy_head(Path(options.repo), work, [f for f in files if f])
         started = time.monotonic()
         with open(out / "stdout.txt", "wb") as stdout, open(out / "stderr.txt", "wb") as stderr:
             process = subprocess.Popen(bwrap_command(work, mounts, options.command), stdout=stdout, stderr=stderr,
@@ -147,6 +149,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a command on a copy of the head with no network, token, or home.")
     parser.add_argument("--repo", required=True, help="head worktree; its tracked files are copied")
     parser.add_argument("--out", required=True, help="run directory for stdout.txt, stderr.txt, run.json")
+    parser.add_argument("--files", help="NUL-separated tracked paths, for a head whose git metadata is not reachable "
+                        "(inside the reviewer jail); default `git ls-files`")
     parser.add_argument("--ro", action="append", default=[], help="SRC[:DEST] mounted read-only, such as a prepared environment")
     parser.add_argument("--timeout", type=float, default=300, help="seconds before the run is killed (exit 124)")
     parser.add_argument("--scratch", help="directory for the copy of the head (default: the system temporary directory)")

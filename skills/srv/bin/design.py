@@ -13,15 +13,17 @@ the depth its verification reaches (read, trace, execute). The user's words
 의해 일어나는 모든 변화를 커버할 수 있는 가치론적인 평가 잣대를 여러개 만들고, 그것이
 내가 말한 "관점"이야".
 
-One structured-output call per review unit reads the unit's hunks (each labelled
+One omp reviewer session per review unit (`reviewer.py`), with read tools on the head, reads the unit's hunks (each labelled
 with a hunk id), its head files, the lines that call into it, the requirement
-copies, and the value catalog (`references/values/*.md`), and answers with
+copies, and the value catalog (`references/values/*.md`), opens what else it needs (the repository's rules,
+callers beyond the request), and answers with
 the change set, the hunks that change no behaviour, the perspectives, and what it
 did with every catalog entry. Coverage is checked here, in code, not trusted to
 the model (`check_design`):
 
 - every hunk is in some change or declared behaviour-free with a reason;
 - every change is in the breadth of some perspective (the union of breadths is the change set);
+- every change that rests on an external program, service, or library is in an `execute` perspective;
 - every catalog entry is used as a source of some perspective or dismissed with a reason.
 
 An answer that fails a check is sent back once with the problems listed. A unit
@@ -49,7 +51,7 @@ VALUES = BIN.parent / "references" / "values"
 BRIEF_PATH = BIN.parent / "references" / "design.md"
 CHANGE_KINDS = (
     "returned_value", "stored_data", "state_and_ownership", "failure_result", "resource_use",
-    "interface_and_name", "documented_promise", "test_contract",
+    "interface_and_name", "documented_promise", "test_contract", "external_contract",
 )
 DEPTHS = ("read", "trace", "execute")
 FREE_SOURCE_PREFIXES = ("requirement:", "rule:")
@@ -173,6 +175,14 @@ def check_design(answer: object, hunks: list[str], catalog: list[str]) -> list[s
     uncovered = [c for c in changes if c not in covered]
     if uncovered:
         problems.append(f"changes {uncovered} are in no perspective's breadth; every change needs a perspective that judges it")
+    executed = {e for p in perspectives if p.get("depth") == "execute" for e in p.get("breadth", [])}
+    unexecuted = [cid for cid, c in changes.items() if c.get("kind") == "external_contract" and cid not in executed]
+    if unexecuted:
+        problems.append(
+            f"external contracts {unexecuted} are in no `execute` perspective's breadth; what an external program, "
+            "service, or library does is decided by running it against a fake built from its documentation, not by "
+            "reading the code that assumes it"
+        )
     dispositions = {row.get("source"): row for row in answer["sources"] if isinstance(row, dict)}
     for source in catalog:
         row = dispositions.get(source)
@@ -208,12 +218,12 @@ def retry_messages(messages: list[dict], content: str, problems: list[str]) -> l
     )}]
 
 
-def design_unit(unit: dict, context: dict, options: argparse.Namespace) -> dict:
+def design_unit(unit: dict, context: dict, options: argparse.Namespace, call) -> dict:
     hunks = hunk_ids(context["changes"], unit)
     catalog = list(context["catalog"])
     reply = sweep.request_json(
         build_messages(unit, context), options, lambda answer: check_design(answer, hunks, catalog),
-        DESIGN_SCHEMA, "srv-design", retry_messages,
+        DESIGN_SCHEMA, "srv-design", retry_messages, call,
     )
     result = {
         "unit": unit["id"], "ok": reply.answer is not None, "hunks": hunks, "attempts": reply.attempts,
@@ -245,8 +255,8 @@ def run_design(options: argparse.Namespace) -> int:
     }
     units = [u for u in plan["units"] if not options.only or u["id"] in options.only]
     progress = sweep.Progress(len(units), out, "srv design")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
-        futures = {pool.submit(design_unit, unit, context, options): unit for unit in units}
+    with sweep.reviewer.Jail(options) as jail, concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
+        futures = {pool.submit(design_unit, unit, context, options, jail.call): unit for unit in units}
         for future in concurrent.futures.as_completed(futures):
             unit = futures[future]
             try:
@@ -257,6 +267,7 @@ def run_design(options: argparse.Namespace) -> int:
             result["source_sha256"] = diff_sha256
             (out / f"{unit['id']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance({**result, "task": unit["id"]})
+        jail.write_log(out / "sessions.json")
     progress.close()
     results = [read_design(out, u["id"], diff_sha256) for u in plan["units"]]
     failed = [u["id"] for u, r in zip(plan["units"], results) if not (r and r["ok"])]
@@ -269,6 +280,7 @@ def run_design(options: argparse.Namespace) -> int:
         "depths": {d: sum(1 for r in done for p in r.get("perspectives", []) if p["depth"] == d) for d in DEPTHS},
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in done),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in done),
+        "tool_calls": sum(r["usage"].get("tool_calls", 0) for r in done),
         "model": options.model, "base_url": options.base_url,
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

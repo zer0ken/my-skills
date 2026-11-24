@@ -76,8 +76,35 @@ def task_of(body: dict) -> str:
     return f"{unit}__{perspective}"
 
 
+class FakeJail:
+    """Stands in for `reviewer.Jail`: each session is one HTTP call to the fake endpoint, so the round's logic is tested
+    without omp. `sandboxed` records which tasks were given `sandbox_run`."""
+
+    sandboxed: ClassVar[list[bool]] = []
+
+    def __init__(self, options) -> None:
+        self.options = options
+
+    def __enter__(self) -> "FakeJail":
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        return None
+
+    def call(self, messages, options, schema, schema_name, sandbox=False):
+        FakeJail.sandboxed.append(sandbox)
+        return sweep.call_model(messages, options, schema, schema_name)
+
+    def write_log(self, path: Path) -> None:
+        path.write_text("[]\n", encoding="utf-8")
+
+
 class SweepTest(unittest.TestCase):
     def setUp(self) -> None:
+        jail = mock.patch.object(sweep.reviewer, "Jail", FakeJail)
+        jail.start()
+        self.addCleanup(jail.stop)
+        FakeJail.sandboxed = []
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.repo = root / "repo"
@@ -110,13 +137,13 @@ class SweepTest(unittest.TestCase):
         FakeEndpoint.requests = []
         FakeEndpoint.respond = staticmethod(lambda body: answer())
 
-    def write_design(self, unit: str, perspectives: list[str], sha256: str | None = None) -> None:
+    def write_design(self, unit: str, perspectives: list[str], sha256: str | None = None, depth: str = "read") -> None:
         design = {
             "unit": unit, "ok": True, "source_sha256": sha256 or hashlib.sha256(DIFF.encode()).hexdigest(),
             "changes": [{"id": "E-1", "kind": "returned_value", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]}],
             "behaviour_free": [],
             "perspectives": [
-                {"id": p, "value": f"value of {p}", "sources": [p], "breadth": ["E-1"], "depth": "read", "checks": ["c"]}
+                {"id": p, "value": f"value of {p}", "sources": [p], "breadth": ["E-1"], "depth": depth, "checks": ["c"]}
                 for p in perspectives
             ],
             "sources": [],
@@ -154,6 +181,13 @@ class SweepTest(unittest.TestCase):
         body = FakeEndpoint.requests[0]
         self.assertEqual(body["response_format"]["type"], "json_schema")
         self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.FINDINGS_SCHEMA)
+
+    def test_only_execute_perspectives_get_the_sandbox_tool(self) -> None:
+        # The change's code runs only where a perspective's value is decided by running it.
+        self.write_design("U-1", ["trace"], depth="execute")
+        self.assertEqual(self.run_sweep(), 0)
+        self.assertEqual(sorted(FakeJail.sandboxed), [False, False, True])
+        self.assertEqual(self.read("sessions.json"), [])
 
     def test_samples_are_independent_calls_pooled_per_task(self) -> None:
         def respond(body: dict) -> str:
