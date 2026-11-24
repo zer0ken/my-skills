@@ -8,7 +8,7 @@
 The operator writes the round's questions to `questions.json` after verifying the
 previous round (`references/deepen.md`): each names the unit and the perspective it
 serves and asks one narrow thing. Each question gets one session (`reviewer.py`), with
-read tools on the head and, for a perspective of `execute` depth, `sandbox_run`; the
+read tools on the head and `sandbox_run`, as every review session has; the
 request is the follow-up brief, the perspective as round 1 showed it, the question,
 the requirement copies, and the unit's hunks. The answer is round 1's findings schema,
 so its lines are re-located from their anchors and the operator verifies it the same
@@ -117,7 +117,6 @@ def run_followup(options: argparse.Namespace) -> int:
         task = sweep.Task(units[q["unit"]], q["id"])
         by_task[task.name] = q
         tasks.append(task)
-    depth = {(u, p["id"]): p["depth"] for u, d in designs.items() for p in d["perspectives"]}
     only = [t for t in tasks if not options.only or t.perspective in options.only]
     with sweep.reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = sweep.run_round(
@@ -125,8 +124,7 @@ def run_followup(options: argparse.Namespace) -> int:
             lambda task: build_messages(by_task[task.name], context),
             lambda findings: sweep.anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv follow-up", lambda task: task.perspective,
-            lambda task: functools.partial(
-                jail.call, depth=depth[(task.unit["id"], by_task[task.name]["perspective"])], label=task.name),
+            lambda task: functools.partial(jail.call, tools=sweep.reviewer.REVIEW_TOOLS, label=task.name),
         )
     return code
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one command against a copy of the head in an isolated sandbox, for an execute-depth perspective.
+"""Run one command against a copy of the head in an isolated sandbox, for a check decided by running.
 
 The code under review is untrusted input, so it runs where it reaches nothing it
 could misuse: no network (not even the host's loopback or the model server), no
@@ -113,7 +113,7 @@ def run(options: argparse.Namespace) -> int:
                   "environment directory), not a parent that also holds credentials or sockets.", file=sys.stderr)
             return NOT_STARTED
     if shutil.which("bwrap") is None:
-        print("sandbox: bwrap is not installed; an execute-depth check stays unrun and goes to residual risk", file=sys.stderr)
+        print("sandbox: bwrap is not installed; a check decided by running stays unrun and goes to residual risk", file=sys.stderr)
         return NOT_STARTED
     record: dict = {"command": options.command, "repo": str(options.repo), "mounts": [[str(s), d] for s, d in mounts],
                     "timeout_s": options.timeout}

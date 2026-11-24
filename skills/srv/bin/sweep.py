@@ -6,7 +6,8 @@
 """srv round 1: review every (unit, perspective) task with independent omp reviewer sessions.
 
 A task is one review unit of `rv/bin/plan-units.py` and one perspective that
-`design.py` built for it: a value, the changes it judges, and the depth it reaches.
+`design.py` built for it: a value, the changes it judges, its depth (the level of
+abstraction it judges at, high or low), and checks that each name their means.
 Each task is `--samples` independent reviewer sessions (samples, `reviewer.py`),
 whose findings are pooled, because one session misses causes another finds; all
 samples of all tasks run at once, so the round takes about as long as its slowest
@@ -14,7 +15,7 @@ session. A session gets the brief (`references/brief.md`), the perspective with 
 catalog entries it rests on, the requirement copies, the unit's hunks, the unit's
 files at the head with line numbers, and the lines elsewhere in the head that name a
 symbol the hunks define or change, and opens the rest of the head with its read
-tools; at `execute` depth it also runs counterexamples with `sandbox_run`. The
+tools, and runs counterexamples with `sandbox_run` where a check's means is `execute`. The
 answer is held to a JSON Schema, validated here, retried once when invalid, and its
 finding lines are re-located from their anchors (`anchor-findings.py`).
 
@@ -59,13 +60,22 @@ from pathlib import Path
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "brief.md"
 VALUES = Path(__file__).resolve().parents[1] / "references" / "values"
+# A perspective's depth is the level of abstraction its value is judged at. The user's words (2026-11-24), after a lead
+# had read the depth as read, trace, and execute: "하이레벨 로우레벨을 말한거다."
 DEPTH_MEANINGS = {
-    "read": "the changed lines and the lines shown in this request decide the value",
-    "trace": "the value is decided only by following callers, callees, or data beyond the unit; report what the request "
-    "shows, and name in `checked` each place you would have to follow",
-    "execute": "the value is decided only by running something; for each finding write in `condition` the exact input or "
-    "situation to run and the result that would show the value lowered, so the operator can run it",
+    "high": "the value is judged on structure: the concepts the change introduces or handles and how each is "
+    "represented, the data model and the invariants it can or cannot enforce, where each responsibility is placed, and "
+    "the module boundaries. A counterexample is a structure, not one input: name every location that shows it, and "
+    "search /work and the files of the whole change for the other places that hold or test the same concept",
+    "low": "the value is judged on behaviour inside the functions the change touches: branches, boundary inputs, "
+    "failure paths, and what each line does. A counterexample is an input and the path it takes, with the result that "
+    "shows the value lowered",
 }
+MEANS_MEANINGS = (
+    "Means of a check: `read`, the request and the lines it shows decide it; `trace`, follow callers, callees, or data "
+    "with your tools to where the behaviour ends; `execute`, run the counterexample with `sandbox_run`, or, when no fake "
+    "can stand for an external system, quote the sentence of its official documentation that decides it"
+)
 SEVERITIES = ("BLOCKER", "MAJOR", "MINOR", "NIT")
 HEAD_CHARS_PER_UNIT = 60_000
 WINDOW_LINES = 60
@@ -159,7 +169,8 @@ def list_tasks(plan: dict, designs: dict[str, dict]) -> list[Task]:
 
 
 def perspective_block(design: dict, perspective_id: str, catalog: dict[str, str]) -> str:
-    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks, and its sources."""
+    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks with their means, and
+    its sources."""
     perspective = next(p for p in design["perspectives"] if p["id"] == perspective_id)
     changes = {c["id"]: c for c in design["changes"]}
     breadth = "\n".join(
@@ -167,14 +178,14 @@ def perspective_block(design: dict, perspective_id: str, catalog: dict[str, str]
         f"(hunks {', '.join(changes[cid]['hunks'])})"
         for cid in perspective["breadth"]
     )
-    checks = "\n".join(f"{n}. {check}" for n, check in enumerate(perspective["checks"], 1))
+    checks = "\n".join(f"{n}. [{check['means']}] {check['question']}" for n, check in enumerate(perspective["checks"], 1))
     sources = "\n\n".join(
         f"## {source}\n\n{catalog[source]}" if source in catalog else f"- {source}" for source in perspective["sources"]
     )
     return (
         f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
         f"Depth: {perspective['depth']} ({DEPTH_MEANINGS[perspective['depth']]})\n\n"
-        f"Breadth (the changes this perspective judges):\n{breadth}\n\nChecks:\n{checks}\n\n"
+        f"Breadth (the changes this perspective judges):\n{breadth}\n\nChecks:\n{checks}\n\n{MEANS_MEANINGS}.\n\n"
         f"Sources of the value:\n\n{sources}"
     )
 
@@ -369,10 +380,18 @@ def build_messages(task: Task, context: dict) -> list[dict]:
             f"# Unit {unit['id']} ({unit['rule']}): its hunks\n\n```diff\n{unit_diff(context['changes'], unit)}\n```",
             "# Unit files at the head (line number, `|`, then the line)\n\n" + numbered_head_files(context["repo"], context["changes"], unit),
             "# Lines elsewhere at the head that name a changed symbol\n\n" + context["callers"][unit["id"]],
+            change_files(context["changes"]),
             "# Output JSON Schema\n\n```json\n" + json.dumps(FINDINGS_SCHEMA, indent=1) + "\n```",
         ]
     )
     return [{"role": "system", "content": context["brief"]}, {"role": "user", "content": user}]
+
+
+def change_files(changes: dict) -> str:
+    """Every file of the whole change, so a reviewer can follow a concept the unit shares with other units: a structure
+    such as one identity represented in six queries spans units (PR 1726, R-004)."""
+    rows = "\n".join(f"- {change.path} ({change.status})" for change in changes.values())
+    return "# Files of the whole change (other units review their hunks; open them with your tools)\n\n" + rows
 
 
 def validate_answer(answer: object) -> list[str]:
@@ -669,15 +688,13 @@ def run_sweep(options: argparse.Namespace) -> int:
     if missing:
         print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
         return 2
-    depth = {(u, p["id"]): p["depth"] for u, d in designs.items() for p in d["perspectives"]}
     with reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = run_round(
             all_tasks, tasks,
             lambda task: build_messages(task, context),
             lambda findings: anchor_findings.anchor_findings(findings, repo),
             options, out, diff_sha256, started, "srv round 1", lambda task: task.name,
-            lambda task: functools.partial(jail.call, depth=depth[(task.unit["id"], task.perspective)], label=task.name),
-            lambda task: options.depth_samples.get(depth[(task.unit["id"], task.perspective)], options.samples),
+            lambda task: functools.partial(jail.call, tools=reviewer.REVIEW_TOOLS, label=task.name),
         )
     return code
 
@@ -687,18 +704,15 @@ def run_round(
     anchor: Callable[[list[dict]], list[dict]], options: argparse.Namespace, out: Path, source_sha256: str, started: float,
     label: str, only_arg: Callable[[Task], str],
     call_for: Callable[[Task], Callable[..., tuple[str, dict, str]]] = lambda task: call_model,
-    samples_for: Callable[[Task], int] | None = None,
 ) -> int:
     """Run `tasks` (`--samples` each, all at once), write one output per task, and report every task of `all_tasks`.
 
     Shared by srv round 1 and prv (`~/.agents/skills/prv/bin/sweep.py`); the caller decides the tasks, how a
     task's messages are built, how its findings are anchored, which input `source_sha256` names, the round's `label`
     for progress and messages, `only_arg`, the `--only` value that reruns a task in the caller's command, and
-    `call_for`, what sends a task's messages (by default one HTTP call per sample), and `samples_for`, how many
-    samples a task runs (by default `--samples`).
+    and `call_for`, what sends a task's messages (by default one HTTP call per sample).
     Exit 0 when every task of `all_tasks` has a valid output for this input, 1 otherwise.
     """
-    count = {task.name: (samples_for(task) if samples_for else options.samples) for task in tasks}
     messages = {task.name: build(task) for task in tasks}
     progress = Progress(len(tasks), out, label)
     done: dict[str, dict[int, dict]] = {task.name: {} for task in tasks}
@@ -706,7 +720,7 @@ def run_round(
         futures = {
             pool.submit(run_task, task, messages[task.name], anchor, options, call_for(task)): (task, number)
             for task in tasks
-            for number in range(1, count[task.name] + 1)
+            for number in range(1, options.samples + 1)
         }
         for future in concurrent.futures.as_completed(futures):
             task, number = futures[future]
@@ -714,9 +728,9 @@ def run_round(
                 done[task.name][number] = future.result()
             except Exception as error:  # noqa: BLE001 - recorded as the sample's failure; the round must still report every task
                 done[task.name][number] = failed_result(task, error)
-            if len(done[task.name]) < count[task.name]:
+            if len(done[task.name]) < options.samples:
                 continue
-            result = merge_samples(task, [done[task.name][n] for n in range(1, count[task.name] + 1)])
+            result = merge_samples(task, [done[task.name][n] for n in range(1, options.samples + 1)])
             result["source_sha256"] = source_sha256
             (out / f"{result['task']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             progress.advance(result)
@@ -736,8 +750,7 @@ def run_round(
         "wall_s": round(time.monotonic() - started, 1),
         "slowest_s": max((r["seconds"] for r in results), default=0),
         "this_run_tasks": len(tasks),
-        # One number when every task ran the same count (prv, or a uniform --samples), else the counts used.
-        "samples": counts[0] if len(counts := sorted({count[t.name] for t in tasks} or {options.samples})) == 1 else counts,
+        "samples": options.samples,
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in results),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in results),
         "tool_calls": sum(r["usage"].get("tool_calls", 0) for r in results),
@@ -784,20 +797,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=900, help="seconds per call or session (omp --max-time)")
     parser.add_argument("--reasoning-effort", default="high", help="empty string to omit")
     parser.add_argument("--only", nargs="+", help="task names `<unit>__<perspective>` to run, for a rerun of failed tasks")
-    parser.add_argument(
-        "--depth-samples", default="read=3,trace=1,execute=1",
-        help="samples per perspective depth, overriding --samples: three samples was measured for calls without tools "
-        "(PR #1415, #1470); a session that reads and runs goes deeper per sample, so trace and execute run one "
-        "(2026-11-24 PR #1470 measurement; see SKILL.md Limits)",
-    )
     parser.add_argument("--sandbox-ro", action="append", default=[],
-                        help="prepared dependency directory mounted read-only into execute-depth counterexample runs")
+                        help="prepared dependency directory mounted read-only into counterexample runs")
     options = parser.parse_args(argv)
-    try:
-        options.depth_samples = {k: int(v) for k, v in (pair.split("=") for pair in options.depth_samples.split(",") if pair)}
-    except ValueError:
-        parser.error("--depth-samples is depth=count pairs, such as read=3,trace=1,execute=1")
-    if min([options.samples, *options.depth_samples.values()]) < 1:
+    if options.samples < 1:
         parser.error("--samples must be 1 or more: a task with no sample is a unit perspective nobody reviewed")
     return options
 

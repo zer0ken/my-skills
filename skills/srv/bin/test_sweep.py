@@ -78,9 +78,9 @@ def task_of(body: dict) -> str:
 
 class FakeJail:
     """Stands in for `reviewer.Jail`: each session is one HTTP call to the fake endpoint, so the round's logic is tested
-    without omp. `depths` records the depth each session was started with."""
+    without omp. `tools` records the tools each session was started with."""
 
-    depths: ClassVar[list[str]] = []
+    tools: ClassVar[list[tuple[str, ...]]] = []
 
     def __init__(self, options, log=None) -> None:
         self.options = options
@@ -91,8 +91,8 @@ class FakeJail:
     def __exit__(self, *_exc) -> None:
         return None
 
-    def call(self, messages, options, schema, schema_name, depth="trace", label=""):
-        FakeJail.depths.append(depth)
+    def call(self, messages, options, schema, schema_name, tools=(), label=""):
+        FakeJail.tools.append(tuple(tools))
         return sweep.call_model(messages, options, schema, schema_name)
 
 
@@ -101,7 +101,7 @@ class SweepTest(unittest.TestCase):
         jail = mock.patch.object(sweep.reviewer, "Jail", FakeJail)
         jail.start()
         self.addCleanup(jail.stop)
-        FakeJail.depths = []
+        FakeJail.tools = []
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.repo = root / "repo"
@@ -134,13 +134,14 @@ class SweepTest(unittest.TestCase):
         FakeEndpoint.requests = []
         FakeEndpoint.respond = staticmethod(lambda body: answer())
 
-    def write_design(self, unit: str, perspectives: list[str], sha256: str | None = None, depth: str = "read") -> None:
+    def write_design(self, unit: str, perspectives: list[str], sha256: str | None = None, depth: str = "low") -> None:
         design = {
             "unit": unit, "ok": True, "source_sha256": sha256 or hashlib.sha256(DIFF.encode()).hexdigest(),
             "changes": [{"id": "E-1", "kind": "returned_value", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]}],
             "behaviour_free": [],
             "perspectives": [
-                {"id": p, "value": f"value of {p}", "sources": [p], "breadth": ["E-1"], "depth": depth, "checks": ["c"]}
+                {"id": p, "value": f"value of {p}", "sources": [p], "breadth": ["E-1"], "depth": depth,
+                 "checks": [{"question": "c", "means": "execute"}]}
                 for p in perspectives
             ],
             "sources": [],
@@ -157,7 +158,7 @@ class SweepTest(unittest.TestCase):
             "--units", str(self.units), "--diff", str(self.diff), "--repo", str(self.repo),
             "--design", str(self.design), "--values", str(self.values), "--requirements", str(self.requirement),
             "--out", str(self.out), "--base-url", f"http://127.0.0.1:{self.server.server_port}/v1",
-            "--model", "fake", "--max-concurrency", "4", "--samples", "1", "--depth-samples", "", *extra,
+            "--model", "fake", "--max-concurrency", "4", "--samples", "1", *extra,
         ]
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
@@ -179,20 +180,20 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(body["response_format"]["type"], "json_schema")
         self.assertEqual(body["response_format"]["json_schema"]["schema"], sweep.FINDINGS_SCHEMA)
 
-    def test_each_session_gets_its_perspectives_depth(self) -> None:
-        # The depth bounds the session's tools; the change's code runs only where a value is decided by running it.
-        self.write_design("U-1", ["trace"], depth="execute")
+    def test_every_review_session_can_read_and_run(self) -> None:
+        # How a check is decided belongs to the check; a session of any depth may need to run its counterexample.
+        self.write_design("U-1", ["trace"], depth="high")
         self.assertEqual(self.run_sweep(), 0)
-        self.assertEqual(sorted(FakeJail.depths), ["execute", "read", "read"])
+        self.assertEqual(set(FakeJail.tools), {sweep.reviewer.REVIEW_TOOLS})
 
-    def test_samples_follow_the_perspectives_depth(self) -> None:
-        # Three samples was measured for calls without tools; a session that reads and runs goes deeper per sample.
-        self.write_design("U-1", ["trace"], depth="execute")
-        self.assertEqual(self.run_sweep("--depth-samples", "read=3,execute=1"), 0)
-        self.assertEqual(len(FakeEndpoint.requests), 3 + 3 + 1)
-        self.assertEqual(self.read("U-1__trace.json")["samples"], 1)
-        self.assertEqual(self.read("U-2__db.json")["samples"], 3)
-        self.assertEqual(self.read("summary.json")["samples"], [1, 3])
+    def test_the_request_carries_depth_check_means_and_the_change_files(self) -> None:
+        self.write_design("U-1", ["trace"], depth="high")
+        self.assertEqual(self.run_sweep(), 0)
+        user = next(b for b in FakeEndpoint.requests if task_of(b) == "U-1__trace")["messages"][1]["content"]
+        self.assertIn("Depth: high (the value is judged on structure:", user)
+        self.assertIn("1. [execute] c", user)
+        self.assertIn("# Files of the whole change", user)
+        self.assertIn("- pkg/store.py (modified)", user)
 
     def test_samples_are_independent_calls_pooled_per_task(self) -> None:
         def respond(body: dict) -> str:

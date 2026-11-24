@@ -7,11 +7,13 @@
 
 A perspective is a value-theoretic yardstick built for this change: a core value
 that must hold, the breadth of changes it judges (a subset of the change set), and
-the depth its verification reaches (read, trace, execute). The user's words
+its depth, the level of abstraction at which the value is judged: `high` (structure)
+or `low` (behaviour inside a function). The user's words
 (2026-11-24): "axiology에는 핵심 가치에 대한 정의, 그 가치를 검증할 깊이, 넓이를
 한정하지 않으면 정교한 리뷰가 불가능해. 그래서 특정 PR에 있는 diff를 보고, 그 diff에
 의해 일어나는 모든 변화를 커버할 수 있는 가치론적인 평가 잣대를 여러개 만들고, 그것이
-내가 말한 "관점"이야".
+내가 말한 "관점"이야", and, on what depth meant: "하이레벨 로우레벨을 말한거다."
+How a check is decided (read, trace, or execute) is the check's means, not the depth.
 
 One omp reviewer session per review unit (`reviewer.py`), with read tools on the head, reads the unit's hunks (each labelled
 with a hunk id), its head files, the lines that call into it, the requirement
@@ -22,8 +24,14 @@ did with every catalog entry. Coverage is checked here, in code, not trusted to
 the model (`check_design`):
 
 - every hunk is in some change or declared behaviour-free with a reason;
-- every change is in the breadth of some perspective (the union of breadths is the change set);
-- every change that rests on an external program, service, or library is in an `execute` perspective;
+- every change is in the breadth of some `low`-depth perspective, so the union of breadths is the change set;
+- every change states whether it alters a structure (a concept, data model, placement of a
+  responsibility, or module boundary) and what, or why not; every change that alters one is also
+  in the breadth of some `high`-depth perspective, because a structural defect seen at low level shows
+  only its symptoms;
+- every change that rests on an external program, service, or library is in the breadth of a
+  perspective with an `execute` check, because reading the code that assumes a contract cannot
+  decide whether the contract holds;
 - every catalog entry is used as a source of some perspective or dismissed with a reason.
 
 An answer that fails a check is sent back once with the problems listed. A unit
@@ -54,7 +62,8 @@ CHANGE_KINDS = (
     "returned_value", "stored_data", "state_and_ownership", "failure_result", "resource_use",
     "interface_and_name", "documented_promise", "test_contract", "external_contract",
 )
-DEPTHS = ("read", "trace", "execute")
+DEPTHS = ("high", "low")
+MEANS = ("read", "trace", "execute")
 FREE_SOURCE_PREFIXES = ("requirement:", "rule:")
 
 _STRINGS = {"type": "array", "items": {"type": "string"}}
@@ -65,11 +74,15 @@ DESIGN_SCHEMA = {
     "properties": {
         "changes": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
-            "required": ["id", "kind", "subject", "before", "after", "hunks"],
+            "required": ["id", "kind", "subject", "before", "after", "hunks", "structure"],
             "properties": {
                 "id": {"type": "string"}, "kind": {"type": "string", "enum": list(CHANGE_KINDS)},
                 "subject": {"type": "string"}, "before": {"type": "string"}, "after": {"type": "string"},
                 "hunks": _STRINGS,
+                "structure": {
+                    "type": "object", "additionalProperties": False, "required": ["alters", "what"],
+                    "properties": {"alters": {"type": "boolean"}, "what": {"type": "string"}},
+                },
             },
         }},
         "behaviour_free": {"type": "array", "items": {
@@ -81,7 +94,11 @@ DESIGN_SCHEMA = {
             "required": ["id", "value", "sources", "breadth", "depth", "checks"],
             "properties": {
                 "id": {"type": "string"}, "value": {"type": "string"}, "sources": _STRINGS, "breadth": _STRINGS,
-                "depth": {"type": "string", "enum": list(DEPTHS)}, "checks": _STRINGS,
+                "depth": {"type": "string", "enum": list(DEPTHS)},
+                "checks": {"type": "array", "items": {
+                    "type": "object", "additionalProperties": False, "required": ["question", "means"],
+                    "properties": {"question": {"type": "string"}, "means": {"type": "string", "enum": list(MEANS)}},
+                }},
             },
         }},
         "sources": {"type": "array", "items": {
@@ -152,20 +169,35 @@ def check_design(answer: object, hunks: list[str], catalog: list[str]) -> list[s
             f"hunks {missing_hunks} are in no change and not declared behaviour-free with a reason; give each the "
             "change it makes, or say why it changes no behaviour"
         )
-    covered: set[str] = set()
+    for cid, change in changes.items():
+        structure = change.get("structure")
+        if not isinstance(structure, dict) or not isinstance(structure.get("alters"), bool) or not str(structure.get("what", "")).strip():
+            problems.append(
+                f"{cid} has no `structure` with a boolean `alters` and a `what`: state the concept, data model, "
+                "responsibility, or module boundary the change alters, or why it alters none"
+            )
+    covered: dict[str, set[str]] = {depth: set() for depth in DEPTHS}
+    executed: set[str] = set()
     used_sources: set[str] = set()
     for p in perspectives:
         pid = p.get("id")
         if not str(p.get("value", "")).strip():
             problems.append(f"{pid} has no value")
-        if not p.get("checks"):
-            problems.append(f"{pid} has no checks")
+        if p.get("depth") not in DEPTHS:
+            problems.append(f"{pid} depth is not one of {DEPTHS}")
+        checks = [c for c in p.get("checks", []) if isinstance(c, dict)]
+        if not checks or len(checks) != len(p.get("checks", [])):
+            problems.append(f"{pid} has no checks, or a check that is not a question with its means")
+        elif any(c.get("means") not in MEANS or not str(c.get("question", "")).strip() for c in checks):
+            problems.append(f"{pid} has a check without a question or with a means that is not one of {MEANS}")
         if not p.get("breadth"):
             problems.append(f"{pid} has an empty breadth")
         unknown = sorted(set(p.get("breadth", [])) - set(changes))
         if unknown:
             problems.append(f"{pid} breadth names {unknown}, which are not change ids")
-        covered |= set(p.get("breadth", []))
+        covered.setdefault(p.get("depth"), set()).update(p.get("breadth", []))
+        if any(c.get("means") == "execute" for c in checks):
+            executed.update(p.get("breadth", []))
         if not p.get("sources"):
             problems.append(f"{pid} has no source")
         for source in p.get("sources", []):
@@ -173,16 +205,25 @@ def check_design(answer: object, hunks: list[str], catalog: list[str]) -> list[s
                 used_sources.add(source)
             elif not str(source).startswith(FREE_SOURCE_PREFIXES):
                 problems.append(f"{pid} source {source!r} is neither a catalog id {catalog} nor `requirement: ...` / `rule: ...`")
-    uncovered = [c for c in changes if c not in covered]
+    uncovered = [c for c in changes if c not in covered["low"]]
     if uncovered:
-        problems.append(f"changes {uncovered} are in no perspective's breadth; every change needs a perspective that judges it")
-    executed = {e for p in perspectives if p.get("depth") == "execute" for e in p.get("breadth", [])}
+        problems.append(
+            f"changes {uncovered} are in no `low`-depth perspective's breadth; every change needs a yardstick that judges "
+            "its behaviour inside the functions it touches"
+        )
+    structural = [cid for cid, c in changes.items() if isinstance(c.get("structure"), dict) and c["structure"].get("alters") is True]
+    unstructured = [c for c in structural if c not in covered["high"]]
+    if unstructured:
+        problems.append(
+            f"changes {unstructured} alter a structure but are in no `high`-depth perspective's breadth; a structural "
+            "defect judged only at low level shows as its symptoms, so give them a yardstick on the structure itself"
+        )
     unexecuted = [cid for cid, c in changes.items() if c.get("kind") == "external_contract" and cid not in executed]
     if unexecuted:
         problems.append(
-            f"external contracts {unexecuted} are in no `execute` perspective's breadth; what an external program, "
-            "service, or library does is decided by running it against a fake built from its documentation, not by "
-            "reading the code that assumes it"
+            f"external contracts {unexecuted} are in no breadth of a perspective with an `execute` check; what an "
+            "external program, service, or library does is decided by running the code against a fake built from "
+            "its documentation, not by reading the code that assumes it"
         )
     dispositions = {row.get("source"): row for row in answer["sources"] if isinstance(row, dict)}
     for source in catalog:
@@ -257,8 +298,8 @@ def run_design(options: argparse.Namespace) -> int:
     units = [u for u in plan["units"] if not options.only or u["id"] in options.only]
     progress = sweep.Progress(len(units), out, "srv design")
     with sweep.reviewer.Jail(options, out / "sessions.jsonl") as jail, concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
-        # The design session reads the repository's rules and callers: trace-depth tools.
-        call = functools.partial(jail.call, depth="trace", label="design")
+        # The design session reads the repository's rules and callers; it runs nothing.
+        call = functools.partial(jail.call, tools=sweep.reviewer.DESIGN_TOOLS, label="design")
         futures = {pool.submit(design_unit, unit, context, options, call): unit for unit in units}
         for future in concurrent.futures.as_completed(futures):
             unit = futures[future]
@@ -279,7 +320,8 @@ def run_design(options: argparse.Namespace) -> int:
         "wall_s": round(time.monotonic() - started, 1), "slowest_s": max((r["seconds"] for r in done), default=0),
         "changes": sum(len(r.get("changes", [])) for r in done),
         "perspectives": sum(len(r.get("perspectives", [])) for r in done),
-        "depths": {d: sum(1 for r in done for p in r.get("perspectives", []) if p["depth"] == d) for d in DEPTHS},
+        "depths": {v: sum(1 for r in done for p in r.get("perspectives", []) if p["depth"] == v) for v in DEPTHS},
+        "structural_changes": sum(1 for r in done for c in r.get("changes", []) if c["structure"]["alters"]),
         "prompt_tokens": sum(r["usage"]["prompt_tokens"] for r in done),
         "completion_tokens": sum(r["usage"]["completion_tokens"] for r in done),
         "tool_calls": sum(r["usage"].get("tool_calls", 0) for r in done),

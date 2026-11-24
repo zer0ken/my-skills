@@ -110,15 +110,15 @@ python3 -I -c 'import json; print(json.dumps({"type": "message_end", "message": 
 """
 
 
-class DepthTest(unittest.TestCase):
-    def test_depth_decides_the_tools(self) -> None:
+class ToolsTest(unittest.TestCase):
+    def test_the_design_session_reads_and_every_review_session_can_also_run(self) -> None:
         options = argparse.Namespace(model="m", reasoning_effort="high", timeout=60)
-        read = reviewer.omp_arguments(options, "s", reviewer.DEPTH_TOOLS["read"])
-        self.assertIn("--no-tools", read, "at read depth the request decides the value; the session gets no tool")
-        self.assertNotIn("--tools", read)
-        execute = reviewer.omp_arguments(options, "s", reviewer.DEPTH_TOOLS["execute"])
-        self.assertEqual(execute[execute.index("--tools") + 1], "read,grep,glob,sandbox_run")
-        self.assertIn("/opt/srv/sandbox_tool.ts", execute)
+        design = reviewer.omp_arguments(options, "s", reviewer.DESIGN_TOOLS)
+        self.assertEqual(design[design.index("--tools") + 1], "read,grep,glob")
+        self.assertNotIn("/opt/srv/sandbox_tool.ts", design, "the design session builds yardsticks and runs nothing")
+        review = reviewer.omp_arguments(options, "s", reviewer.REVIEW_TOOLS)
+        self.assertEqual(review[review.index("--tools") + 1], "read,grep,glob,sandbox_run")
+        self.assertIn("/opt/srv/sandbox_tool.ts", review)
 
 
 class AdmissionTest(unittest.TestCase):
@@ -203,15 +203,15 @@ class JailTest(unittest.TestCase):
         self.server.server_close()
         self.tmp.cleanup()
 
-    def probe(self, depth: str) -> dict:
+    def probe(self, tools: tuple[str, ...]) -> dict:
         which = shutil.which
         fake = mock.patch.object(reviewer.shutil, "which", lambda name: str(self.fake) if name == "omp" else which(name))
         with fake, reviewer.Jail(self.options) as jail:
-            content, _usage, _finish = jail.call([{"role": "user", "content": "q"}], self.options, {}, "t", depth=depth)
+            content, _usage, _finish = jail.call([{"role": "user", "content": "q"}], self.options, {}, "t", tools=tools)
         return json.loads(content)
 
     def test_the_session_reaches_only_the_model_and_reads_the_head(self) -> None:
-        report = self.probe("trace")
+        report = self.probe(reviewer.DESIGN_TOOLS)
         self.assertEqual(report["model_via_relay"], "model-server", "the relay is the session's way to the model")
         self.assertNotEqual(report["host_loopback"], "model-server",
                             "the session has its own network namespace: the host's loopback is not reachable")
@@ -224,7 +224,7 @@ class JailTest(unittest.TestCase):
         self.assertNotIn("sandbox_run", report["args"][report["args"].index("--tools") + 1])
 
     def test_a_counterexample_run_cannot_reach_the_relay_and_starts_from_the_head(self) -> None:
-        report = self.probe("execute")
+        report = self.probe(reviewer.REVIEW_TOOLS)
         code, stderr = report["sandbox_relay"]
         self.assertNotEqual(code, 0, "code run by sandbox_run must not reach the model relay")
         self.assertTrue("FileNotFoundError" in stderr or "ConnectionRefusedError" in stderr, stderr)

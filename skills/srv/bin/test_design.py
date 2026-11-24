@@ -28,11 +28,23 @@ fixtures = load("test_sweep_fixtures", "test_sweep.py")
 FakeEndpoint, DIFF, SOURCE, CALLER = fixtures.FakeEndpoint, fixtures.DIFF, fixtures.SOURCE, fixtures.CALLER
 
 
+NO_STRUCTURE = {"alters": False, "what": "함수 안의 분기만 바뀐다"}
+
+
+def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTURE) -> dict:
+    return {"id": cid, "kind": kind, "subject": "s", "before": "b", "after": "a", "hunks": ["H1"], "structure": structure}
+
+
+def perspective(pid: str, breadth: list[str], depth: str = "low", means: str = "read") -> dict:
+    return {"id": pid, "value": "v", "sources": ["db"], "breadth": breadth, "depth": depth,
+            "checks": [{"question": "c", "means": means}]}
+
+
 def valid(hunk: str = "H1", catalog=("db", "trace")) -> dict:
     return {
-        "changes": [{"id": "E-1", "kind": "returned_value", "subject": "s", "before": "b", "after": "a", "hunks": [hunk]}],
+        "changes": [{**change("E-1"), "hunks": [hunk]}],
         "behaviour_free": [],
-        "perspectives": [{"id": "K-1", "value": "v", "sources": ["db"], "breadth": ["E-1"], "depth": "execute", "checks": ["c"]}],
+        "perspectives": [perspective("K-1", ["E-1"], means="execute")],
         "sources": [{"source": "db", "use": "used", "reason": ""}]
         + [{"source": s, "use": "dismissed", "reason": "r"} for s in catalog if s != "db"],
     }
@@ -56,23 +68,54 @@ class CheckDesignTest(unittest.TestCase):
 
     def test_a_change_in_no_breadth_fails(self) -> None:
         answer = valid()
-        answer["changes"].append({"id": "E-2", "kind": "failure_result", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]})
+        answer["changes"].append(change("E-2", "failure_result"))
         self.assertEqual(
             design.check_design(answer, ["H1"], ["db", "trace"]),
-            ["changes ['E-2'] are in no perspective's breadth; every change needs a perspective that judges it"],
+            ["changes ['E-2'] are in no `low`-depth perspective's breadth; every change needs a yardstick that judges "
+             "its behaviour inside the functions it touches"],
         )
 
-    def test_an_external_contract_needs_an_execute_perspective(self) -> None:
+    def test_a_change_judged_only_at_high_depth_fails(self) -> None:
+        # Low depth is where a change's behaviour is judged line by line; a high yardstick alone leaves it unjudged.
         answer = valid()
-        answer["changes"].append({"id": "E-2", "kind": "external_contract", "subject": "s", "before": "b", "after": "a", "hunks": ["H1"]})
-        answer["perspectives"].append(
-            {"id": "K-2", "value": "v", "sources": ["db"], "breadth": ["E-1", "E-2"], "depth": "read", "checks": ["c"]}
-        )
+        answer["perspectives"][0]["depth"] = "high"
+        self.assertTrue(design.check_design(answer, ["H1"], ["db", "trace"])[0].startswith("changes ['E-1'] are in no `low`"))
+
+    def test_a_structural_change_needs_a_high_depth_perspective(self) -> None:
+        # PR 1726 R-004: record identity held as a metadata_pairs string prefix; low-depth yardsticks caught only the
+        # symptom at graph_search.cypher:339, never the representation itself.
+        answer = valid()
+        answer["changes"].append(change("E-2", "stored_data", {"alters": True, "what": "레코드 동일성을 문자열 접두사로 나타낸다"}))
+        answer["perspectives"][0]["breadth"].append("E-2")
         self.assertEqual(
             design.check_design(answer, ["H1"], ["db", "trace"]),
-            ["external contracts ['E-2'] are in no `execute` perspective's breadth; what an external program, service, "
-             "or library does is decided by running it against a fake built from its documentation, not by reading "
-             "the code that assumes it"],
+            ["changes ['E-2'] alter a structure but are in no `high`-depth perspective's breadth; a structural defect "
+             "judged only at low level shows as its symptoms, so give them a yardstick on the structure itself"],
+        )
+        answer["perspectives"].append(perspective("K-2", ["E-2"], depth="high"))
+        self.assertEqual(design.check_design(answer, ["H1"], ["db", "trace"]), [])
+
+    def test_every_change_states_its_structure(self) -> None:
+        answer = valid()
+        answer["changes"][0]["structure"] = {"alters": False, "what": " "}
+        self.assertTrue(design.check_design(answer, ["H1"], ["db", "trace"])[0].startswith("E-1 has no `structure`"))
+
+    def test_a_check_states_its_means(self) -> None:
+        answer = valid()
+        answer["perspectives"][0]["checks"] = ["c"]
+        self.assertTrue(design.check_design(answer, ["H1"], ["db", "trace"]))
+        answer["perspectives"][0]["checks"] = [{"question": "c", "means": "guess"}]
+        self.assertTrue(design.check_design(answer, ["H1"], ["db", "trace"]))
+
+    def test_an_external_contract_needs_an_execute_check(self) -> None:
+        answer = valid()
+        answer["changes"].append(change("E-2", "external_contract"))
+        answer["perspectives"].append(perspective("K-2", ["E-1", "E-2"], means="read"))
+        self.assertEqual(
+            design.check_design(answer, ["H1"], ["db", "trace"]),
+            ["external contracts ['E-2'] are in no breadth of a perspective with an `execute` check; what an external "
+             "program, service, or library does is decided by running the code against a fake built from its "
+             "documentation, not by reading the code that assumes it"],
         )
         answer["perspectives"][0]["breadth"].append("E-2")
         self.assertEqual(design.check_design(answer, ["H1"], ["db", "trace"]), [])
@@ -157,8 +200,9 @@ class DesignRunTest(unittest.TestCase):
         self.assertIn("## db\n\n1. Check queries.", user)
         self.assertRegex(user, r"@@ [^\n]*@@[^\n]*  \[H1\]")
         unit = json.loads((self.out / "U-2.json").read_text(encoding="utf-8"))
-        self.assertEqual((unit["ok"], unit["hunks"], unit["perspectives"][0]["depth"]), (True, ["H1"], "execute"))
-        self.assertEqual(json.loads((self.out / "summary.json").read_text())["depths"], {"read": 0, "trace": 0, "execute": 2})
+        self.assertEqual((unit["ok"], unit["hunks"], unit["perspectives"][0]["depth"]), (True, ["H1"], "low"))
+        summary = json.loads((self.out / "summary.json").read_text())
+        self.assertEqual((summary["depths"], summary["structural_changes"]), ({"high": 0, "low": 2}, 0))
 
     def test_uncovered_answer_is_sent_back_with_its_problems(self) -> None:
         calls = []

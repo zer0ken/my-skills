@@ -25,14 +25,14 @@ untrusted input, so the jail holds:
   Unix sockets that are bind-mounted into the sandbox)",
   https://github.com/anthropic-experimental/sandbox-runtime). A URL read fails at name
   resolution, so the read tool cannot send the head anywhere;
-- only the tools the caller names; at execute depth that includes `sandbox_run`
+- only the tools the caller names: read tools for the design session, and `sandbox_run` as well for review sessions
   (`sandbox_tool.ts`), which runs a command through `sandbox.py` in a nested namespace
   without even the relay, so the change's code never shares a namespace with the
   session that talks to the model.
 
 The answer is the text of the last assistant message; the caller validates it.
 
-Usage as a module: `with Jail(options, log) as jail: jail.call(messages, options, schema, name, depth="trace")`.
+Usage as a module: `with Jail(options, log) as jail: jail.call(messages, options, schema, name, tools=REVIEW_TOOLS)`.
 The file also runs inside the jail as the inner end of the relay: `reviewer.py relay-inner SOCKET PORT`.
 """
 
@@ -56,10 +56,12 @@ from urllib.parse import urlsplit
 BIN = Path(__file__).resolve().parent
 INNER_PORT = 18000
 READ_TOOLS = ("read", "grep", "glob")
-# A perspective's depth is how far its verification must go, so it also bounds what the session may do: at `read` the
-# request decides the value and the session gets no tool, at `trace` it follows the behaviour with read tools, at
-# `execute` it also runs counterexamples. In the first full run a `read` session with tools made 67 tool calls.
-DEPTH_TOOLS = {"read": (), "trace": READ_TOOLS, "execute": (*READ_TOOLS, "sandbox_run")}
+# The design session reads the repository to build the yardsticks and runs nothing. Every review session can also
+# run, because how a check is decided (read, trace, execute) belongs to the check, not to the session: the user's
+# words (2026-11-24), on the limit that review sessions could not run tests: "실제 실행도 가능해야돼. 에이전트
+# 하네스를 사용하는데 그걸 못할 이유가 없어".
+DESIGN_TOOLS = READ_TOOLS
+REVIEW_TOOLS = (*READ_TOOLS, "sandbox_run")
 SANDBOX_TOOL = BIN / "sandbox_tool.ts"
 SYSTEM_DIRS = ("/usr", "/etc")
 # One omp session runs about 200 threads (measured 200 to 206 on omp 19.1.1, 2026-11-24), and its jail, shell, and
@@ -74,7 +76,7 @@ JAIL_GUIDANCE = (
     "the request does not show (callers, tests, rules, documents) before you decide a check. "
 )
 SANDBOX_GUIDANCE = (
-    "This perspective is decided by running. Use sandbox_run to run a counterexample: it runs a bash script in a "
+    "A check whose means is `execute` is decided by running. Use sandbox_run to run a counterexample: it runs a bash script in a "
     "fresh writable copy of /work with no network, and returns the exit code and the output. Write the script so its "
     "output shows the value lowered or kept, and report in the finding the script and the output line that decides it. "
 )
@@ -318,11 +320,10 @@ class Jail:
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def call(self, messages: list[dict], options: argparse.Namespace, schema: dict, schema_name: str,
-             depth: str = "trace", label: str = "") -> tuple[str, dict, str]:
-        """One omp session with the tools its depth allows; the contract of `sweep.call_model`: content, usage,
-        finish reason. `schema` is in the request text already; the caller validates the answer against it."""
+             tools: tuple[str, ...] = REVIEW_TOOLS, label: str = "") -> tuple[str, dict, str]:
+        """One omp session with `tools`; the contract of `sweep.call_model`: content, usage, finish reason.
+        `schema` is in the request text already; the caller validates the answer against it."""
         del schema
-        tools = DEPTH_TOOLS[depth]
         sandbox = "sandbox_run" in tools
         system = "\n".join(m["content"] for m in messages if m["role"] == "system")
         system += "\n\n" + (JAIL_GUIDANCE if tools else "") + (SANDBOX_GUIDANCE if sandbox else "")
@@ -338,7 +339,7 @@ class Jail:
                                         timeout=options.timeout + 60, check=False)
             except subprocess.TimeoutExpired as error:
                 raise TimeoutError(f"the omp session ran past {options.timeout + 60:.0f} s") from error
-        row = {"event": "session", "label": label, "schema": schema_name, "depth": depth,
+        row = {"event": "session", "label": label, "schema": schema_name, "tools": list(tools),
                "seconds": round(time.monotonic() - started, 1), "exit": result.returncode}
         if result.returncode:
             self.record({**row, "error": result.stderr.strip()[-800:]})
