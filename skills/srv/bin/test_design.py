@@ -29,7 +29,7 @@ FakeEndpoint, DIFF, SOURCE, CALLER = fixtures.FakeEndpoint, fixtures.DIFF, fixtu
 
 
 NO_STRUCTURE = {"alters": False, "what": "함수 안의 분기만 바뀐다"}
-CATALOG = ["db", "trace"]
+CATALOG = ["db#1", "trace#1"]
 
 
 def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTURE, unit: str = "U-1") -> dict:
@@ -38,8 +38,8 @@ def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTUR
 
 
 def perspective(pid: str, breadth: list[str], depth: str = "low", means: str = "read") -> dict:
-    return {"id": pid, "value": "v", "broken_if": "x", "sources": ["catalog: db"], "breadth": breadth, "depth": depth,
-            "checks": [{"question": "c", "means": means}]}
+    return {"id": pid, "value": "v", "broken_if": "x", "breadth": breadth, "depth": depth,
+            "checks": [{"question": "c", "means": means, "source": "catalog: db#1"}]}
 
 
 def valid_changes(hunk: str = "H1") -> dict:
@@ -49,7 +49,7 @@ def valid_changes(hunk: str = "H1") -> dict:
 def valid_perspectives() -> dict:
     return {
         "perspectives": [perspective("K-1", ["U-1/E-1"], means="execute")],
-        "sources": [{"source": "catalog: db", "use": "used", "reason": ""}, {"source": "catalog: trace", "use": "dismissed", "reason": "r"}],
+        "dismissed": [{"item": "catalog: trace#1", "reason": "r"}],
     }
 
 
@@ -125,26 +125,26 @@ class CheckPerspectivesTest(unittest.TestCase):
     def test_a_perspective_states_what_breaks_its_value(self) -> None:
         answer = valid_perspectives()
         answer["perspectives"][0]["broken_if"] = " "
-        problems = design.check_perspectives(answer, {"U-1/E-1": change("E-1")}, ["db", "trace"])
+        problems = design.check_perspectives(answer, {"U-1/E-1": change("E-1")}, CATALOG)
         self.assertTrue(any("K-1 has no `broken_if`" in p for p in problems), problems)
 
     def test_a_low_perspective_stays_narrow(self) -> None:
         many = {f"U-1/E-{n}": change(f"E-{n}") for n in range(1, design.LOW_BREADTH_MAX + 2)}
         answer = valid_perspectives()
         answer["perspectives"][0]["breadth"] = list(many)
-        problems = design.check_perspectives(answer, many, ["db", "trace"])
+        problems = design.check_perspectives(answer, many, CATALOG)
         self.assertTrue(any(f"K-1 is `low` with {design.LOW_BREADTH_MAX + 1} changes" in p for p in problems), problems)
         answer["perspectives"] = [perspective("K-1", list(many)[: design.LOW_BREADTH_MAX], means="execute"),
                                   perspective("K-2", list(many)[design.LOW_BREADTH_MAX:], means="execute"),
                                   perspective("K-3", list(many), depth="high")]
-        self.assertEqual(design.check_perspectives(answer, many, ["db", "trace"]), [],
+        self.assertEqual(design.check_perspectives(answer, many, CATALOG), [],
                          "a high perspective may be wide: it judges structure, not lines")
 
     def test_a_check_states_its_means(self) -> None:
         answer = valid_perspectives()
         answer["perspectives"][0]["checks"] = ["c"]
         self.assertTrue(self.check(answer))
-        answer["perspectives"][0]["checks"] = [{"question": "c", "means": "guess"}]
+        answer["perspectives"][0]["checks"] = [{"question": "c", "means": "guess", "source": "catalog: db#1"}]
         self.assertTrue(self.check(answer))
 
     def test_an_external_contract_needs_an_execute_check(self) -> None:
@@ -160,21 +160,30 @@ class CheckPerspectivesTest(unittest.TestCase):
         answer["perspectives"][0]["breadth"].append("U-1/E-2")
         self.assertEqual(self.check(answer, change("E-1"), contract), [])
 
-    def test_every_catalog_entry_is_used_or_dismissed_with_a_reason(self) -> None:
+    def test_every_catalog_item_is_asked_by_a_check_or_dismissed_with_a_reason(self) -> None:
+        # Coordinator, 2026-11-25: "항목마다 어느 관점의 가치로 쓰였거나 이유와 함께 기각됐는지를 코드가 확인하게 하라".
         answer = valid_perspectives()
-        answer["sources"] = [{"source": "catalog: db", "use": "used", "reason": ""}, {"source": "trace", "use": "dismissed", "reason": ""}]
+        answer["dismissed"] = [{"item": "trace#1", "reason": " "}, {"item": "db#1", "reason": "r"}]
         self.assertEqual(
-            design.check_perspectives(answer, {"U-1/E-1": change("E-1")}, ["db", "trace", "tests"]),
-            ["catalog entry 'trace' is dismissed but is a perspective's source or has no reason",
-             "catalog entry 'tests' has no row in `sources`; use it in a perspective or dismiss it with a reason"],
+            design.check_perspectives(answer, {"U-1/E-1": change("E-1")}, ["db#1", "trace#1", "db#2", "tests#1"]),
+            ["catalog item 'trace#1' is dismissed without a reason",
+             "catalog item 'db#1' is dismissed but a check asks it; keep one of the two",
+             ("catalog items ['trace#1', 'db#2', 'tests#1'] are asked by no check and not dismissed; an item left out "
+              "is a defect class the review never looks for, so give each a check in the perspective whose value it "
+              "serves (a new perspective when none fits, within the breadth caps), or dismiss it with the reason no "
+              "change has it at stake")],
+            "an item of a file another item of which is asked is still unasked",
         )
 
-    def test_a_source_outside_catalog_and_records_fails(self) -> None:
+    def test_a_check_source_is_a_catalog_item_or_a_record(self) -> None:
         answer = valid_perspectives()
-        answer["perspectives"][0]["sources"] = ["catalog: db", "taste"]
+        answer["perspectives"][0]["checks"].append({"question": "q", "means": "read", "source": "catalog: db"})
+        self.assertEqual(len(self.check(answer)), 1, "a whole catalog file is not a source")
+        answer["perspectives"][0]["checks"][1]["source"] = "taste"
         self.assertEqual(len(self.check(answer)), 1)
-        answer["perspectives"][0]["sources"] = ["db", "requirement: rows load", "rule: AGENTS.md:3"]
-        self.assertEqual(self.check(answer), [], "a bare catalog id is the same entry as `catalog: <id>`")
+        for source in ("db#1", "requirement: rows load", "rule: AGENTS.md:3"):
+            answer["perspectives"][0]["checks"][1]["source"] = source
+            self.assertEqual(self.check(answer), [], source)
 
 
 def step(body: dict) -> str:
@@ -205,8 +214,8 @@ class DesignRunTest(unittest.TestCase):
             subprocess.run(["git", "-C", str(self.repo), *command], check=True)
         self.values = root / "values"
         self.values.mkdir()
-        (self.values / "db.md").write_text("1. Check queries.\n", encoding="utf-8")
-        (self.values / "trace.md").write_text("1. Trace the requirement.\n", encoding="utf-8")
+        (self.values / "db.md").write_text("# Method: db\n1. Check queries.\n", encoding="utf-8")
+        (self.values / "trace.md").write_text("# Method: trace\n1. Trace the requirement.\n", encoding="utf-8")
         self.diff = root / "diff.patch"
         self.diff.write_text(DIFF, encoding="utf-8")
         self.units = root / "units.json"
@@ -251,7 +260,7 @@ class DesignRunTest(unittest.TestCase):
                         "every request starts with the shared pack, so the server reuses its prefix")
         self.assertIn("Load rows.", unit_body["messages"][1]["content"])
         whole = next(b for b in FakeEndpoint.requests if step(b) == "srv-perspectives")["messages"][1]["content"]
-        self.assertIn("## db\n\n1. Check queries.", whole)
+        self.assertIn("# Method: db\n- db#1: Check queries.", whole)
         self.assertIn("- U-1/E-1 [returned_value]", whole)
         self.assertIn("- U-2/E-1 [returned_value]", whole)
         unit = json.loads((self.out / "U-2.json").read_text(encoding="utf-8"))

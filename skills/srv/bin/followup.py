@@ -103,7 +103,7 @@ def run_followup(options: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     context = {
         "brief": follow_up_brief(), "plan": plan, "designs": designs, "perspectives": perspectives,
-        "catalog": {p.stem: p.read_text(encoding="utf-8").strip() for p in sorted(sweep.VALUES.glob("*.md"))},
+        "catalog": sweep.read_catalog(),
         "pack": sweep.read_pack(Path(options.context), diff_sha256),
         "changes": {c.path: c for c in sweep.plan_units.parse_diff(diff_text)},
     }

@@ -116,8 +116,9 @@ class SweepTest(unittest.TestCase):
             subprocess.run(["git", "-C", str(self.repo), *command], check=True)
         self.values = root / "values"
         self.values.mkdir()
-        (self.values / "trace.md").write_text("1. Trace the requirement.\n", encoding="utf-8")
-        (self.values / "db.md").write_text("1. Check queries.\n", encoding="utf-8")
+        (self.values / "trace.md").write_text("# Method: trace\nApply U0.\n1. Trace the requirement.\n2. Name the rule.\n",
+                                              encoding="utf-8")
+        (self.values / "db.md").write_text("# Method: db\n1. Check queries.\n", encoding="utf-8")
         self.diff = root / "diff.patch"
         self.diff.write_text(DIFF, encoding="utf-8")
         plan = sweep.plan_units.plan_units(DIFF)
@@ -157,8 +158,8 @@ class SweepTest(unittest.TestCase):
         design = {
             "ok": True, "source_sha256": hashlib.sha256(DIFF.encode()).hexdigest(),
             "perspectives": [
-                {"id": p, "value": f"value of {p}", "broken_if": f"broken {p}", "sources": [f"catalog: {p}"], "breadth": b, "depth": depth,
-                 "checks": [{"question": "c", "means": "execute"}]}
+                {"id": p, "value": f"value of {p}", "broken_if": f"broken {p}", "breadth": b, "depth": depth,
+                 "checks": [{"question": "c", "means": "execute", "source": f"catalog: {p}#1"}]}
                 for p, b in breadths.items()
             ],
             "sources": [],
@@ -210,7 +211,9 @@ class SweepTest(unittest.TestCase):
         self.assertEqual(self.run_sweep(), 0)
         user = next(b for b in FakeEndpoint.requests if task_of(b) == "change__trace")["messages"][1]["content"]
         self.assertIn("Depth: high (the value is judged on structure:", user)
-        self.assertIn("1. [execute] c", user)
+        self.assertIn("1. [execute] c (source: catalog: trace#1)", user)
+        self.assertIn("Sources of the value:\n\n# Method: trace\nApply U0.\n- trace#1: Trace the requirement.", user)
+        self.assertNotIn("Name the rule", user, "a reviewer gets the catalog items its checks ask, not the whole file")
         self.assertIn("# Files of the whole change", user)
         self.assertIn("- pkg/store.py (modified)", user)
 
@@ -272,7 +275,7 @@ class SweepTest(unittest.TestCase):
         user = next(b for b in FakeEndpoint.requests if task_of(b) == "change__db")["messages"][1]["content"]
         self.assertIn("    2|     query = 'SELECT 1'", user)
         self.assertIn("pkg/api.py:3:load([])", user)
-        self.assertIn("1. Check queries.", user)
+        self.assertIn("- db#1: Check queries.", user)
         self.assertIn("Value: value of db", user)
         self.assertIn("- U-2/E-1 [returned_value] s: b -> a (hunks U-2/H1)", user)
 

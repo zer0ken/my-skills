@@ -12,7 +12,7 @@ Each task is `--samples` independent reviewer sessions (samples, `reviewer.py`),
 whose findings are pooled, because one session misses causes another finds; all
 samples of all tasks run at once, so the round takes about as long as its slowest
 session. A session gets the brief (`references/brief.md`), the perspective with the
-catalog entries it rests on, the requirement copies, the unit's hunks, the unit's
+catalog items its checks ask about, the requirement copies, the unit's hunks, the unit's
 files at the head with line numbers, and the lines elsewhere in the head that name a
 symbol the hunks define or change, and opens the rest of the head with its read
 tools, and runs counterexamples with `sandbox_run` where a check's means is `execute`. The
@@ -181,10 +181,42 @@ class Task:
 
 
 RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
+CATALOG_ITEM_RE = re.compile(r"^(\d+)\. ")
+
+
+@dataclass(frozen=True)
+class CatalogItem:
+    """One numbered check of a value catalog method file, named `<file>#<n>`: the file's header (its title and the
+    method it applies) and the check's line. A perspective check names the item it asks about, so coverage is decided
+    per item: a file whose one item became a value says nothing about its other items (PR #1726, 2026-11-25: `growth`
+    was used for added routers only, and the reuse item that held two missed defects was never asked)."""
+
+    header: str
+    text: str
+
+
+def read_catalog(directory: Path = VALUES) -> dict[str, CatalogItem]:
+    """Every item of every method file in the value catalog directory, by item id `<file>#<n>`."""
+    items: dict[str, CatalogItem] = {}
+    for path in sorted(directory.glob("*.md")):
+        lines = path.read_text(encoding="utf-8").strip().splitlines()
+        header = "\n".join(line for line in lines if not CATALOG_ITEM_RE.match(line)).strip()
+        for line in lines:
+            if match := CATALOG_ITEM_RE.match(line):
+                items[f"{path.stem}#{match[1]}"] = CatalogItem(header, line[match.end():])
+    return items
+
+
+def catalog_text(catalog: dict[str, CatalogItem], item_ids) -> str:
+    """The named catalog items as a request shows them: each method file's header once, then its items with their ids."""
+    by_header: dict[str, list[str]] = {}
+    for item_id in item_ids:
+        by_header.setdefault(catalog[item_id].header, []).append(f"- {item_id}: {catalog[item_id].text}")
+    return "\n\n".join(f"{header}\n" + "\n".join(items) for header, items in by_header.items())
 
 
 def catalog_id(source: object, catalog) -> str | None:
-    """The catalog entry a perspective source names, as `catalog: <id>` or the bare id; None for any other source."""
+    """The catalog item a check's source names, as `catalog: <file>#<n>` or the bare id; None for any other source."""
     text = str(source or "").strip()
     if text.startswith("catalog:"):
         text = text[len("catalog:"):].strip()
@@ -208,9 +240,9 @@ def list_tasks(plan: dict, designs: dict[str, dict], perspectives: dict) -> list
     return [Task(perspective_view(plan, designs, p), p["id"]) for p in perspectives["perspectives"]]
 
 
-def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_id: str, catalog: dict[str, str]) -> str:
-    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks with their means, and
-    its sources."""
+def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_id: str, catalog: dict[str, CatalogItem]) -> str:
+    """The perspective as the reviewer reads it: value, depth, the changes it judges, checks with their means and the
+    source each asks about, and those sources, catalog items under their method file's header."""
     perspective = next(p for p in perspectives["perspectives"] if p["id"] == perspective_id)
     rows = []
     for gid in perspective["breadth"]:
@@ -219,11 +251,12 @@ def perspective_block(perspectives: dict, designs: dict[str, dict], perspective_
         structure = f"; structure: {c['structure']['what']}" if c["structure"]["alters"] else ""
         rows.append(f"- {gid} [{c['kind']}] {c['subject']}: {c['before']} -> {c['after']} "
                     f"(hunks {', '.join(f'{uid}/{h}' for h in c['hunks'])}{structure})")
-    checks = "\n".join(f"{n}. [{check['means']}] {check['question']}" for n, check in enumerate(perspective["checks"], 1))
-    sources = "\n\n".join(
-        f"## {entry}\n\n{catalog[entry]}" if (entry := catalog_id(source, catalog)) else f"- {source}"
-        for source in perspective["sources"]
-    )
+    checks = "\n".join(f"{n}. [{check['means']}] {check['question']} (source: {check['source']})"
+                       for n, check in enumerate(perspective["checks"], 1))
+    cited = list(dict.fromkeys(check["source"] for check in perspective["checks"]))
+    items = [item for source in cited if (item := catalog_id(source, catalog))]
+    records = [f"- {source}" for source in cited if not catalog_id(source, catalog)]
+    sources = "\n\n".join(part for part in ("\n".join(records), catalog_text(catalog, items)) if part)
     return (
         f"# Perspective: {perspective_id}\n\nValue: {perspective['value']}\n\n"
         f"The value is broken if: {perspective.get('broken_if', '(not stated)')}\n\n"
@@ -761,17 +794,17 @@ def run_sweep(options: argparse.Namespace) -> int:
     context = {
         "brief": BRIEF_PATH.read_text(encoding="utf-8"),
         "plan": plan, "designs": designs, "perspectives": perspectives,
-        "catalog": {path.stem: path.read_text(encoding="utf-8").strip() for path in sorted(Path(options.values).glob("*.md"))},
+        "catalog": read_catalog(Path(options.values)),
         "pack": read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
     }
     all_tasks = list_tasks(plan, designs, perspectives)
     tasks = [task for task in all_tasks if not options.only or task.name in options.only]
-    missing = sorted({s for p in perspectives["perspectives"] for s in p["sources"]
-                      if not s.startswith(RECORD_SOURCE_PREFIXES) and not catalog_id(s, context["catalog"])})
+    missing = sorted({c["source"] for p in perspectives["perspectives"] for c in p["checks"]
+                      if not c["source"].startswith(RECORD_SOURCE_PREFIXES) and not catalog_id(c["source"], context["catalog"])})
     if missing:
-        print(f"sweep: perspectives name catalog entries {missing} that are not in {options.values}", file=sys.stderr)
+        print(f"sweep: perspective checks name catalog items {missing} that are not in {options.values}", file=sys.stderr)
         return 2
     with reviewer.Jail(options, out / "sessions.jsonl") as jail:
         code = run_round(

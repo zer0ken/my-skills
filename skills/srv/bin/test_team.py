@@ -28,7 +28,7 @@ FakeEndpoint = fixtures.FakeEndpoint
 
 def perspective(pid: str, breadth: list[str], depth: str = "low") -> dict:
     return {"id": pid, "value": f"value {pid}", "broken_if": f"broken {pid}", "depth": depth, "breadth": breadth,
-            "checks": [{"question": "c", "means": "read"}], "sources": ["catalog: db"]}
+            "checks": [{"question": "c", "means": "read", "source": "catalog: db#1"}]}
 
 
 def finding(fid: str, path: str, line: int, status: str = "exact") -> dict:
@@ -65,7 +65,7 @@ class PureTest(unittest.TestCase):
         self.assertEqual(values, {"vllm:prompt_tokens_total": 8.0})
 
     def test_an_execute_check_never_run_leaves_its_perspective_undecided(self) -> None:
-        p = {**perspective("K-1", ["U-1/E-1"]), "checks": [{"question": "c", "means": "execute"}]}
+        p = {**perspective("K-1", ["U-1/E-1"]), "checks": [{"question": "c", "means": "execute", "source": "catalog: db#1"}]}
         self.assertFalse(team.decided(p, {"verdict": "holds"}, set()))
         self.assertTrue(team.decided(p, {"verdict": "holds"}, {"K-1"}))
         self.assertTrue(team.decided(perspective("K-2", ["U-1/E-1"]), {"verdict": "broken"}, set()))

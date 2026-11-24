@@ -30,8 +30,9 @@ So the stage has two steps:
    "단발 구조화 출력은 좋지. 필요하면 그렇게 해.").
 2. Perspectives, for the whole change: one structured-output call reads the change set of every
    unit (changes named `<unit>/E-<n>`), the rules, the requirement copies, and the
-   value catalog (`references/values/*.md`), and answers with the perspectives, whose
-   breadth may span units, and what it did with every catalog entry
+   value catalog (`references/values/*.md`, one item per numbered check, `<file>#<n>`), and
+   answers with the perspectives, whose breadth may span units and each of whose checks names
+   the one source it asks about, and the catalog items it dismissed with a reason
    (`check_perspectives`).
 
 Coverage is checked here, in code, not trusted to the model:
@@ -50,7 +51,9 @@ Coverage is checked here, in code, not trusted to the model:
 - every change that rests on an external program, service, or library is in the breadth of a
   perspective with an `execute` check, because reading the code that assumes a contract cannot
   decide whether the contract holds;
-- every catalog entry is used as a source of some perspective or dismissed with a reason.
+- every catalog item is asked by some perspective's check or dismissed with a reason. Coverage is per item, not per
+  file: on PR #1726 the `growth` file counted as used for added routers alone, and its reuse item, which held two
+  missed defects, was never asked (2026-11-25 attribution, ~/agent-assets/rebot/REPORT-srv-team.md).
 
 An answer that fails a check is sent back once with the problems listed. A unit or a
 perspective set without a valid answer leaves changes nobody will review, so the
@@ -76,7 +79,6 @@ import time
 from pathlib import Path
 
 BIN = Path(__file__).resolve().parent
-VALUES = BIN.parent / "references" / "values"
 CHANGES_BRIEF = BIN.parent / "references" / "changes.md"
 PERSPECTIVES_BRIEF = BIN.parent / "references" / "design.md"
 CHANGE_KINDS = (
@@ -124,27 +126,25 @@ CHANGES_SCHEMA = {
 PERSPECTIVES_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["perspectives", "sources"],
+    "required": ["perspectives", "dismissed"],
     "properties": {
         "perspectives": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
-            "required": ["id", "value", "broken_if", "sources", "breadth", "depth", "checks"],
+            "required": ["id", "value", "broken_if", "breadth", "depth", "checks"],
             "properties": {
                 "id": {"type": "string"}, "value": {"type": "string"}, "broken_if": {"type": "string"},
-                "sources": _STRINGS, "breadth": _STRINGS,
+                "breadth": _STRINGS,
                 "depth": {"type": "string", "enum": list(DEPTHS)},
                 "checks": {"type": "array", "items": {
-                    "type": "object", "additionalProperties": False, "required": ["question", "means"],
-                    "properties": {"question": {"type": "string"}, "means": {"type": "string", "enum": list(MEANS)}},
+                    "type": "object", "additionalProperties": False, "required": ["question", "means", "source"],
+                    "properties": {"question": {"type": "string"}, "means": {"type": "string", "enum": list(MEANS)},
+                                   "source": {"type": "string"}},
                 }},
             },
         }},
-        "sources": {"type": "array", "items": {
-            "type": "object", "additionalProperties": False, "required": ["source", "use", "reason"],
-            "properties": {
-                "source": {"type": "string"}, "use": {"type": "string", "enum": ["used", "dismissed"]},
-                "reason": {"type": "string"},
-            },
+        "dismissed": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["item", "reason"],
+            "properties": {"item": {"type": "string"}, "reason": {"type": "string"}},
         }},
     },
 }
@@ -160,11 +160,6 @@ def load_module(name: str, path: Path):
 
 
 sweep = load_module("srv_sweep", BIN / "sweep.py")
-
-
-def read_catalog(directory: Path) -> dict[str, str]:
-    """The value catalog: each method file's id (its stem) and text."""
-    return {path.stem: path.read_text(encoding="utf-8").strip() for path in sorted(directory.glob("*.md"))}
 
 
 def check_changes(answer: object, hunks: list[str]) -> list[str]:
@@ -209,7 +204,7 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
         problems.append("perspective ids are not unique")
     covered: dict[str, set[str]] = {depth: set() for depth in DEPTHS}
     executed: set[str] = set()
-    used_sources: set[str] = set()
+    asked: set[str] = set()
     for p in perspectives:
         pid = p.get("id")
         if not str(p.get("value", "")).strip():
@@ -229,9 +224,18 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
             problems.append(f"{pid} depth is not one of {DEPTHS}")
         checks = [c for c in p.get("checks", []) if isinstance(c, dict)]
         if not checks or len(checks) != len(p.get("checks", [])):
-            problems.append(f"{pid} has no checks, or a check that is not a question with its means")
+            problems.append(f"{pid} has no checks, or a check that is not a question with its means and source")
         elif any(c.get("means") not in MEANS or not str(c.get("question", "")).strip() for c in checks):
             problems.append(f"{pid} has a check without a question or with a means that is not one of {MEANS}")
+        for check in checks:
+            source = check.get("source")
+            if item := sweep.catalog_id(source, catalog):
+                asked.add(item)
+            elif not str(source or "").startswith(sweep.RECORD_SOURCE_PREFIXES):
+                problems.append(
+                    f"{pid} check source {source!r} is neither a catalog item `catalog: <file>#<n>` nor `requirement: "
+                    "...` / `rule: ...`; a whole catalog file is not a source, name the numbered item the check asks"
+                )
         if not p.get("breadth"):
             problems.append(f"{pid} has an empty breadth")
         unknown = sorted(set(p.get("breadth", [])) - set(changes))
@@ -240,14 +244,6 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
         covered.setdefault(p.get("depth"), set()).update(p.get("breadth", []))
         if any(c.get("means") == "execute" for c in checks):
             executed.update(p.get("breadth", []))
-        if not p.get("sources"):
-            problems.append(f"{pid} has no source")
-        for source in p.get("sources", []):
-            entry = sweep.catalog_id(source, catalog)
-            if entry:
-                used_sources.add(entry)
-            elif not str(source).startswith(sweep.RECORD_SOURCE_PREFIXES):
-                problems.append(f"{pid} source {source!r} is neither `catalog: <id>` of {catalog} nor `requirement: ...` / `rule: ...`")
     uncovered = [c for c in changes if c not in covered["low"]]
     if uncovered:
         problems.append(
@@ -267,15 +263,24 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: list[s
             "external program, service, or library does is decided by running the code against a fake built from "
             "its documentation, not by reading the code that assumes it"
         )
-    dispositions = {sweep.catalog_id(row.get("source"), catalog): row for row in answer["sources"] if isinstance(row, dict)}
-    for source in catalog:
-        row = dispositions.get(source)
-        if row is None:
-            problems.append(f"catalog entry {source!r} has no row in `sources`; use it in a perspective or dismiss it with a reason")
-        elif row.get("use") == "used" and source not in used_sources:
-            problems.append(f"catalog entry {source!r} is marked used but no perspective names it as a source")
-        elif row.get("use") == "dismissed" and (source in used_sources or not str(row.get("reason", "")).strip()):
-            problems.append(f"catalog entry {source!r} is dismissed but is a perspective's source or has no reason")
+    dismissed: set[str] = set()
+    for row in answer["dismissed"]:
+        item = sweep.catalog_id(row.get("item") if isinstance(row, dict) else None, catalog)
+        if item is None:
+            problems.append(f"dismissed row {row!r} does not name a catalog item `<file>#<n>`")
+        elif item in asked:
+            problems.append(f"catalog item {item!r} is dismissed but a check asks it; keep one of the two")
+        elif not str(row.get("reason", "")).strip():
+            problems.append(f"catalog item {item!r} is dismissed without a reason")
+        else:
+            dismissed.add(item)
+    unasked = [item for item in catalog if item not in asked | dismissed]
+    if unasked:
+        problems.append(
+            f"catalog items {unasked} are asked by no check and not dismissed; an item left out is a defect class the "
+            "review never looks for, so give each a check in the perspective whose value it serves (a new perspective "
+            "when none fits, within the breadth caps), or dismiss it with the reason no change has it at stake"
+        )
     return problems
 
 
@@ -307,11 +312,11 @@ def build_change_messages(unit: dict, context: dict) -> list[dict]:
 
 
 def build_perspective_messages(designs: dict[str, dict], plan: dict, context: dict) -> list[dict]:
-    catalog = "\n\n".join(f"## {name}\n\n{text}" for name, text in context["catalog"].items())
+    catalog = sweep.catalog_text(context["catalog"], context["catalog"])
     rules = sorted({(r["source"], r["text"]) for d in designs.values() for r in d["rules"]})
     user = "\n\n".join([
         context["pack"],
-        "# Value catalog (universal value sources; cite an entry as `catalog: <id>`)\n\n" + catalog,
+        "# Value catalog (universal value sources; a check names an item as `catalog: <file>#<n>`)\n\n" + catalog,
         "# Repository rules the change-set step cited\n\n"
         + ("\n".join(f"- {source}: {text}" for source, text in rules) or "(none read)"),
         "# Change set of the whole change (`<unit>/E-<n>`)\n\n" + change_set_text(change_set(designs), plan),
@@ -356,7 +361,7 @@ def run_design(options: argparse.Namespace) -> int:
     context = {
         "changes_brief": CHANGES_BRIEF.read_text(encoding="utf-8"),
         "perspectives_brief": PERSPECTIVES_BRIEF.read_text(encoding="utf-8"),
-        "catalog": read_catalog(Path(options.values)),
+        "catalog": sweep.read_catalog(Path(options.values)),
         "pack": sweep.read_pack(Path(options.context), diff_sha256),
         "changes": changes,
         "repo": repo,
@@ -443,7 +448,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--units", required=True, help="unit plan from rv/bin/plan-units.py")
     parser.add_argument("--diff", required=True, help="the diff the unit plan was made from")
     parser.add_argument("--repo", required=True, help="head worktree")
-    parser.add_argument("--values", default=str(VALUES), help="value catalog directory")
+    parser.add_argument("--values", default=str(sweep.VALUES), help="value catalog directory")
     parser.add_argument("--context", required=True, help="context directory that context.py wrote for this diff")
     parser.add_argument("--out", required=True, help="design directory, one file per unit and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
