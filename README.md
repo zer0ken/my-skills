@@ -7,7 +7,6 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 - [problem-modeling](skills/problem-modeling/SKILL.md) · 문제의 입력·출력·제약과 평가 기준을 정의한다.
 - [prior-research](skills/prior-research/SKILL.md) · 논문·표준 구현·저장소 기록에서 선행 해법을 찾고 근거를 대조한다.
 - [ds](skills/ds/SKILL.md) · 저장소의 아키텍처를 확인하고 변경할 책임과 통합 지점을 설계한다.
-- [pov](skills/pov/SKILL.md) · 제품과 관련 기술을 일곱 전문 분야의 관점에서 조사한다.
 - [my-code-plan](skills/my-code-plan/SKILL.md) · 요구사항에서 파일별 변경까지 계획을 트리로 만들고 검사한다.
 - [expert-skill](skills/expert-skill/SKILL.md) · 분야별 일차 자료에서 검토 방법을 추출해 전문 스킬을 설계한다.
 - [python-expert](skills/python-expert/SKILL.md) · Python의 타입·모듈 경계·예외·자원 수명을 검토한다.
