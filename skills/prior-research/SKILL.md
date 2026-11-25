@@ -3,7 +3,7 @@ name: prior-research
 description: "Investigate prior work on a topic or the problem at hand (papers, standard implementations, the repository's design and decision records) with iterative search, and leave a search log and an evidence table. Use when the user calls /prior-research, asks for prior work, related papers, or existing solutions, or when known solutions must be found before problem definition or design."
 metadata:
   author: hrlee
-  version: "1.1.1"
+  version: "1.2.0"
   domain: research
   triggers: 선행 연구, 관련 연구, 논문 조사, 기존 해법 조사, prior work, related work, literature
 ---
@@ -11,6 +11,8 @@ metadata:
 # Prior Research
 
 Find research and records that already dealt with the problem being solved. Do not stop at one or two keyword searches; widen to neighboring fields and better solutions by repeating the search with the academic names obtained from matching literature. The outputs are two: a search log and an evidence table.
+
+The core of this search is the names: what the field calls the problem, its solutions, and each method a design will use, so that the design is built from methods under their known names. It is not a search for sources that back a design already in mind. A method of the coming design that the search finds no known name for is reported as a design defect candidate, not as a new idea, together with what the sources say about why nobody does it. The user's words (2026-11-25), to a lead that had built its main test-architecture candidate by joining two known methods into something no source names: "그 이름은 이미 기존에 알려진 이름을 그대로 쓰고, 기존에 알려진 이름이 없다면 그건 잘못된 설계일 가능성이 높다고 명심해라. 창의적인게 아니라 아무도 그렇게 안하는 이유가 있다고 생각해라", and, right after: "선행 연구 조사의 핵심이다. 명심해라".
 
 ## Preconditions
 
@@ -31,7 +33,7 @@ Write one row to the search log for every search.
 
 1. Search for papers with plausible keywords that express the input, output, and constraints of the problem definition.
 2. Find at least one paper in the results that matches the problem being solved. Judge the match by the problem setting in the body (input, output, assumptions), not the abstract.
-3. From the matching paper, find and record the academic name of this problem and the names neighboring fields use for the same problem.
+3. From the matching paper, find and record the academic name of this problem, the names of its solutions and of the methods they are built from, and the names neighboring fields use for the same problem and solutions.
 4. Search again with those names to find more recent papers, better solutions, surveys, and benchmarks that solved the same problem. If a new name appears, go back to 3.
 5. Stop when no new names appear and the same candidates repeat. Write the reason for stopping and the directions not checked in the last row.
 
@@ -64,6 +66,6 @@ The search log is a JSON array, and each element has the following fields.
 | `names` | Array of academic names and neighboring-field names obtained from this search |
 | `next` | The next query and its reason; in the last row, the reason for stopping |
 
-The evidence table is a JSON array, and each element has `candidate`, `search_id` (the search log id that produced the candidate; it must not be a row whose `generated` is `true`), `url` (primary source), `quote` (a quote of 20 or more characters that exists in the body), `limits`, `unresearched`, `accessed_at`, `http_status`, and `body_sha256`.
+The evidence table is a JSON array, and each element has `candidate` (under the name its source uses), `search_id` (the search log id that produced the candidate; it must not be a row whose `generated` is `true`), `url` (primary source), `quote` (a quote of 20 or more characters that exists in the body), `limits`, `unresearched`, `accessed_at`, `http_status`, and `body_sha256`.
 
 In the research narrative, write the path of the iterative search (the first keywords, the names found, the fields widened with those names), the reason for stopping, and the unresearched scope, citing evidence table rows. If another procedure (such as R2 of my-workflow) fixes file names and fields, follow that procedure.

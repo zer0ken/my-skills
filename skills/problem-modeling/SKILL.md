@@ -3,7 +3,7 @@ name: problem-modeling
 description: "Define the problem mathematically before choosing a solution. Name it with a known problem type, fix inputs and outputs as symbols, and document the core subproblems with their boundary cases, constraints, evaluation metrics, and out-of-scope items. Use when the user calls /problem-modeling, asks for a problem's definition, input, or output, or when two or more fix attempts on the same defect have failed and the problem must be redefined."
 metadata:
   author: hrlee
-  version: "1.2.1"
+  version: "1.3.0"
   domain: workflow
   triggers: 문제 정의, 입력 출력, problem modeling, 수학적 정의, 문제를 정의해
 ---
@@ -72,7 +72,7 @@ Write the adjacent problems that are not part of this problem, and for each, whi
 
 ### 9. Solution structure (after the definition)
 
-Write the solution only after finishing the definition. Map each part of the solution to the subproblem of the definition it handles, and justify that placement with the research grounds of 1. Separate the parts that rules can judge, the parts deterministic analysis (parsers, part-of-speech analysis, etc.) handles, and the parts a model handles, and leave the model only questions whose output space is small and that code can verify.
+Write the solution only after finishing the definition. Map each part of the solution to the subproblem of the definition it handles, and justify that placement with the research grounds of 1. Name each part by the name the field gives the method it is, with that source; a part with no known name is presumed a wrong design, not a creative one, and is replaced with the known method or dropped (the user's words, 2026-11-25: "기존에 알려진 이름이 없다면 그건 잘못된 설계일 가능성이 높다고 명심해라. 창의적인게 아니라 아무도 그렇게 안하는 이유가 있다고 생각해라"). Separate the parts that rules can judge, the parts deterministic analysis (parsers, part-of-speech analysis, etc.) handles, and the parts a model handles, and leave the model only questions whose output space is small and that code can verify.
 
 ## Document format
 
