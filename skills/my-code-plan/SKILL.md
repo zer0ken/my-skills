@@ -3,7 +3,7 @@ name: my-code-plan
 description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before the first code edit. Use once per task whose purpose is to modify code, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation. Not for writing documents, notes, plans, or rules, and not per file write. 코드 수정이 목적인 작업이면 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 그 작업을 시작할 때 한 번 사용한다."
 metadata:
   author: hrlee
-  version: "1.2.0"
+  version: "1.2.1"
   domain: planning
   triggers: 코드 계획, 알려진 해법, 웹 조사, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
 ---
@@ -32,7 +32,7 @@ The method connects two known techniques. Stepwise refinement decomposes a task 
 
 Run this skill once per task whose purpose is to modify code, before its first code edit: a one-line change, a review finding, a CI failure, an issue, a script for an investigation. It is a planning step of the task, not a step before each file write, and writing documents, notes, plans, or rules is not code modification. A change whose plan already exists extends that plan with the new requirement at depth 0 instead of editing outside it. Small changes produce small trees, not no tree: a one-line review fix is still depth 0 (the finding in the reviewer's words), depth 1 (the condition that must hold afterwards), and depth 2 (the edit and its test).
 
-Inside a staged workflow such as my-workflow, the stage order belongs to the workflow; this skill is how the code of a stage is planned before it is edited. Scheduling the leaves over several turns uses `~/.agents/skills/task-graph/SKILL.md`, whose nodes are this tree's leaves.
+Inside a staged workflow such as my-workflow, the stage order belongs to the workflow; this skill is how the code of a stage is planned before it is edited.
 
 ## Depths
 
