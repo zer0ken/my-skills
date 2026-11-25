@@ -3,7 +3,7 @@ name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.5.1"
+  version: "0.5.2"
   domain: workflow
   triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인, 스펙 수정
   dependencies:
@@ -58,7 +58,7 @@ Before choosing how to fix, ask of each accepted finding whether the code or art
 Then place each fix:
 
 1. Within the promise of the issue and PR: decide the change.
-2. Outside that promise: when an open issue already promises it, leave it to that issue; otherwise draft the issue that would promise it and bring it to the user. Do not slip it into the current change.
+2. Outside that promise: when an open issue already promises it, leave it to that issue; otherwise draft the issue that would promise it and bring it to the user; inside a my-workflow run, file the draft where the run's step says and go on, without asking for its review. Do not slip it into the current change.
 3. A public contract change (REST and MCP responses, DB schema, config keys) or a structural change: ask the user, or, inside a procedure that owns redesign, go back to its design stage.
 4. A procedural error whose cause lies in my-harness or my-workflow: hand it to a modification session as the `harness` skill describes; one that lies in the project's rules: propose the rule change within that repository's procedure.
 
