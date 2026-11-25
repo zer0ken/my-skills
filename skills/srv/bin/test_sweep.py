@@ -53,7 +53,7 @@ CATALOG = {
 
 
 def write_catalog(directory: Path, extra: dict | None = None) -> Path:
-    """The catalog as `references/perspectives/` holds it, one file per perspective."""
+    """The catalog as `review-technique/perspectives/` holds it, one file per perspective."""
     directory.mkdir(parents=True, exist_ok=True)
     for pid, (depth, picks, execute, value) in {**CATALOG, **(extra or {})}.items():
         (directory / f"{pid}.md").write_text(

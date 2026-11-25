@@ -59,7 +59,8 @@ from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "brief.md"
-CATALOG = Path(__file__).resolve().parents[1] / "references" / "perspectives"
+# The review yardsticks rv, srv, and prv share, kept once in the review-technique skill (REVIEW-TECHNIQUES.md 8.0 common-1).
+CATALOG = SKILLS / "review-technique" / "perspectives"
 # What a change makes different, for someone who uses the code (`references/changes.md`); every change set element has
 # one kind, and every catalog perspective names the kinds it is at stake in.
 CHANGE_KINDS = (
@@ -201,7 +202,7 @@ RECORD_SOURCE_PREFIXES = ("requirement:", "rule:")
 
 @dataclass(frozen=True)
 class CatalogPerspective:
-    """One perspective of srv's catalog (`references/perspectives/<id>.md`): a review yardstick fixed before any change
+    """One perspective of the shared catalog (`~/.agents/skills/review-technique/perspectives/<id>.md`): a review yardstick fixed before any change
     is seen, from which each review picks the ones its change has (the user, 2026-11-24, after a lead had let code
     build a perspective per value source, 266 of them on PR #1726: "관점은 코드에서 찾는게 아니라 미리 정해진 검토
     관점 중에서 코드 변경에 관련된 걸 고르는거다."). It holds one core `value`, the `depth` it is judged at (`high`:

@@ -28,7 +28,7 @@ So the stage has two steps:
    No exploration is left to it: the pack already holds what a session would search
    for, so the call is one request, not an agent session (the user, 2026-11-24:
    "단발 구조화 출력은 좋지. 필요하면 그렇게 해.").
-2. Perspectives, picked from srv's catalog (`references/perspectives/`, REVIEW-TECHNIQUES.md section 4), never
+2. Perspectives, picked from the shared catalog (`~/.agents/skills/review-technique/perspectives/`, REVIEW-TECHNIQUES.md section 4), never
    built (the user, 2026-11-24, after a lead had let code build a perspective per value source, 266 on PR #1726:
    "관점은 코드에서 찾는게 아니라 미리 정해진 검토 관점 중에서 코드 변경에 관련된 걸 고르는거다."). Code picks
    every catalog perspective one of whose picks (a change kind, `structure`, or a tag the change-set call gave) some
