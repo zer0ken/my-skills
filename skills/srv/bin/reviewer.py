@@ -163,13 +163,17 @@ class Relay:
 
 
 def relay_inner(path: str, port: int) -> None:
-    """The relay inside the jail, from omp's TCP port to the unix socket mounted from outside, on the process's own
-    thread."""
+    """The relay inside the jail, from omp's TCP port to the unix socket mounted from outside, on one thread. The port
+    is bound before the process forks and the parent returns, so the jail's shell starts omp only once the port
+    accepts: started in the background instead, omp could connect before the relay listened and fail."""
+    listener = socket.socket(socket.AF_INET)
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(256)
+    if os.fork():
+        return
+
     async def main() -> None:
-        listener = socket.socket(socket.AF_INET)
-        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        listener.bind(("127.0.0.1", port))
-        listener.listen(256)
         server = await start_relay(listener, lambda: asyncio.open_unix_connection(path), [])
         async with server:
             await server.serve_forever()
@@ -216,7 +220,7 @@ def jail_command(head: Path, agent: Path, relay: Path, omp: Path, omp_args: list
         for source in sandbox.get("ro", []):
             cmd += ["--ro-bind", str(source), str(source)]
         cmd += ["--setenv", "SRV_SANDBOX_RO", json.dumps([str(s) for s in sandbox.get("ro", [])])]
-    inner = f"/usr/bin/python3 -I /opt/srv/reviewer.py relay-inner /relay/model.sock {INNER_PORT} </dev/null & "
+    inner = f"/usr/bin/python3 -I /opt/srv/reviewer.py relay-inner /relay/model.sock {INNER_PORT} </dev/null && "
     quoted = " ".join("'" + arg.replace("'", "'\"'\"'") + "'" for arg in ["/opt/srv/omp", *omp_args])
     return [*cmd, "--chdir", "/review", "--", "/bin/sh", "-c", inner + "exec " + quoted]
 
