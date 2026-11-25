@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.31.0"
+  version: "2.32.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -260,7 +260,7 @@ For a finding to claim the 재현 evidence_class, it must be confirmed by runnin
 
 ## U5 Propagation check
 
-Search whether the cause of a confirmed defect also exists in other locations in the same pattern. The target is the whole repository.
+Search whether the cause of a confirmed defect also exists in other locations in the same pattern. The target is the locations the change reaches: its changed files and the code its behavior reaches, its callers, callees, and the data it writes or reads. The same cause at a location the change does not reach is a problem the change did not write, outside the scope (`## Scope of a finding`), and U6 would drop it, so searching the whole repository for findings spends the cost rv minimizes on findings it then discards (the user, 2026-11-25: "Rv는 단일 프론티어 모델을 쓴다는 가정 하게 완벽히 리뷰가 가능한 가는하면서 비용이 적게 드는 절차로 수행되여야 하고"). A location outside the change that a search shows anyway is not a finding: it goes to the reply to the caller as an issue draft candidate, with the location and the original finding's id, as the harness rules have a problem outside the promised scope drafted as an issue for the user.
 
 1. Extract the cause of the defect (a wrong pattern, a missing check, a wrong assumption).
 2. Find other locations where that cause appears by search (grep, LSP references, import tracing).
