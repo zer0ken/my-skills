@@ -154,12 +154,22 @@ def repository_rules(repo: Path, citations: dict[str, list[tuple[int, int]]]) ->
     return "\n\n".join(f"### {path}\n\n{(repo / path).read_text(encoding='utf-8')}" for path in found) or "(none)"
 
 
+def perspective_block(perspective, method: str) -> str:
+    """A reviewer's perspective: the shared yardstick (its value, the condition that picks it, the `broken_if` state, and
+    its sources, from `~/.agents/skills/review-technique/perspectives/`) first, then prv's procedure for judging it on a
+    plan, so the criterion lives in the shared catalog alone (REVIEW-TECHNIQUES.md 8.2 prv-1)."""
+    return (f"# Perspective: {perspective.id} {perspective.title}\n\nValue: {perspective.value}\n\n"
+            f"Picked when: {perspective.when}\n\nThe value is broken if: {perspective.broken_if} (in a plan: the plan "
+            f"specifies, or leaves undecided, what would produce that state)\n\nSources: {perspective.sources}\n\n"
+            f"## How to judge it on a plan\n\n{method}")
+
+
 def build_messages(task, context: dict) -> list[dict]:
     method = srv.strip_frontmatter((context["perspectives"] / f"{task.perspective}.md").read_text(encoding="utf-8"))
     user = "\n\n".join(
         [
             context["shared"],
-            f"# Perspective: {task.perspective}\n\n{method}",
+            perspective_block(context["catalog"][task.perspective], method),
             "# Output JSON Schema\n\n```json\n" + json.dumps(srv.FINDINGS_SCHEMA, indent=1) + "\n```",
         ]
     )
@@ -189,6 +199,13 @@ def run(options: argparse.Namespace) -> int:
     if missing or not ids:
         print(f"prv sweep: no method file for perspectives {missing or ids} in {perspectives}", file=sys.stderr)
         return 2
+    catalog = srv.read_catalog(Path(options.catalog))
+    if outside := [pid for pid in ids if pid not in catalog or catalog[pid].depth != "high"]:
+        print(f"prv sweep: {outside} are not high perspectives of the shared catalog {options.catalog}. A plan has no lines "
+              "to judge at low depth, so prv judges only the high perspectives; name a method file after one of "
+              f"{sorted(pid for pid, p in catalog.items() if p.depth == 'high')} instead of adding a perspective here, "
+              "because a criterion kept only in prv would drift from rv and srv", file=sys.stderr)
+        return 2
     plan_text = plan.read_text(encoding="utf-8")
     requirements = "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements)
     citations = find_citations(plan_text, repo)
@@ -200,7 +217,8 @@ def run(options: argparse.Namespace) -> int:
             "# Repository rules on the cited paths\n\n" + repository_rules(repo, citations),
         ]
     )
-    context = {"brief": BRIEF_PATH.read_text(encoding="utf-8"), "perspectives": perspectives, "shared": shared}
+    context = {"brief": BRIEF_PATH.read_text(encoding="utf-8"), "perspectives": perspectives, "shared": shared,
+               "catalog": catalog}
     tasks = [srv.Task({"id": "plan"}, pid) for pid in ids]
     out.mkdir(parents=True, exist_ok=True)
     source = hashlib.sha256((plan_text + "\0" + requirements).encode("utf-8")).hexdigest()
@@ -218,8 +236,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--plan", required=True, help="the plan copy under review")
     parser.add_argument("--requirements", required=True, nargs="+", help="requirement copies")
     parser.add_argument("--repo", required=True, help="worktree at the review base")
-    parser.add_argument("--perspectives", required=True, help="perspective method directory")
-    parser.add_argument("--only", nargs="+", help="perspective ids (method file stems); default every method file")
+    parser.add_argument("--perspectives", required=True, help="directory of prv's procedures, one per shared high perspective id")
+    parser.add_argument("--catalog", default=str(srv.CATALOG), help="the shared perspective catalog the procedures judge")
+    parser.add_argument("--only", nargs="+", help="perspective ids (procedure file stems); default every procedure file")
     parser.add_argument("--out", required=True, help="directory for the per-perspective outputs and summary.json")
     parser.add_argument("--base-url", required=True, help="OpenAI-compatible endpoint, ending in /v1")
     parser.add_argument("--model", required=True)

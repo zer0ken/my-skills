@@ -64,8 +64,8 @@ class PrvSweepTest(unittest.TestCase):
         self.requirement.write_text("Lock the writer.\n", encoding="utf-8")
         self.methods = root / "methods"
         self.methods.mkdir()
-        (self.methods / "trace.md").write_text("1. Trace the requirement.\n", encoding="utf-8")
-        (self.methods / "query.md").write_text("1. Check queries.\n", encoding="utf-8")
+        (self.methods / "H1.md").write_text("1. Trace the requirement.\n", encoding="utf-8")
+        (self.methods / "H7.md").write_text("1. Check queries.\n", encoding="utf-8")
         self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Endpoint)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         Endpoint.requests = []
@@ -146,15 +146,36 @@ class PrvSweepTest(unittest.TestCase):
         self.assertLess(user.index("# The plan: plan.md"), user.index("# Perspective: "),
                         "the plan and code come before the method, so every perspective shares one prompt prefix")
         self.assertIn("  150| line 150 ", user)
-        result = json.loads((Path(self.tmp.name) / "out" / "plan__trace.json").read_text(encoding="utf-8"))
+        h1 = prv.srv.read_catalog(prv.srv.CATALOG)["H1"]
+        h1_user = next(r["messages"][1]["content"] for r in Endpoint.requests if "# Perspective: H1 " in r["messages"][1]["content"])
+        block = h1_user.split("# Perspective: ", 1)[1].split("\n\n# Output JSON Schema", 1)[0]
+        self.assertEqual(block, f"{h1.id} {h1.title}\n\nValue: {h1.value}\n\nPicked when: {h1.when}\n\nThe value is broken "
+                         f"if: {h1.broken_if} (in a plan: the plan specifies, or leaves undecided, what would produce that "
+                         f"state)\n\nSources: {h1.sources}\n\n## How to judge it on a plan\n\n1. Trace the requirement.\n",
+                         "the reviewer gets the shared yardstick first and prv's procedure after it; do not copy the "
+                         "value or broken_if into prv's method file, which would let prv drift from rv and srv")
+        result = json.loads((Path(self.tmp.name) / "out" / "plan__H1.json").read_text(encoding="utf-8"))
         self.assertEqual([(f["anchor_status"], f["line"], f["sample"]) for f in result["findings"]], [("moved", 3, 1), ("moved", 3, 2)],
                          "a finding on the plan is anchored in the plan copy")
         with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(prv.main([*argv, "--only", "trace"]), 0)
+            self.assertEqual(prv.main([*argv, "--only", "H1"]), 0)
         summary = json.loads((Path(self.tmp.name) / "out" / "summary.json").read_text(encoding="utf-8"))
         self.assertEqual((summary["tasks"], summary["this_run_tasks"]), (2, 1),
                          "a rerun of one perspective still reports the whole round; do not summarize only the rerun")
 
+
+    def test_a_method_for_a_perspective_outside_the_shared_high_list_is_refused(self) -> None:
+        for name in ("trace", "L6"):  # an old prv-only name, and a low perspective a plan has no lines for
+            (self.methods / f"{name}.md").write_text("1. x\n", encoding="utf-8")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                code = prv.main(["--plan", str(self.plan), "--requirements", str(self.requirement), "--repo", str(self.repo),
+                                 "--perspectives", str(self.methods), "--out", str(Path(self.tmp.name) / "out"),
+                                 "--base-url", "http://127.0.0.1:9/v1", "--model", "fake"])
+            self.assertEqual(code, 2, f"{name} must be refused before any call")
+            self.assertIn(f"['{name}'] are not high perspectives of the shared catalog", stderr.getvalue())
+            self.assertEqual(Endpoint.requests, [])
+            (self.methods / f"{name}.md").unlink()
 
 if __name__ == "__main__":
     unittest.main()

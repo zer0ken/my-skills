@@ -3,7 +3,7 @@ name: prv
 description: "Plan review (plan review): check a plan or design document before implementation with blind structured-output calls to the local model, one perspective each with a method checklist and several samples per perspective, then have the one operator session verify every finding against the code and consolidate. Use when the user calls /prv or $prv, asks for a plan review or 계획 검수 (계획·설계 문서를 구현 전에 검수할 때), or when a my-workflow design stage reviews its design document. The session that owns the plan does not run it: it starts one operator session that runs every step and returns one consolidated file."
 metadata:
   author: hrlee
-  version: "1.14.0"
+  version: "1.15.0"
   domain: workflow
   triggers: prv, plan review, 계획 리뷰, 계획 검수, 설계 검수
   dependencies:
@@ -28,7 +28,7 @@ prv is not `rv`. `rv` is one adversarial review of a diff, a PR, or a document b
 | operator | The one session between the caller and the reviewers: it runs the reviewers, waits for them, verifies every finding against the code, clusters them, writes the consolidated file, and returns it to the caller. It reviews nothing itself and edits nothing but the review directory |
 | plan | The document under review: a design, implementation plan, or migration plan that decides structure before code changes |
 | review base | The commit the plan applies to: the merge base of the working branch with the branch it targets (`git merge-base HEAD origin/HEAD`). Not the commit the work started on, which a rebase leaves behind |
-| perspective | One review dimension defined by a method checklist file under `references/perspectives/`; a reviewer reports only defects inside it |
+| perspective | One high perspective of the catalog rv, srv, and prv share (`~/.agents/skills/review-technique/perspectives/<id>.md`): its core value, the condition that picks it, and its `broken_if` state; prv adds only the procedure for judging it on a plan, `references/perspectives/<id>.md`, and a reviewer reports only defects inside it |
 | reviewer | One structured-output call to the local model that applies one perspective to the plan (`bin/sweep.py`), blind to everything but its request |
 | sample | One independent reviewer call for a perspective; a perspective runs `--samples` of them at once (default 3) and pools their findings, each marked with its sample number |
 | confirmed cluster | A group of duplicate findings that the operator verified against the cited lines (CONFIRMED) |
@@ -58,18 +58,28 @@ Reviewers get nothing else: no producer conversation, no earlier review, no gate
 
 ## Perspectives
 
-Choose the perspectives the plan touches; `trace` always runs.
+prv judges the 14 high perspectives (H1-H14) of the shared catalog, whose definition, picking conditions, and sources are in `~/.agents/skills/review-technique/SKILL.md`; a plan has no lines to judge at low depth. Each reviewer request carries the perspective's value, `Picked when`, and `Broken if` from the catalog, then prv's procedure from `references/perspectives/<id>.md`, which holds only how to judge that value on a plan, so the criterion lives in the shared catalog alone (REVIEW-TECHNIQUES.md 8.2 prv-1). `bin/sweep.py` refuses a procedure file whose name is not a high perspective of the catalog. The list was 12 in REVIEW-TECHNIQUES.md 8.2 prv-3; H9 and H11 were added because the lifecycle of new state and the structure of model calls are cheapest to settle before code exists (coordinator decision, 2026-11-25), and prv's earlier `ops` and `perf` items judge them.
 
-| Id | File | Covers |
+The operator picks the perspectives: for each one it judges the catalog's `Picked when` against the plan document (does the plan add or change what the condition names) and runs every perspective it cannot clear that way, writing one line per perspective it leaves out with the plan lines that show the condition is not met (REVIEW-TECHNIQUES.md 8.2 prv-2). H1 always runs.
+
+| Id | Procedure | Holds the earlier items |
 | --- | --- | --- |
-| P1 | `references/perspectives/trace.md` | Requirement-plan traceability, the solution the requirements state and the smallest mechanism, concept definitions and identity, claims about existing code, repository rules |
-| P2 | `references/perspectives/query.md` | Queries, indexes, readers and writers of changed stored units (`sql-expert` DM-Querying, DM-Processing) |
-| P3 | `references/perspectives/concurrency.md` | Transactions, concurrency, failure and recovery (`parallel-expert`, `sql-expert` DM-Internals) |
-| P4 | `references/perspectives/backends.md` | Equivalence across storage backends and test fakes |
-| P5 | `references/perspectives/ops.md` | Lifecycle of new state, background tasks, migration, public contract |
-| P6 | `references/perspectives/perf.md` | Known algorithms and their complexity for each computation, hot paths, budgets, measurement on realistic data |
+| H1 | requirement traceability on a plan | trace 1, 2, 4, 5, 6; ops 5 |
+| H2 | concept definitions and representation | trace 3 |
+| H3 | removal of the cause and alternative structures; the hot-path budgets and the comparison plan are the evidence for its cost judgment | trace 7 (smallest mechanism); perf 2, 3, 6 |
+| H4 | responsibility placement and module boundaries | none |
+| H5 | the need for each added unit | trace 7 (change no requirement needs) |
+| H6 | reuse and known implementations | perf 1 |
+| H7 | storage contract (`sql-expert` DM-Querying, DM-Processing, DM-Modeling, DM-NoSQL) | query 1-4, backends 1-4, ops 4; perf 4 is query 3 |
+| H8 | concurrency and recovery design (`parallel-expert`, `sql-expert` DM-Internals) | concurrency 1-4, ops 3 |
+| H9 | lifecycle and ownership of state and resources | ops 1, 2 |
+| H10 | trust boundaries | none |
+| H11 | model call structure | perf 5 |
+| H12 | test strategy | none |
+| H13 | reuse and scope of test setup | none |
+| H14 | recorded intent | none |
 
-A perspective is a checklist, not a persona. The user's words (2026-11-12): "전문 작업에서는 '역할극'이 아니라, 메소돌로지를 적용해야돼." A new perspective is a new method file whose items come from a field's sources or its `-expert` skill.
+A perspective is a yardstick, not a persona. The user's words (2026-11-12): "전문 작업에서는 '역할극'이 아니라, 메소돌로지를 적용해야돼." A new procedure item comes from a field's sources or its `-expert` skill, and a new criterion goes into the shared catalog, not into prv.
 
 ## Procedure
 
@@ -86,6 +96,8 @@ The caller takes the confirmed clusters as findings to fix. PLAUSIBLE clusters a
 In a my-workflow run, the gate's judge session is the operator, the review directory is `<run root>/artifacts/<task id>-prv/` and the consolidated file is `<run root>/artifacts/<task id>-prv.md`, where `<task id>` is the `dev-plan` task the gate judges, such as `T2`.
 
 ## Limits
+
+The trials below ran prv's earlier six perspectives (`trace`, `query`, `concurrency`, `backends`, `ops`, `perf`, ids P1-P6), whose items are now the procedures of H1-H14 as the table in Perspectives maps them; their numbers were not measured again on the new list.
 
 Agreement is not evidence. In the first trial all four blind reviewers raised the same finding (C05), and in the third four sessions shared one false premise (C18); the verifier rejected both against the code. Clusters raised by two or more sessions were confirmed more often (75-100%) than those raised by one (48.6%), but count a cluster by its verification, never by how many raised it.
 
