@@ -58,6 +58,7 @@ class PrvSweepTest(unittest.TestCase):
         (self.repo / "AGENTS.md").write_text("Root rule.\n", encoding="utf-8")
         (self.repo / "emem" / "AGENTS.md").write_text("Package rule.\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(self.repo), "init", "-q"], check=True)
+        subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True)
         self.plan = root / "plan.md"
         self.plan.write_text(PLAN, encoding="utf-8")
         self.requirement = root / "issue.md"
@@ -77,13 +78,13 @@ class PrvSweepTest(unittest.TestCase):
 
     def test_citations_resolve_through_checkout_prefixes_and_keep_their_lines(self) -> None:
         cited = prv.find_citations(PLAN, self.repo)
-        self.assertEqual(cited, {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": []},
+        self.assertEqual(cited.files, {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": []},
                          "a citation through a checkout name (`merge/`) still names the repository file")
 
     def test_absolute_paths_and_file_links_are_citations(self) -> None:
         plan = (f"See {self.repo}/emem/store.py:150 and [store.py]({self.repo}/emem/store.py#L10-L12), "
                 f"and [small.py](/elsewhere/worktree/emem/small.py#L1).\n")
-        self.assertEqual(prv.find_citations(plan, self.repo), {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": [(1, 1)]},
+        self.assertEqual(prv.find_citations(plan, self.repo).files, {"emem/store.py": [(150, 150), (10, 12)], "emem/small.py": [(1, 1)]},
                          "plans cite by absolute path and as Paseo file links (`path#La-Lb`), as reports are written; "
                          "a request without that code is reviewed blind, so extend CITE_RE instead of rewriting the plan")
 
@@ -91,37 +92,94 @@ class PrvSweepTest(unittest.TestCase):
         other = Path(self.tmp.name) / "other-project" / "emem"
         other.mkdir(parents=True)
         (other / "small.py").write_text("y = 2\n", encoding="utf-8")
-        self.assertEqual(prv.find_citations(f"Compare {other}/small.py:1.\n", self.repo), {},
+        self.assertEqual(prv.find_citations(f"Compare {other}/small.py:1.\n", self.repo).files, {},
                          "a claim about another project's file must not be checked against the review base's file of the same name")
 
     def test_a_repository_file_named_like_the_plan_is_still_cited(self) -> None:
         (self.repo / "docs").mkdir()
         (self.repo / "docs" / "plan.md").write_text("old design\n", encoding="utf-8")
-        self.assertEqual(prv.find_citations("Follow `docs/plan.md:1`.\n", self.repo), {"docs/plan.md": [(1, 1)]},
+        self.assertEqual(prv.find_citations("Follow `docs/plan.md:1`.\n", self.repo).files, {"docs/plan.md": [(1, 1)]},
                          "only files of the review base are cited, so a name shared with the plan copy is no reason to drop one")
+
+    def track(self, *paths: str) -> None:
+        for path in paths:
+            (self.repo / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / path).write_text("x\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True)
+
+    def test_short_citations_follow_the_plans_own_paths(self) -> None:
+        self.track("emem/neo4j/db.py", "emem/akasic/db.py", "emem/neo4j/queries/upsert.cypher", "emem/ontology.cypher",
+                   "tests/test_routes.py")
+        plan = (
+            "- Read `upsert.cypher:1040-1100`(write), `:1370-1425`(create), `ontology.cypher:147-240`.\n"
+            "- Read `neo4j/db.py:379-400,515-532`.\n"
+            "\n"
+            "Reuse `reserve_ids` (`neo4j/db.py:379-397`).\n"
+            "\n"
+            "| row | node | file |\n"
+            "| L1 | delete the block (`:153-162`) | `emem/ontology.cypher` |\n"
+            "| L2 | delete the line (`:1067-1072`) | `emem/neo4j/queries/upsert.cypher` |\n"
+            "| L3 | and its header (`:1041-1043`) | - |\n"
+            "| L4 | the block (`:58-65`) | `test_routes.py` case | `emem/ontology.cypher` |\n"
+        )
+        cited = prv.find_citations(plan, self.repo)
+        self.assertEqual(
+            cited.files,
+            {"emem/neo4j/queries/upsert.cypher": [(1040, 1100), (1370, 1425), (1067, 1072), (1041, 1043)],
+             "emem/ontology.cypher": [(147, 240), (153, 162)],
+             "emem/neo4j/db.py": [(379, 400), (515, 532), (379, 397)], "tests/test_routes.py": []},
+            "plans cite a file by its base name or a trailing path, and later lines as `:a-b`, after or before naming it once "
+            "(the #1778 T1 plan named upsert_storage.cypher in full only at its leaf table); a citation that reaches no file "
+            "leaves that code out of every reviewer's request, so extend the resolution instead of asking plans for full paths",
+        )
+        self.assertEqual(cited.unattached, ["`:58-65` on plan line 10 may belong to any of `test_routes.py`, `emem/ontology.cypher`"],
+                         "a line-only citation before several files of its row could be either; the file column is a "
+                         "convention of one plan format, not something the script can tell")
+
+    def test_unattached_citations_are_named_not_guessed(self) -> None:
+        self.track("emem/neo4j/db.py", "emem/akasic/db.py")
+        plan = ("The store changes (`neo4j/db.py:3`, `db.py:12-14`) and reads `rows[:20]` and `{\"port\":8000}`.\n"
+                "\nThe old value stays (`:1476-1482`).\n")
+        cited = prv.find_citations(plan, self.repo)
+        self.assertEqual(cited.files, {"emem/neo4j/db.py": [(3, 3)]},
+                         "only inline code `:a-b` is a line-only citation; a slice or a JSON port is not a line of db.py")
+        self.assertEqual(
+            cited.unattached,
+            ["`db.py:12-14` on plan line 1 names any of 2 files: emem/akasic/db.py, emem/neo4j/db.py",
+             "`:1476-1482` on plan line 3 has no file citation on its line or in its paragraph"],
+            "a citation the script cannot tie to one file is named for the operator, even after a qualified citation of one "
+            "candidate (the #1778 T1 plan cited `neo4j/repositories/storage/upsert_storage.py` and then the shared "
+            "`repositories/storage/upsert_storage.py`); a guess shows the wrong lines, or reports them past the wrong file's end",
+        )
+        text = prv.cited_code(self.repo, cited)
+        self.assertIn("- `db.py:12-14` on plan line 1 names any of 2 files: emem/akasic/db.py, emem/neo4j/db.py", text)
+        self.track("a/__init__.py", "b/__init__.py", "c/__init__.py", "d/__init__.py")
+        self.assertEqual(prv.find_citations("See `__init__.py`.\n", self.repo).unattached,
+                         ["`__init__.py` on plan line 1 names any of 4 files: a/__init__.py, b/__init__.py, c/__init__.py, ..."],
+                         "a common name matches every package; the note goes into every request, so it names a few")
 
     def test_empty_files_long_files_without_lines_and_the_budget_are_named(self) -> None:
         (self.repo / "emem" / "__init__.py").write_text("", encoding="utf-8")
-        text = prv.cited_code(self.repo, {"emem/__init__.py": [], "emem/store.py": []})
+        text = prv.cited_code(self.repo, prv.Citations({"emem/__init__.py": [], "emem/store.py": []}))
         self.assertIn("### emem/__init__.py (empty at the review base)", text, "an empty cited file is a fact the reviewer needs")
         self.assertIn("- emem/store.py (cited without a line; 300 lines)", text)
         original = prv.CITED_CHARS_TOTAL
         prv.CITED_CHARS_TOTAL = 100
         try:
-            text = prv.cited_code(self.repo, {"emem/store.py": [(150, 150)]})
+            text = prv.cited_code(self.repo, prv.Citations({"emem/store.py": [(150, 150)]}))
         finally:
             prv.CITED_CHARS_TOTAL = original
         self.assertIn("- emem/store.py (over the request budget)", text,
                       "code left out of the request is named, so a reviewer does not take silence for absence")
 
     def test_cited_lines_past_the_end_are_named(self) -> None:
-        text = prv.cited_code(self.repo, {"emem/store.py": [(500, 502)]})
+        text = prv.cited_code(self.repo, prv.Citations({"emem/store.py": [(500, 502)]}))
         self.assertIn("- emem/store.py: cited lines 500-502 are past its 300 lines at the review base", text,
                       "a citation of lines the base does not have is the stale claim trace must see; do not drop it silently")
         self.assertNotIn("### emem/store.py (", text, "no empty block for a file with nothing to show")
 
     def test_cited_code_shows_windows_of_long_files_and_short_files_whole(self) -> None:
-        text = prv.cited_code(self.repo, {"emem/store.py": [(150, 150)], "emem/small.py": []})
+        text = prv.cited_code(self.repo, prv.Citations({"emem/store.py": [(150, 150)], "emem/small.py": []}))
         self.assertIn("### emem/store.py (the lines around the plan's citations; the file has 300 lines)", text)
         self.assertIn("  130| line 130 ", text)
         self.assertIn("  170| line 170 ", text)
@@ -129,7 +187,7 @@ class PrvSweepTest(unittest.TestCase):
         self.assertIn("### emem/small.py\n    1| x = 1", text)
 
     def test_repository_rules_follow_the_cited_paths(self) -> None:
-        text = prv.repository_rules(self.repo, {"emem/store.py": []})
+        text = prv.repository_rules(self.repo, prv.Citations({"emem/store.py": []}))
         self.assertLess(text.index("### AGENTS.md"), text.index("### emem/AGENTS.md"))
 
     def test_one_call_per_perspective_and_sample_with_the_method_last(self) -> None:
@@ -139,6 +197,8 @@ class PrvSweepTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(prv.main(argv), 0)
         self.assertEqual(len(Endpoint.requests), 4, "two perspectives, two samples each")
+        self.assertEqual((Path(self.tmp.name) / "out" / "unattached-citations.md").read_text(encoding="utf-8"), "",
+                         "the operator reads this file for the consolidated file; it exists, empty, when every citation resolved")
         self.assertEqual(Endpoint.requests[0]["max_tokens"], 131072,
                          "a plan request is long (139k prompt tokens measured on #1303 r2) and the trace answer stopped at 65,536 "
                          "with reasoning; keep the default that held it instead of lowering it to pass")

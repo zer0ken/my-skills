@@ -9,12 +9,14 @@ A task is one perspective; it runs `--samples` independent requests to an
 OpenAI-compatible endpoint at once, and all tasks run together, so the round
 takes about as long as its slowest call. A reviewer session with tools spends
 most of its time finding the code a plan talks about; the plan already names it,
-as `path` or `path:line` citations. This script finds those citations, reads the
-cited files at the review base, and puts the lines around each citation (the
-whole file when it is short) into the request, with the AGENTS.md files on the
-cited paths. The request holds the requirement copies, the plan with line
-numbers, that code, those rules, and the perspective method last, so every
-perspective shares one prompt prefix.
+as `path` or `path:line` citations, often shortened to a base name or a trailing
+path (`db.py:379`) and to `:line` for the file just named. This script resolves
+those citations (`find_citations`), reads the cited files at the review base, and
+puts the lines around each citation (the whole file when it is short) into the
+request, with the AGENTS.md files on the cited paths; a citation that could name
+several files is listed in `<out>/unattached-citations.md` instead. The request
+holds the requirement copies, the plan with line numbers, that code, those rules,
+and the perspective method last, so every perspective shares one prompt prefix.
 
 Calls, validation, retries, sample pooling, and the summary are srv's round
 runner (`~/.agents/skills/srv/bin/sweep.py`); finding lines are re-located from
@@ -38,15 +40,20 @@ import re
 import subprocess
 import sys
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parents[2]
 BRIEF_PATH = Path(__file__).resolve().parents[1] / "references" / "call-brief.md"
+LINE_RANGES = r"(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)"
 CITE_RE = re.compile(
     r"(?<![\w./-])(/?(?:[\w.-]+/)*[\w.-]+\.(?:py|sql|cypher|md|toml|ya?ml|json|ts|tsx|js|go|rs|sh))"
-    r"(?::(\d+)(?:-(\d+))?|#L(\d+)(?:-L(\d+))?)?(?![\w/])"
+    r"(?::" + LINE_RANGES + r"|#L(\d+)(?:-L(\d+))?)?(?![\w/])"
 )
+# A line-only citation is written as inline code, `:a-b`; unquoted, `x[:20]` and `"port":8000` would read as one.
+LINE_ONLY_RE = re.compile(r"`:" + LINE_RANGES + r"`")
 CITE_RADIUS = 20
+CANDIDATES_SHOWN = 3  # `__init__.py` alone names dozens of files; the operator needs the count and a few, not all
 SHORT_FILE_CHARS = 12_000
 CITED_CHARS_TOTAL = 300_000
 
@@ -63,15 +70,48 @@ def load_module(name: str, path: Path):
 srv = load_module("srv_sweep", SKILLS / "srv" / "bin" / "sweep.py")
 
 
+@dataclass
+class Citations:
+    """What the plan cites at the review base: each file in order of first citation with its cited line ranges, and the
+    citations the script could not tie to one file, named so the operator reads them instead of the reviewers."""
+
+    files: dict[str, list[tuple[int, int]]]
+    unattached: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Token:
+    """One citation in the plan: a file token (`path` is its written path) or a line-only token (`path` is None)."""
+
+    line: int
+    text: str
+    path: str | None
+    ranges: list[tuple[int, int]]
+    files: list[str] = field(default_factory=list)  # a file token's repository candidates; one means resolved
+
+
+def parse_ranges(text: str | None, last: str | None = None) -> list[tuple[int, int]]:
+    """`a`, `a-b`, `a-b,c-d` (or `#La-Lb`, given as `text` and `last`) as ordered (first, last) pairs."""
+    if not text:
+        return []
+    if last is not None:
+        return [(int(text), max(int(text), int(last)))]
+    pairs = [part.split("-") for part in text.split(",")]
+    return [(int(pair[0]), max(int(pair[0]), int(pair[-1]))) for pair in pairs]
+
+
+def outside_repository(repo: Path, cited: str) -> bool:
+    """An absolute path to a file that exists outside a checkout of this repository names another project's file, not
+    the review base's file of the same name."""
+    return cited.startswith("/") and Path(cited).is_file() and git_common_dir(Path(cited).parent) != git_common_dir(repo)
+
+
 def resolve_cited_path(repo: Path, cited: str) -> str | None:
     """The repository path a citation names, dropping leading directories the repository does not have.
 
     Plans often cite through a worktree or checkout name (`merge/emem/x.py` for `emem/x.py`) or by absolute path,
-    as file links in reports are written (`/home/u/repo/emem/x.py`). An absolute path to a file that exists outside
-    a checkout of this repository names another project's file, not the review base's file of the same name.
+    as file links in reports are written (`/home/u/repo/emem/x.py`).
     """
-    if cited.startswith("/") and Path(cited).is_file() and git_common_dir(Path(cited).parent) != git_common_dir(repo):
-        return None
     parts = cited.lstrip("/").split("/")
     for start in range(len(parts)):
         candidate = "/".join(parts[start:])
@@ -90,28 +130,91 @@ def git_common_dir(directory: Path) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def find_citations(plan_text: str, repo: Path) -> dict[str, list[tuple[int, int]]]:
-    """Cited repository files in order of first citation, each with its cited line ranges.
+def tracked_by_name(repo: Path) -> dict[str, list[str]]:
+    """The review base's tracked files by base name, from one `git ls-files`; untracked copies such as `.worktrees/`
+    would make every name ambiguous."""
+    result = subprocess.run(["git", "-C", str(repo), "ls-files", "-z"], capture_output=True, text=True, check=False)
+    by_name: dict[str, list[str]] = {}
+    for path in sorted(filter(None, result.stdout.split("\0"))):
+        by_name.setdefault(posixpath.basename(path), []).append(path)
+    return by_name
 
-    A citation is a file path the review base has, written relative, through a checkout name, or absolute,
-    with an optional `:a-b` or `#La-Lb` line range.
+
+def read_tokens(plan_text: str) -> list[Token]:
+    tokens = []
+    for number, line in enumerate(plan_text.splitlines(), start=1):
+        found = [(m.start(), Token(number, m.group(0), m.group(1),
+                                   parse_ranges(m.group(2)) or parse_ranges(m.group(3), m.group(4) or m.group(3))))
+                 for m in CITE_RE.finditer(line)]
+        found += [(m.start(), Token(number, ":" + m.group(1), None, parse_ranges(m.group(1)))) for m in LINE_ONLY_RE.finditer(line)]
+        tokens += [token for _, token in sorted(found, key=lambda item: item[0])]
+    return tokens
+
+
+def owners(index: int, tokens: list[Token], blocks: list[int]) -> list[Token]:
+    """The file citations the line-only citation `tokens[index]` may belong to, as a reader resolves "the same file":
+    the nearest one before it on its line, else every one after it on its line (a table row names its file in a later
+    column), else the same two in its paragraph or table. Several after it are a choice `find_citations` does not make."""
+    token = tokens[index]
+    before = [t for t in tokens[:index] if t.path is not None]
+    after = [t for t in tokens[index + 1:] if t.path is not None]
+    for scope in (lambda t: t.line == token.line, lambda t: blocks[t.line] == blocks[token.line]):
+        if near := [t for t in before if scope(t)]:
+            return near[-1:]
+        if later := [t for t in after if scope(t)]:
+            return later
+    return []
+
+
+def find_citations(plan_text: str, repo: Path) -> Citations:
+    """The repository files the plan cites and their line ranges, in order of first citation.
+
+    A file citation is a path the review base has, written relative, through a checkout name, or absolute, or a
+    trailing part of one down to the bare base name (`neo4j/db.py`, `db.py`), with an optional `:a-b`, `:a-b,c-d`, or
+    `#La-Lb` range. A line-only citation `:a-b` belongs to the file of `owners`. A citation that could name several
+    files is named in `unattached` instead of tied to one, as an editor opens a word link that matches a single file
+    and lists the matches otherwise (https://code.visualstudio.com/docs/terminal/basics); a guess would show the
+    reviewers the wrong lines as cited. A citation of a file the review base does not have is dropped.
     """
-    cited: dict[str, list[tuple[int, int]]] = {}
-    for match in CITE_RE.finditer(plan_text):
-        path = resolve_cited_path(repo, match.group(1))
-        if path is None:
+    tokens = read_tokens(plan_text)
+    blocks = [0]  # the paragraph or table of each plan line: a blank line starts the next one
+    for line in plan_text.splitlines():
+        blocks.append(blocks[-1] + (not line.strip()))
+    by_name: dict[str, list[str]] | None = None
+    for token in (t for t in tokens if t.path is not None):
+        if outside_repository(repo, token.path):
             continue
-        ranges = cited.setdefault(path, [])
-        first, last = match.group(2) or match.group(4), match.group(3) or match.group(5)
-        if first:
-            ranges.append((int(first), max(int(first), int(last or first))))
-    return cited
+        if direct := resolve_cited_path(repo, token.path):
+            token.files = [direct]
+            continue
+        by_name = tracked_by_name(repo) if by_name is None else by_name
+        suffix = token.path.lstrip("/")
+        token.files = [p for p in by_name.get(posixpath.basename(suffix), []) if p == suffix or p.endswith("/" + suffix)]
+    citations = Citations({})
+    for index, token in enumerate(tokens):
+        if token.path is not None:
+            if len(token.files) > 1:
+                shown = ", ".join(token.files[:CANDIDATES_SHOWN]) + (", ..." if len(token.files) > CANDIDATES_SHOWN else "")
+                citations.unattached.append(f"`{token.text}` on plan line {token.line} names any of {len(token.files)} files: {shown}")
+            elif token.files:
+                citations.files.setdefault(token.files[0], []).extend(token.ranges)
+            continue
+        found = owners(index, tokens, blocks)
+        files = {path for owner in found for path in owner.files}
+        if not found:
+            citations.unattached.append(f"`{token.text}` on plan line {token.line} has no file citation on its line or in its paragraph")
+        elif len(files) == 1 and all(len(owner.files) == 1 for owner in found):
+            citations.files.setdefault(files.pop(), []).extend(token.ranges)
+        elif files:
+            written = ", ".join(f"`{owner.text}`" for owner in found)
+            citations.unattached.append(f"`{token.text}` on plan line {token.line} may belong to any of {written}")
+    return citations
 
 
-def cited_code(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
+def cited_code(repo: Path, citations: Citations) -> str:
     """The cited files at the review base, within `CITED_CHARS_TOTAL`, in citation order."""
-    parts, used, left_out = [], 0, []
-    for path, ranges in citations.items():
+    parts, used, left_out = [], 0, list(citations.unattached)
+    for path, ranges in citations.files.items():
         lines = (repo / path).read_text(encoding="utf-8", errors="replace").splitlines()
         size = sum(len(line) + 1 for line in lines)
         if not lines:
@@ -141,12 +244,12 @@ def cited_code(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
     return "\n\n".join(parts) if parts else "(the plan cites no file of the repository)"
 
 
-def repository_rules(repo: Path, citations: dict[str, list[tuple[int, int]]]) -> str:
+def repository_rules(repo: Path, citations: Citations) -> str:
     """AGENTS.md at the root and in every directory on the cited paths, root first."""
     found: list[str] = []
     for path in ["AGENTS.md"] + [
         posixpath.join(*Path(cited).parts[:depth], "AGENTS.md")
-        for cited in citations
+        for cited in citations.files
         for depth in range(1, len(Path(cited).parts))
     ]:
         if path not in found and (repo / path).is_file():
@@ -209,6 +312,11 @@ def run(options: argparse.Namespace) -> int:
     plan_text = plan.read_text(encoding="utf-8")
     requirements = "\n\n".join(Path(path).read_text(encoding="utf-8") for path in options.requirements)
     citations = find_citations(plan_text, repo)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "unattached-citations.md").write_text("".join(f"- {note}\n" for note in citations.unattached), encoding="utf-8")
+    if citations.unattached:
+        print(f"prv sweep: {len(citations.unattached)} citations of the plan name no single file, so no reviewer sees their "
+              f"lines; they are listed in {out / 'unattached-citations.md'} for the consolidated file", file=sys.stderr)
     shared = "\n\n".join(
         [
             "# Requirement copies (what the plan answers)\n\n" + requirements,
@@ -220,7 +328,6 @@ def run(options: argparse.Namespace) -> int:
     context = {"brief": BRIEF_PATH.read_text(encoding="utf-8"), "perspectives": perspectives, "shared": shared,
                "catalog": catalog}
     tasks = [srv.Task({"id": "plan"}, pid) for pid in ids]
-    out.mkdir(parents=True, exist_ok=True)
     source = hashlib.sha256((plan_text + "\0" + requirements).encode("utf-8")).hexdigest()
     # The round is every perspective with an output for this plan, so a rerun with --only reports the whole round.
     earlier = {path.stem.removeprefix("plan__") for path in out.glob("plan__*.json")}
