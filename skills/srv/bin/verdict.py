@@ -12,6 +12,9 @@ established never becomes acceptance:
 3. 조건부 수용: a question only a person can answer, or any remaining MINOR or NIT cluster.
 4. 수용: none of the above.
 
+The residual risk counts the PLAUSIBLE clusters in one line instead of naming each: they are not
+findings, and the document lists them apart from the findings (`team.write_document`).
+
 Every perspective `design.py` built must appear in the verdict file with `decided`
 true (every check decided by its means) or false, so a perspective nobody accounted for cannot pass silently.
 
@@ -80,7 +83,9 @@ def judge(verdict: dict) -> dict:
     risks = list(verdict.get("risks", []))
     risks += [f"관점 {pid} 는 점검을 정한 수단으로 다 판정하지 못했다: {p.get('note', '')}".rstrip(": ")
               for p in verdict.get("perspectives", []) if not p["decided"] for pid in [p["id"]]]
-    risks += [f"{c['id']} 는 발생 조건을 확정하지 못했다" for c in clusters if c["verdict"] == "PLAUSIBLE"]
+    unconfirmed = [c for c in clusters if c["verdict"] == "PLAUSIBLE"]
+    if unconfirmed:
+        risks.append(f"발생 조건을 확정하지 못한 묶음 {len(unconfirmed)}개(차단 등급 {len(unsettled)}개)")
     return {"decision": decision, "reason": reason, "confirmed": [c["id"] for c in clusters if c["verdict"] == "CONFIRMED"],
             "questions": questions, "residual_risk": risks}
 

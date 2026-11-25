@@ -37,6 +37,14 @@ class JudgeTest(unittest.TestCase):
         self.assertEqual(judgment["decision"], "증거 부족")
         self.assertEqual(judgment["residual_risk"], ["관점 K-1 는 점검을 정한 수단으로 다 판정하지 못했다: 격리 실행 불가"])
 
+    def test_unconfirmed_clusters_are_one_counted_risk(self) -> None:
+        clusters = [cluster("BLOCKER", "PLAUSIBLE"), {**cluster("MINOR", "PLAUSIBLE"), "id": "R-2"}, cluster("NIT")]
+        risks = verdict.judge({"clusters": clusters, "perspectives": DECIDED})["residual_risk"]
+        self.assertEqual(risks, ["발생 조건을 확정하지 못한 묶음 2개(차단 등급 1개)"],
+                         "an unconfirmed cluster is not a finding: the residual risk counts them in one line and names "
+                         "none of them, so the review body carries no unconfirmed cluster. Do not list their ids here "
+                         "again; the document writes them to their own file")
+
     def test_question_or_minor_is_conditional(self) -> None:
         self.assertEqual(self.decide(questions=[{"id": "Q-1"}]), "조건부 수용")
         self.assertEqual(self.decide([cluster("MINOR")]), "조건부 수용")

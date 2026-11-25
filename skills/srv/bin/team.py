@@ -478,14 +478,16 @@ def findings_of(results: dict[str, list[dict]]) -> list[dict]:
             for pid, rows in results.items() for r in rows for f in r.get("findings", [])]
 
 
+UNCONFIRMED = "UNCONFIRMED.md"
+
+
 def write_document(out: Path, clusters: list[dict], judgment: dict, perspectives: list[dict], judgments: dict,
                    summary: dict, head: str) -> None:
     confirmed = [c for c in clusters if c["verdict"] == "CONFIRMED" and "merged_into" not in c]
     counts = Counter(c["severity"] for c in confirmed)
     rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']}{' (같은 결함: ' + ', '.join(c['duplicates']) + ')' if c.get('duplicates') else ''} | {c['evidence']} | {c['fix']} |"
                      for c in confirmed)
-    plausible = "\n".join(f"- {c['id']} [{c['severity']}] `{c['file']}:{c['line']}`: {c['condition']}"
-                          for c in clusters if c["verdict"] == "PLAUSIBLE" and "merged_into" not in c)
+    unconfirmed = [c for c in clusters if c["verdict"] == "PLAUSIBLE" and "merged_into" not in c]
     rejected = "\n".join(f"- {c['id']} `{c['file']}:{c['line']}`: {c['reasons'][0] if c['reasons'] else ''}"
                          for c in clusters if c["verdict"] in ("REJECTED", "OUT-OF-SCOPE"))
     lenses = "\n".join(f"| {p['id']} | {p['depth']} | {p['value']} | {p['broken_if']} | {len(p['breadth'])} | "
@@ -506,8 +508,7 @@ def write_document(out: Path, clusters: list[dict], judgment: dict, perspectives
 ## 잔여 위험
 
 {chr(10).join('- ' + r for r in judgment['residual_risk']) or '없음'}
-
-{plausible}
+{f"{chr(10)}확정하지 못한 묶음은 지적이 아니므로 이 문서에 싣지 않고 `{UNCONFIRMED}` 에 둔다." if unconfirmed else ""}
 
 ## 관점
 
@@ -532,6 +533,24 @@ def write_document(out: Path, clusters: list[dict], judgment: dict, perspectives
 다시 돌리지는 않는다.
 """
     (out / "REVIEW.md").write_text(text, encoding="utf-8")
+    write_unconfirmed(out, unconfirmed, head)
+
+
+def write_unconfirmed(out: Path, unconfirmed: list[dict], head: str) -> None:
+    """The PLAUSIBLE clusters, apart from REVIEW.md: the verify calls neither established nor refuted them, the way SARIF
+    keeps `open` ("insufficient information to decide whether a problem exists") apart from `fail`, so a reader of the
+    review sees only established findings. Each row names what its verify calls said would decide it."""
+    rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']} | "
+                     f"{c['reasons'][0] if c['reasons'] else ''} |" for c in unconfirmed)
+    (out / UNCONFIRMED).write_text(f"""# srv 미확정 묶음
+
+head `{head}`. 검증 호출이 확정도 기각도 하지 못한 묶음 {len(unconfirmed)}개다. 지적이 아니며, 하나를 지적으로 쓰려면
+head 에서 직접 확인한다.
+
+| id | 심각도 | 위치 | 발생 조건과 결과 | 판정에 필요한 것 |
+| --- | --- | --- | --- | --- |
+{rows}
+""", encoding="utf-8")
 
 
 # ---------------------------------------------------------------- the run

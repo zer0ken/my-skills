@@ -74,6 +74,26 @@ class PureTest(unittest.TestCase):
         self.assertEqual(team.majority(["broken", "broken", "holds"]), "broken")
         self.assertEqual(team.majority(["broken", "holds", "undecided"]), "undecided")
 
+    def test_the_review_lists_only_confirmed_clusters_and_the_rest_go_to_their_own_file(self) -> None:
+        def cluster(cid: str, state: str) -> dict:
+            return {"id": cid, "verdict": state, "severity": "MAJOR", "file": "a.py", "line": 3, "evidence": "read",
+                    "condition": f"condition {cid}", "fix": "f", "reasons": [f"reason {cid}"]}
+        clusters = [cluster("R-001", "CONFIRMED"), cluster("R-002", "PLAUSIBLE"), cluster("R-003", "REJECTED")]
+        judgment = {"decision": "차단", "reason": "r", "residual_risk": ["발생 조건을 확정하지 못한 묶음 1개(차단 등급 1개)"]}
+        summary = {"stages": [{"stage": "inspect", "seconds": 1, "server": {}}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            team.write_document(out, clusters, judgment, [], {}, summary, "abc")
+            review = (out / "REVIEW.md").read_text(encoding="utf-8")
+            unconfirmed = (out / "UNCONFIRMED.md").read_text(encoding="utf-8")
+        self.assertIn("condition R-001", review)
+        self.assertNotIn("condition R-002", review,
+                         "REVIEW.md carries findings only: a PLAUSIBLE cluster was neither established nor refuted, so it "
+                         "goes to UNCONFIRMED.md and REVIEW.md names only their count and that file. Do not put it back "
+                         "under 잔여 위험 or anywhere else in REVIEW.md")
+        self.assertIn("| R-002 | MAJOR | `a.py:3` | condition R-002 | reason R-002 |", unconfirmed)
+        self.assertNotIn("R-001", unconfirmed)
+
     def test_a_counter_that_went_down_has_no_delta(self) -> None:
         before = {"vllm:prompt_tokens_total": 10.0, "vllm:generation_tokens_total": 9.0}
         after = {"vllm:prompt_tokens_total": 15.0, "vllm:generation_tokens_total": 3.0}
