@@ -105,6 +105,8 @@ class CheckLedgerTest(unittest.TestCase):
         self.assertEqual(CATALOG["U1-import"].sub_checks, ("1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"))
         self.assertTrue(CATALOG["U3-db"].per_area)
         self.assertFalse(CATALOG["U2-concepts"].per_area)
+        self.assertTrue(CATALOG["U3-tests"].always)
+        self.assertFalse(CATALOG["U3-db"].always, "U3-db is picked only when the change touches the database")
 
     def test_complete_ledger_passes(self):
         self.assertEqual(check_review.check_ledger(LEDGER, COMPLETE, CATALOG), [])
@@ -123,10 +125,25 @@ class CheckLedgerTest(unittest.TestCase):
             [
                 (
                     "항목 원장의 턴 `리뷰어:2` 에 `U1-import` 와 `U1-layout` 가 함께 있다: 한 턴에는 한 항목만 검토한다. "
+                    "한 턴에 여러 항목을 둘 수 있는 것은 고르는 조건에 맞지 않는 항목의 `해당 없음` 행만 쓰는 선별 턴뿐이다. "
                     "턴 값만 바꿔 맞추지 말고 `U1-layout` 를 자기 턴에서 다시 검토하고 그 턴에서 행을 쓴다."
                 )
             ],
         )
+
+    def test_a_selection_turn_may_clear_conditional_items_together(self):
+        # User, 2026-11-25, on narrowing the 2026-11-14 one-item-per-turn decision to the picked items: "권장으로해라".
+        text = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다",
+                                      "U3-db": "해당 없음: DB 파일이 바뀌지 않았다", "U3-docs": "해당 없음: 문서가 바뀌지 않았다"})
+        text = text.replace("| 리뷰어:19 | U3-db |", "| 리뷰어:1 | U3-db |").replace("| 리뷰어:20 | U3-docs |", "| 리뷰어:1 | U3-docs |")
+        self.assertEqual(check_review.check_ledger(text, COMPLETE, CATALOG), [])
+
+    def test_a_selection_turn_cannot_clear_an_always_item_or_examine_one(self):
+        text = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다",
+                                      "U3-tests": "해당 없음: 시험이 없다"})
+        text = text.replace("| 리뷰어:17 | U3-tests |", "| 리뷰어:1 | U3-tests |")
+        self.assertEqual(len(check_review.check_ledger(text, COMPLETE, CATALOG)), 1,
+                         "U3-tests is picked always, so it keeps its own turn even when its verdict is 해당 없음")
 
     def test_per_area_item_covers_its_areas_in_one_turn(self):
         text = build_ledger(areas=("U-1", "U-2"), verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다"})

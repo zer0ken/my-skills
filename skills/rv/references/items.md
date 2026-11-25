@@ -16,6 +16,8 @@ The words name the item, not the pair of an item and an area: a per-area item is
 4. Units that run in parallel (U1 and U2, U3 split by review units) each have their own reviewing session, and each session takes its unit's items in consecutive turns; a U3 session given several review units covers all of them in each per-area item's turn. U4 verifiers stay separate fresh sessions; per-item turns do not merge verification into the reviewing session.
 5. A follow-up review runs every item again at the current head, because it is exhaustive.
 
+The first item turn of a reviewing session is its selection turn (선별 턴). In it the session judges, for every item whose `고르는 조건` is not `항상`, whether the change meets that condition, and writes a `해당 없음: <the condition it does not meet>` row, with the evidence that shows it, for each item it does not pick; it picks every item it cannot clear that way. Those rows may share the selection turn, and every picked item and every `항상` item still gets its own turn. The user's words (2026-11-14): "Rv 스킬로 리뷰를 할 때, 각 항목 반드시 별도의 턴으로 파악하도록 해야도ㅑ." and (2026-11-25): "Rv는 단일 프론티어 모델을 쓴다는 가정 하게 완벽히 리뷰가 가능한 가는하면서 비용이 적게 드는 절차로 수행되여야 하고". Asked whether to narrow the first decision to the picked items so that an item the change does not touch spends no turn (REVIEW-TECHNIQUES decision 2), the user answered (2026-11-25): "권장으로해라". A row the selection turn writes is an item cleared by its condition, not an examined item, so it names no sub-check, as the ledger format exempts a `해당 없음` row.
+
 ## Ledger format
 
 The ledger is a Markdown file kept with the review's separate material, not a section of the posted review. It holds one table with these columns in this order.
@@ -33,25 +35,25 @@ A `|` inside a cell, inside a backtick command too, is written `\|`, because a G
 
 ## Catalog
 
-| 항목 | 단위 | 영역별 | SKILL.md 부분 | 세부 |
-|---|---|---|---|---|
-| U0-prior | U0 | 아니오 | U0, the recheck of prior_ids, responses, and user decisions | 이전 지적, 응답, 사용자 결정 |
-| U1-import | U1 | 아니오 | U1 item 1 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 |
-| U1-layout | U1 | 아니오 | U1 item 2 | 2.1, 2.2, 2.3 |
-| U1-names | U1 | 아니오 | U1 item 3 | 3.1, 3.2, 3.3 |
-| U1-size | U1 | 아니오 | U1 items 4.1-4.3 | 4.1, 4.2, 4.3 |
-| U1-split | U1 | 아니오 | U1 item 4.4 | 4.4.1, 4.4.2, 4.4.3 |
-| U1-leftovers | U1 | 아니오 | U1 items 4.5-4.6 | 4.5, 4.6 |
-| U1-precedent | U1 | 아니오 | U1 item 5 | 5.1, 5.2, 5.3 |
-| U2-concepts | U2 | 아니오 | U2 question 0 | 0.1, 0.2, 0.3, 0.4 |
-| U2-structure | U2 | 아니오 | U2 question 1 | 1.1, 1.2, 1.3 |
-| U2-quality | U2 | 아니오 | U2 question 2 | 2.1, 2.2, 2.3 |
-| U3-safety | U3 | 예 | U3 steps 1-4 | 안전 사실, 심볼 밖 소비자, 실행 증명, 배제 목록 |
-| U3-reuse | U3 | 예 | U3, reuse and known implementations | 저장소 재사용, 외부 구현, 의존성, 최소 변경 |
-| U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 |
-| U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 |
-| U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 |
-| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI |
-| U3-claims | U3 | 예 | U3, claims against results | 주장 대조, 검증 조건 |
-| U3-db | U3 | 예 | U3, DB schema and usage | 스키마 권고, 호출 수, 인덱스, 트랜잭션 |
-| U3-docs | U3 | 예 | U3, meaning and organization of documents | 필요성, 순서, 예시 |
+| 항목 | 단위 | 영역별 | SKILL.md 부분 | 세부 | 고르는 조건 |
+|---|---|---|---|---|---|
+| U0-prior | U0 | 아니오 | U0, the recheck of prior_ids, responses, and user decisions | 이전 지적, 응답, 사용자 결정 | 이 PR 에 이전 리뷰, 작성자 응답, 사용자 결정 중 하나가 있다 |
+| U1-import | U1 | 아니오 | U1 item 1 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 | 변경이 import, `__init__.py`, 패키지 공개 경로를 더하거나 바꾼다 |
+| U1-layout | U1 | 아니오 | U1 item 2 | 2.1, 2.2, 2.3 | 변경이 파일이나 디렉터리를 더하거나 옮기거나 지운다 |
+| U1-names | U1 | 아니오 | U1 item 3 | 3.1, 3.2, 3.3 | 변경이 파일, 모듈, 식별자의 이름을 더하거나 바꾼다 |
+| U1-size | U1 | 아니오 | U1 items 4.1-4.3 | 4.1, 4.2, 4.3 | 항상 |
+| U1-split | U1 | 아니오 | U1 item 4.4 | 4.4.1, 4.4.2, 4.4.3 | 항상 |
+| U1-leftovers | U1 | 아니오 | U1 items 4.5-4.6 | 4.5, 4.6 | 항상 |
+| U1-precedent | U1 | 아니오 | U1 item 5 | 5.1, 5.2, 5.3 | 변경의 근거로 기존 코드나 관례를 드는 곳(PR 본문, 응답, 주석, 커밋)이 있다 |
+| U2-concepts | U2 | 아니오 | U2 question 0 | 0.1, 0.2, 0.3, 0.4 | 항상 |
+| U2-structure | U2 | 아니오 | U2 question 1 | 1.1, 1.2, 1.3 | 항상 |
+| U2-quality | U2 | 아니오 | U2 question 2 | 2.1, 2.2, 2.3 | 항상 |
+| U3-safety | U3 | 예 | U3 steps 1-4 | 안전 사실, 심볼 밖 소비자, 실행 증명, 배제 목록 | 항상 |
+| U3-reuse | U3 | 예 | U3, reuse and known implementations | 저장소 재사용, 외부 구현, 의존성, 최소 변경 | 변경이 함수, 클래스, 모듈, 설정 키, 질의, 의존성 같은 새 단위를 더한다 |
+| U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 | 변경이 반복, 검색, 정렬, 집계, 순위, 수치 계산을 더하거나 바꾼다 |
+| U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 | 변경이 외부 호출, I/O, 파싱, 예외 처리, 재시도를 더하거나 바꾼다 |
+| U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 | 변경이 사용자·다른 서비스·파일·모델에서 온 입력, 질의·명령·경로 조립, 비밀, 인증·권한에 닿는다 |
+| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI | 항상 |
+| U3-claims | U3 | 예 | U3, claims against results | 주장 대조, 검증 조건 | 항상 |
+| U3-db | U3 | 예 | U3, DB schema and usage | 스키마 권고, 호출 수, 인덱스, 트랜잭션 | 변경이 스키마, 질의, 인덱스, 트랜잭션, DB 연결을 더하거나 바꾼다 |
+| U3-docs | U3 | 예 | U3, meaning and organization of documents | 필요성, 순서, 예시 | 변경이 문서, docstring, 주석을 더하거나 바꾼다 |

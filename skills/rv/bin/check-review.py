@@ -187,12 +187,14 @@ class Item(NamedTuple):
     id: str
     per_area: bool
     sub_checks: tuple[str, ...]
+    always: bool  # its 고르는 조건 is `항상`: it is never cleared in the selection turn
 
 
 ITEMS_PATH = Path(__file__).resolve().parent.parent / "references" / "items.md"
 CATALOG_SECTION = "Catalog"
 LEDGER_COLUMNS = ("턴", "항목", "영역", "확인한 범위", "근거", "판정")
 WHOLE_AREA = "전체"
+ALWAYS = "항상"
 CLEARED = "배제:"
 TURN_RE = re.compile(r"^(.+):(\d+)$")
 EVIDENCE_RE = re.compile(r"`[^`]+`|https?://|\S+:\d+")
@@ -208,11 +210,13 @@ def read_catalog(text: str) -> dict[str, Item]:
         raise ValueError(f"`## {CATALOG_SECTION}` 표가 없다")
     header = rows[0]
     id_col, area_col, sub_col = header.index("항목"), header.index("영역별"), header.index("세부")
+    pick_col = header.index("고르는 조건")
     return {
         row[id_col]: Item(
             row[id_col],
             row[area_col] == "예",
             tuple(part.strip() for part in row[sub_col].split(",")),
+            row[pick_col] == ALWAYS,
         )
         for row in rows[1:]
     }
@@ -229,7 +233,7 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
         ]
     review_ids = set(R_ID_RE.findall(review))
     violations: list[str] = []
-    turn_items: dict[str, str] = {}
+    turn_rows: dict[str, list[tuple[str, bool]]] = {}
     seen: dict[str, list[str]] = {}
     for cells in rows[1:]:
         if len(cells) != len(LEDGER_COLUMNS):
@@ -257,11 +261,9 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
             continue
         if not TURN_RE.match(row["턴"]):
             violations.append(f"항목 원장의 {label} 행 턴 `{row['턴']}` 이 `<세션>:<번호>` 형식이 아니다.")
-        elif turn_items.setdefault(row["턴"], item_id) != item_id:
-            violations.append(
-                f"항목 원장의 턴 `{row['턴']}` 에 `{turn_items[row['턴']]}` 와 `{item_id}` 가 함께 있다: 한 턴에는 한 항목만 검토한다. "
-                f"턴 값만 바꿔 맞추지 말고 `{item_id}` 를 자기 턴에서 다시 검토하고 그 턴에서 행을 쓴다."
-            )
+        else:
+            cleared = verdict.startswith(NOT_APPLICABLE + ":") and not item.always
+            turn_rows.setdefault(row["턴"], []).append((item_id, cleared))
         if not item.per_area and area != WHOLE_AREA:
             violations.append(f"항목 원장의 {label} 행 영역이 `{WHOLE_AREA}` 가 아니다: 이 항목은 영역별 항목이 아니다.")
         if not EVIDENCE_RE.search(row["근거"]):
@@ -281,6 +283,16 @@ def check_ledger(ledger: str, review: str, catalog: dict[str, Item]) -> list[str
         if skipped:
             violations.append(f"항목 원장의 {label} 행 확인한 범위에 세부 점검 {', '.join(skipped)} 가 없다: 세부 점검마다 결과를 적는다.")
 
+    for turn, members in turn_rows.items():
+        items = list(dict.fromkeys(item_id for item_id, _ in members))
+        if len(items) > 1 and not all(cleared for _, cleared in members):
+            # The selection turn may clear several conditional items together; any other turn holds one item.
+            examined = items[1]
+            violations.append(
+                f"항목 원장의 턴 `{turn}` 에 `{items[0]}` 와 `{examined}` 가 함께 있다: 한 턴에는 한 항목만 검토한다. "
+                f"한 턴에 여러 항목을 둘 수 있는 것은 고르는 조건에 맞지 않는 항목의 `{NOT_APPLICABLE}` 행만 쓰는 선별 턴뿐이다. "
+                f"턴 값만 바꿔 맞추지 말고 `{examined}` 를 자기 턴에서 다시 검토하고 그 턴에서 행을 쓴다."
+            )
     areas = {area for item_id, areas_ in seen.items() if catalog[item_id].per_area for area in areas_}
     for item in catalog.values():
         expected = sorted(areas or {WHOLE_AREA}) if item.per_area else [WHOLE_AREA]
