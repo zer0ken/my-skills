@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.33.1"
+  version: "2.34.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -299,7 +299,7 @@ Identifiers (commits, issues, PRs, files) are written for a person to read easil
   3.2 `## 기능과 완료 기준`: whether the change does what the issue's completion criteria and the PR's claims say for the code's users, whether it adds functionality nobody asked for, and the failure path and security judgments of U3.
   3.3 `## 크기와 증가`: U1 item 4. The dimension table, the new unit table, deletion candidates, and the split judgment.
   3.4 `## 품질`: U2 question 2. Where the implementation, prompts, queries, and documents fall short of the ceiling the structure allows, including complexity a simpler implementation would remove and the implementation cost judged in U3, and every metric against the baseline or the measurement gap. Size and reuse belong to `크기와 증가`, tests to `시험`, and failure paths and security to `기능과 완료 기준`.
-  3.5 `## 시험`: the test judgment of U3, and the CI state of the reviewed head: each failing or pending required check with its job and cause. A failure the change causes is a finding.
+  3.5 `## 시험`: the test judgment of U3.
   3.6 `## 이름과 문서`: U1 items 3 and 4.6 and the document review of U3.
 
 4. Findings: under a `##` section per review area, write one finding as one `-` item.
@@ -315,7 +315,7 @@ Identifiers (commits, issues, PRs, files) are written for a person to read easil
 
 7. `## 검증 범위`: the last section. Write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope. Only HTML comment lines, such as a machine-read verdict marker, may follow it.
 
-Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. The review proceeds while CI fails or is pending, and a head whose required checks fail is not approved; pending checks do not withhold the verdict, because the review loop does not wait for CI and the author waits for it only in the merge check (the user's words, 2026-11-16: "리뷰 루프는 ci를 기다리지 않는다. Ci는 병합에서만 기다린다."); a CI pass is a precondition of approval, never its ground, and a change that works or passes CI is not approved when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
+Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. The review and CI are independent checks: the review exists to catch what CI cannot, so it starts and ends on the head without waiting for CI, and its verdict neither requires a CI pass nor rests on one. CI is the author's merge condition, judged in the merge check. The user's words (2026-11-25), given as a general instruction with no PR named: "리뷰할 때 CI를 기다리지 마라. 리뷰는 CI가 잡지 못하는 것을 잡기 위해 있는 것이다. 서로 독립이다."; and earlier, on the author's loop (2026-11-16): "리뷰 루프는 ci를 기다리지 않는다. Ci는 병합에서만 기다린다." A change that works or passes CI is not approved when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
 
 A follow-up review preserves existing IDs and opinions, records responses as `A-001` and rechecks as `R-001-C`. Statuses are OPEN, ANSWERED, RECHECK, RESOLVED, SKIP, and a status changes to RESOLVED only after the fix and evidence are confirmed. Write the reason on SKIP.
 

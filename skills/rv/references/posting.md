@@ -6,7 +6,7 @@ The procedure for posting as a PR review or comment is as follows. Post and edit
 
 1. Mention the PR author (the login from `gh pr view --json author`) as `@login` in the first sentence of the result document. The same for follow-up reviews.
 
-2. Before posting, recheck the latest head and PR state, the applicable target conditions, CI and conflict conditions, and new reviews and comments. If the head changed, do not post stale results. If there is a review with a different verdict on the same head, do not post; report the conflicting evidence.
+2. Before posting, recheck the latest head and PR state, the applicable target conditions, conflict conditions, and new reviews and comments. If the head changed, do not post stale results. If there is a review with a different verdict on the same head, do not post; report the conflicting evidence.
 
 3. Outside code spans, `~` becomes strikethrough on GitHub, so write ranges with a hyphen, as in `R-001-R-006`.
 
