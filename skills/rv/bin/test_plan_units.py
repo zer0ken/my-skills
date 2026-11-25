@@ -137,45 +137,5 @@ class GeneratedTest(unittest.TestCase):
         self.assertIn({"file": "pkg/util_b.py", "reason": "linguist-generated"}, plan["excluded"])
 
 
-class PerspectiveTest(unittest.TestCase):
-    def write(self, directory: Path, name: str, frontmatter: str) -> None:
-        Path(directory, name).write_text(f"---\n{frontmatter}---\n# Method\n", encoding="utf-8")
-
-    def test_match_rules_select_perspectives_with_reasons(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            self.write(Path(tmp), "trace.md", "match: always\n")
-            self.write(Path(tmp), "docs.md", "match-path: *.md\n")
-            self.write(Path(tmp), "layout.md", "match-status: renamed\nmatch-status: added\n")
-            self.write(Path(tmp), "db.md", "match-line: \\bSELECT\\b\n")
-            perspectives = plan_units.read_perspectives(Path(tmp))
-        plan = plan_units.plan_units(DIFF, perspectives=perspectives, budget=400)
-        self.assertEqual(sorted(unit_of(plan, "docs/new.md")["perspectives"]), ["docs", "layout", "trace"])
-        self.assertEqual(sorted(unit_of(plan, "gone.py")["perspectives"]), ["db", "trace"])
-        self.assertEqual(unit_of(plan, "gone.py")["perspectives"]["db"], ["line gone.py ~ /\\bSELECT\\b/: SELECT 1"])
-        self.assertEqual(sorted(unit_of(plan, "pkg/core.py")["perspectives"]), ["trace"])
-
-    def test_line_patterns_do_not_read_prose_files(self) -> None:
-        diff = file_diff("docs/guide.md", 0).replace("@@ -1,0 +1,0 @@\n", "@@ -1,0 +1,1 @@\n+Run SELECT on the table.\n")
-        with tempfile.TemporaryDirectory() as tmp:
-            self.write(Path(tmp), "db.md", "match-line: \\bSELECT\\b\n")
-            perspectives = plan_units.read_perspectives(Path(tmp))
-        plan = plan_units.plan_units(diff, perspectives=perspectives, budget=400)
-        self.assertEqual(unit_of(plan, "docs/guide.md")["perspectives"], {},
-                         "match-line patterns name code; a word in prose must not hand a document a code perspective")
-
-    def test_missing_frontmatter_is_an_error_that_names_the_fix(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            Path(tmp, "bad.md").write_text("# Method\n", encoding="utf-8")
-            with self.assertRaises(ValueError) as caught:
-                plan_units.read_perspectives(Path(tmp))
-        self.assertIn("match-path", str(caught.exception))
-
-    def test_unknown_frontmatter_key_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            self.write(Path(tmp), "x.md", "when: always\n")
-            with self.assertRaises(ValueError):
-                plan_units.read_perspectives(Path(tmp))
-
-
 if __name__ == "__main__":
     unittest.main()

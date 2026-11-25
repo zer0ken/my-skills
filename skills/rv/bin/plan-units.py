@@ -20,11 +20,7 @@ Rules, applied in this order:
    lines of the unit stay within the budget; a file larger than the budget is a
    unit of its own. Hunks are never split.
 
-With `--perspectives`, each unit also lists the srv perspectives whose
-frontmatter `match-*` lines it satisfies, with the matched reason.
-
-Usage: plan-units.py --diff diff.patch [--repo HEAD_WORKTREE] [--perspectives DIR]
-                     [--budget 400] [--out units.json]
+Usage: plan-units.py --diff diff.patch [--repo HEAD_WORKTREE] [--budget 400] [--out units.json]
 Exit codes: 0 the plan was written, 2 an input could not be read.
 """
 
@@ -32,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import codecs
-import fnmatch
 import hashlib
 import json
 import posixpath
@@ -73,11 +68,6 @@ SAME_EXTENSION_TESTS = (".py", ".go", ".rs", ".rb", ".php")
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 QUOTED_PATH = r'"(?:[^"\\]|\\.)*"'
 DIFF_GIT_RE = re.compile(rf"^diff --git (?P<old>{QUOTED_PATH}|a/.+?) (?P<new>{QUOTED_PATH}|b/.+)$")
-FRONTMATTER_KEYS = ("match", "match-path", "match-status", "match-line")
-# Prose files whose changed lines `match-line` does not read: its patterns name
-# code (`execute(`, `timeout`, `llm`), and the same words in prose would hand a
-# document a code perspective. Documents get their perspectives by `match-path`.
-PROSE_SUFFIXES = (".md", ".mdx", ".rst", ".txt", ".adoc")
 
 
 @dataclass
@@ -299,76 +289,12 @@ def bundle_files(changes: list[FileChange], budget: int) -> list[tuple[str, list
     return [(rule, [by_path[path] for path in members]) for rule, members in units]
 
 
-@dataclass
-class Perspective:
-    """The `match-*` frontmatter of one srv perspective method file."""
-
-    id: str
-    always: bool = False
-    paths: list[str] = field(default_factory=list)
-    statuses: list[str] = field(default_factory=list)
-    lines: list[re.Pattern[str]] = field(default_factory=list)
-
-
-def read_perspective(path: Path) -> Perspective:
-    """Parse the leading `---` block of a perspective file; its keys are `FRONTMATTER_KEYS`."""
-    perspective = Perspective(id=path.stem)
-    text = path.read_text(encoding="utf-8").splitlines()
-    if not text or text[0].strip() != "---":
-        raise ValueError(
-            f"{path}: no `---` frontmatter. Each perspective declares when it applies with "
-            "`match: always` or `match-path`/`match-status`/`match-line` lines, so units pick "
-            "perspectives by rule; add the lines that describe the code this method reviews."
-        )
-    for line in text[1:]:
-        if line.strip() == "---":
-            return perspective
-        key, sep, value = line.partition(":")
-        key, value = key.strip(), value.strip()
-        if not sep or key not in FRONTMATTER_KEYS:
-            raise ValueError(f"{path}: frontmatter line `{line}` is not one of {', '.join(FRONTMATTER_KEYS)}")
-        if key == "match":
-            if value != "always":
-                raise ValueError(f"{path}: `match:` takes only `always`")
-            perspective.always = True
-        elif key == "match-path":
-            perspective.paths.append(value)
-        elif key == "match-status":
-            perspective.statuses.append(value)
-        else:
-            perspective.lines.append(re.compile(value))
-    raise ValueError(f"{path}: frontmatter is not closed with `---`")
-
-
-def read_perspectives(directory: Path) -> list[Perspective]:
-    return [read_perspective(path) for path in sorted(directory.glob("*.md"))]
-
-
-def match_reasons(perspective: Perspective, files: list[FileChange]) -> list[str]:
-    """Why a perspective applies to a unit; empty when it does not."""
-    if perspective.always:
-        return ["always"]
-    reasons: list[str] = []
-    for change in files:
-        for pattern in perspective.paths:
-            if fnmatch.fnmatch(change.path, pattern) or fnmatch.fnmatch(posixpath.basename(change.path), pattern):
-                reasons.append(f"path {change.path} ~ {pattern}")
-        if change.status in perspective.statuses:
-            reasons.append(f"status {change.path} {change.status}")
-        for pattern in perspective.lines if not change.path.lower().endswith(PROSE_SUFFIXES) else ():
-            hit = next((line for h in change.hunks for line in h.changed_lines if pattern.search(line)), None)
-            if hit is not None:
-                reasons.append(f"line {change.path} ~ /{pattern.pattern}/: {hit.strip()[:80]}")
-    return reasons
-
-
 def plan_units(
     diff_text: str,
     repo: Path | None = None,
-    perspectives: list[Perspective] | None = None,
     budget: int = DEFAULT_BUDGET,
 ) -> dict:
-    """Build the unit plan: units with their hunks and perspectives, and the excluded files."""
+    """Build the unit plan: units with their hunks, and the excluded files."""
     changes = parse_diff(diff_text)
     generated = generated_paths(repo, [c.path for c in changes if c.status != "deleted"]) if repo else set()
     excluded, kept = [], []
@@ -397,9 +323,6 @@ def plan_units(
                 for f in files
             ],
         }
-        if perspectives is not None:
-            matched = {p.id: match_reasons(p, files) for p in perspectives}
-            unit["perspectives"] = {pid: reasons for pid, reasons in matched.items() if reasons}
         units.append(unit)
     return {
         "diff_sha256": hashlib.sha256(diff_text.encode("utf-8")).hexdigest(),
@@ -413,14 +336,12 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Split a git diff into review units.")
     parser.add_argument("--diff", required=True, help="unified diff, `git diff <merge base>...<head>`")
     parser.add_argument("--repo", help="head worktree, for `linguist-generated` attributes")
-    parser.add_argument("--perspectives", help="srv perspective directory with `match-*` frontmatter")
     parser.add_argument("--budget", type=int, default=DEFAULT_BUDGET, help="changed lines per directory unit")
     parser.add_argument("--out", help="write the plan here instead of stdout")
     args = parser.parse_args(argv)
     try:
         diff_text = Path(args.diff).read_text(encoding="utf-8")
-        perspectives = read_perspectives(Path(args.perspectives)) if args.perspectives else None
-        plan = plan_units(diff_text, Path(args.repo) if args.repo else None, perspectives, args.budget)
+        plan = plan_units(diff_text, Path(args.repo) if args.repo else None, args.budget)
     except (OSError, UnicodeDecodeError, ValueError, subprocess.CalledProcessError) as error:
         print(f"plan-units: {error}", file=sys.stderr)
         return 2
@@ -429,10 +350,9 @@ def main(argv: list[str]) -> int:
         Path(args.out).write_text(text, encoding="utf-8")
     else:
         sys.stdout.write(text)
-    tasks = sum(len(u.get("perspectives", {})) for u in plan["units"])
     print(
         f"plan-units: {len(plan['units'])} units, {sum(len(u['files']) for u in plan['units'])} files, "
-        f"{len(plan['excluded'])} excluded, {tasks} tasks",
+        f"{len(plan['excluded'])} excluded",
         file=sys.stderr,
     )
     return 0
