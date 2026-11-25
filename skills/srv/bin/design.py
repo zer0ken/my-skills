@@ -117,12 +117,12 @@ CHANGES_SCHEMA = {
     "properties": {
         "changes": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
-            "required": ["id", "kind", "subject", "before", "after", "hunks", "tags", "structure"],
+            "required": ["id", "kind", "subject", "before", "after", "hunks", "symbols", "tags", "structure"],
             "properties": {
                 "id": {"type": "string"}, "kind": {"type": "string", "enum": list(CHANGE_KINDS)},
                 "tags": {"type": "array", "items": {"type": "string", "enum": list(sweep.CHANGE_TAGS)}},
                 "subject": {"type": "string"}, "before": {"type": "string"}, "after": {"type": "string"},
-                "hunks": _STRINGS,
+                "hunks": _STRINGS, "symbols": _STRINGS,
                 "structure": {
                     "type": "object", "additionalProperties": False, "required": ["alters", "what"],
                     "properties": {"alters": {"type": "boolean"}, "what": {"type": "string"}},
@@ -144,8 +144,9 @@ CHANGES_SCHEMA = {
 
 
 
-def check_changes(answer: object, hunks: list[str]) -> list[str]:
-    """Problems of one unit's change set; empty when its schema and its hunk coverage hold."""
+def check_changes(answer: object, hunks: dict[str, str]) -> list[str]:
+    """Problems of one unit's change set; empty when its schema and its hunk coverage hold. `hunks` maps each of the
+    unit's hunk ids to its text (`sweep.hunk_texts`), so every symbol a change names is checked against its hunks."""
     if not isinstance(answer, dict) or set(answer) != set(CHANGES_SCHEMA["required"]):
         return [f"the answer is not an object with exactly {CHANGES_SCHEMA['required']}"]
     problems: list[str] = []
@@ -164,6 +165,11 @@ def check_changes(answer: object, hunks: list[str]) -> list[str]:
             "change it makes, or say why it changes no behaviour"
         )
     for cid, change in changes.items():
+        text = "\n".join(hunks.get(h, "") for h in change.get("hunks", []))
+        if not isinstance(change.get("symbols"), list) or (absent := [n for n in change["symbols"] if str(n) not in text]):
+            problems.append(f"{cid}: symbols {absent if isinstance(change.get('symbols'), list) else '(none)'} do not "
+                            "appear in its hunks; list the names of the definitions the change adds, removes, or edits "
+                            "exactly as its hunks write them, because each one must be asked by a review check")
         if not isinstance(change.get("tags"), list) or set(change["tags"]) - set(sweep.CHANGE_TAGS):
             problems.append(f"{cid} has no `tags` list of {sweep.CHANGE_TAGS}; give every tag that holds for the change, "
                             "since the tags decide which perspectives judge it")
@@ -196,6 +202,9 @@ def check_perspectives(answer: object, changes: dict[str, dict], catalog: dict[s
     executed: set[str] = set()
     for p in perspectives:
         pid, picked = p["id"], catalog.get(p["catalog"])
+        if unasked := unasked_symbols(p["checks"], symbols_of([cid for cid in p["breadth"] if cid in changes], changes)):
+            problems.append(f"{pid}: no check names the symbols {unasked} of its breadth, so no inspector is asked to judge "
+                            "them; every symbol of a breadth must appear in a check's question")
         if picked is None:
             problems.append(f"{pid} names {p['catalog']!r}, which is not a catalog perspective; perspectives are picked "
                             "from the catalog, never made for the change")
@@ -437,7 +446,8 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
         return "\n".join(f"- {cid} [{changes[cid]['kind']}{', alters structure' if changes[cid]['structure']['alters'] else ''}"
                          f"{''.join(', ' + tag for tag in changes[cid].get('tags', []))}] "
                          f"{changes[cid]['subject']}: {changes[cid]['before']} -> {changes[cid]['after']} "
-                         f"({', '.join(changes[cid]['files'])})" for cid in ids)
+                         f"({', '.join(changes[cid]['files'])}; symbols: {', '.join(changes[cid]['symbols']) or 'none'})"
+                         for cid in ids)
 
     def message(brief: str, *parts: str, schema: dict) -> list[dict]:
         return [{"role": "system", "content": context[brief]}, {"role": "user", "content": user_message(context, *parts, schema=schema)}]
@@ -471,7 +481,7 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
     futures = [pool.submit(call, bind_messages(pid, group, task_rules),
                            functools.partial(check_bind, perspective=catalog[pid], attached=task_rules), BIND_SCHEMA, "srv-bind")
                for pid, group, task_rules in tasks]
-    perspectives, errors = [], []
+    perspectives, errors, supplemented = [], [], []
     for (pid, group, task_rules), future in zip(tasks, futures):
         answer = future.result()
         if not answer["ok"]:
@@ -480,6 +490,9 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
         p = catalog[pid]
         checks = [{"question": c["question"], "means": c["means"], "source": bind_source(c["source"], p, task_rules)}
                   for c in answer["checks"]]
+        if missing := unasked_symbols(checks, symbols_of(group, changes)):
+            checks.append(symbol_check(missing, p))
+            supplemented.append({"catalog": pid, "breadth": group, "symbols": missing})
         perspectives.append({"catalog": pid, "value": p.value, "broken_if": answer["broken_if"], "breadth": group,
                              "depth": p.depth, "checks": checks,
                              "rules": [{"rule": rule, "text": rule_text[rule]} for rule in task_rules]})
@@ -491,8 +504,26 @@ def build_perspectives(designs: dict[str, dict], changes: dict[str, dict], conte
         "rules": rule_rows,
     }
     problems = check_perspectives(answer, changes, catalog, rules)
-    return {"ok": not problems, "errors": problems, "calls": calls, **answer, "aliases": aliases,
+    return {"ok": not problems, "errors": problems, "calls": calls, **answer, "aliases": aliases, "supplemented": supplemented,
             "seconds": round(time.monotonic() - started, 1)}
+
+
+def symbols_of(breadth: list[str], changes: dict[str, dict]) -> list[str]:
+    """The symbols of a breadth's changes, once each, in breadth order."""
+    return list(dict.fromkeys(name for cid in breadth for name in changes[cid].get("symbols", [])))
+
+
+def unasked_symbols(checks: list[dict], symbols: list[str]) -> list[str]:
+    """The symbols no check's question names. Run 14f (PR #1726): the reuse perspective's breadth held the change of rv
+    R-008, but none of its 14 checks named `_record_informations`, so no inspector judged it."""
+    questions = "\n".join(c["question"] for c in checks)
+    return [name for name in symbols if name not in questions]
+
+
+def symbol_check(names: list[str], perspective: CatalogPerspective) -> dict:
+    """The check code adds for the symbols a binding left unasked: one question on the perspective's own value."""
+    return {"question": ", ".join(f"`{n}`" for n in names) + f" 가 이 관점의 가치를 지키는가: {perspective.value}",
+            "means": "read", "source": perspective.id}
 
 
 def governs(rule: str, breadth: list[str], changes: dict[str, dict]) -> bool:
@@ -549,7 +580,7 @@ def run_design(options: argparse.Namespace) -> int:
     progress = sweep.Progress(len(rerun) + 1, out, "srv design")
     with concurrent.futures.ThreadPoolExecutor(max_workers=options.max_concurrency) as pool:
         futures = {pool.submit(ask, build_change_messages(unit, context),
-                               functools.partial(check_changes, hunks=sweep.hunk_ids(changes, unit)),
+                               functools.partial(check_changes, hunks=sweep.hunk_texts(changes, unit)),
                                CHANGES_SCHEMA, "srv-changes", options, sweep.call_model): unit for unit in rerun}
         for future in concurrent.futures.as_completed(futures):
             unit = futures[future]

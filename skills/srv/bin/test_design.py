@@ -45,13 +45,18 @@ CATALOG = {"L1": entry("L1", "low", ALL_KINDS, execute=True), "H2": entry("H2", 
 
 def change(cid: str, kind: str = "returned_value", structure: dict = NO_STRUCTURE, unit: str = "U-1",
            files: tuple[str, ...] = ("pkg/store.py",), tags: tuple[str, ...] = ()) -> dict:
-    return {"id": cid, "kind": kind, "subject": "s", "before": "b", "after": "a", "hunks": ["H1"], "tags": list(tags),
-            "structure": structure, "unit": unit, "files": list(files)}
+    return {"id": cid, "kind": kind, "subject": "s", "before": "b", "after": "a", "hunks": ["H1"], "symbols": [],
+            "tags": list(tags), "structure": structure, "unit": unit, "files": list(files)}
+
+
+def hunks(*ids: str) -> dict[str, str]:
+    """Hunk texts for check_changes: each hunk defines `store`, the fixture changes' one symbol."""
+    return {h: "@@ -1 +1 @@\n+def store(): pass" for h in ids}
 
 
 def perspective(pid: str, breadth: list[str], catalog: str = "L1", means: str = "execute", rules: list[str] = ()) -> dict:
     picked = CATALOG[catalog]
-    checks = [{"question": "c", "means": means, "source": catalog}] + [{"question": "r", "means": "read", "source": r} for r in rules]
+    checks = [{"question": "c `store`", "means": means, "source": catalog}] + [{"question": "r", "means": "read", "source": r} for r in rules]
     return {"id": pid, "catalog": catalog, "value": picked.value, "broken_if": "x", "breadth": breadth,
             "depth": picked.depth, "checks": checks, "rules": [{"rule": r, "text": "t"} for r in rules]}
 
@@ -67,37 +72,48 @@ def valid_perspectives() -> dict:
 
 class CheckChangesTest(unittest.TestCase):
     def test_a_covering_change_set_passes(self) -> None:
-        self.assertEqual(design.check_changes(valid_changes(), ["H1"]), [])
+        self.assertEqual(design.check_changes(valid_changes(), hunks("H1")), [])
 
     def test_a_hunk_in_no_change_fails(self) -> None:
-        problems = design.check_changes(valid_changes(), ["H1", "H2"])
+        problems = design.check_changes(valid_changes(), hunks("H1", "H2"))
         self.assertEqual(len(problems), 1)
         self.assertTrue(problems[0].startswith("hunks ['H2'] are in no change"), problems)
 
     def test_a_behaviour_free_hunk_needs_a_reason(self) -> None:
         answer = valid_changes()
         answer["behaviour_free"] = [{"hunk": "H2", "reason": " "}]
-        self.assertTrue(design.check_changes(answer, ["H1", "H2"]))
+        self.assertTrue(design.check_changes(answer, hunks("H1", "H2")))
         answer["behaviour_free"] = [{"hunk": "H2", "reason": "comment only"}]
-        self.assertEqual(design.check_changes(answer, ["H1", "H2"]), [])
+        self.assertEqual(design.check_changes(answer, hunks("H1", "H2")), [])
 
     def test_every_change_states_its_structure(self) -> None:
         answer = valid_changes()
         answer["changes"][0]["structure"] = {"alters": False, "what": " "}
-        self.assertTrue(design.check_changes(answer, ["H1"])[0].startswith("E-1 has no `structure`"))
+        self.assertTrue(design.check_changes(answer, hunks("H1"))[0].startswith("E-1 has no `structure`"))
 
     def test_a_rule_names_the_line_it_read(self) -> None:
         answer = valid_changes()
         answer["rules"] = [{"source": "AGENTS.md", "text": "x"}]
-        self.assertTrue(design.check_changes(answer, ["H1"]))
+        self.assertTrue(design.check_changes(answer, hunks("H1")))
         answer["rules"] = [{"source": "rule: AGENTS.md:3", "text": "x"}]
-        self.assertEqual(design.check_changes(answer, ["H1"]), [])
+        self.assertEqual(design.check_changes(answer, hunks("H1")), [])
 
+    def test_a_symbol_not_in_its_hunks_is_refused(self) -> None:
+        answer = valid_changes()
+        answer["changes"][0]["symbols"] = ["store", "invented"]
+        problems = design.check_changes(answer, hunks("H1"))
+        self.assertEqual(len(problems), 1)
+        self.assertTrue(problems[0].startswith("E-1: symbols ['invented'] do not appear in its hunks"), problems)
 
 class CheckPerspectivesTest(unittest.TestCase):
     def check(self, answer: dict, *changes: dict, rules: list[str] = ()) -> list[str]:
         return design.check_perspectives(answer, {f"{c['unit']}/{c['id']}": c for c in (changes or (change("E-1"),))},
                                          CATALOG, list(rules))
+
+    def test_a_symbol_no_check_names_fails(self) -> None:
+        problems = self.check(valid_perspectives(), {**change("E-1"), "symbols": ["store", "load"]})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertTrue(problems[0].startswith("K-1: no check names the symbols ['load']"), problems)
 
     def test_a_covering_perspective_set_passes(self) -> None:
         self.assertEqual(self.check(valid_perspectives()), [])
@@ -303,7 +319,7 @@ class DesignRunTest(unittest.TestCase):
         bind = next(b for b in FakeEndpoint.requests if step(b) == "srv-bind")["messages"][1]["content"]
         self.assertIn("- L1 title L1 (low): value of db. Picked when: when L1.", bind)
         self.assertIn("Decided by a run.", bind)
-        self.assertIn("- U-2/E-1 [returned_value] s: b -> a (pkg/store.py)", bind)
+        self.assertIn("- U-2/E-1 [returned_value] s: b -> a (pkg/store.py; symbols: none)", bind)
         perspectives = json.loads((self.out / "perspectives.json").read_text(encoding="utf-8"))
         self.assertEqual([(p["id"], p["catalog"], p["depth"], p["breadth"], p["checks"][0]["source"], p["value"])
                           for p in perspectives["perspectives"]],
@@ -311,6 +327,27 @@ class DesignRunTest(unittest.TestCase):
         self.assertEqual(perspectives["unpicked"], [{"catalog": "H2", "reason": "no change is picked by structure"}])
         summary = json.loads((self.out / "summary.json").read_text())
         self.assertEqual((summary["depths"], summary["perspectives_ok"]), ({"high": 0, "low": 1}, True))
+
+    def test_every_symbol_of_a_task_is_named_by_a_check(self) -> None:
+        # Run 14f (PR #1726): the reuse perspective held rv R-008's change, but no check named `_record_informations`.
+        def respond(body: dict) -> str:
+            name, user = step(body), body["messages"][1]["content"]
+            if name == "srv-changes":
+                changes = valid_changes()
+                if "pkg/store.py" in user.split("# Unit files at the head", 1)[1]:
+                    changes["changes"][0]["symbols"] = ["load"]
+                return json.dumps(changes)
+            return json.dumps({"broken_if": "b", "checks": [{"question": "q", "means": "execute", "source": "L1"}]})
+
+        FakeEndpoint.respond = staticmethod(respond)
+        self.assertEqual(self.run_design(), 0)
+        bind = next(b for b in FakeEndpoint.requests if step(b) == "srv-bind")["messages"][1]["content"]
+        self.assertIn("symbols: load)", bind, "the binding call must see the symbols it has to ask")
+        perspectives = json.loads((self.out / "perspectives.json").read_text(encoding="utf-8"))
+        questions = [c["question"] for c in perspectives["perspectives"][0]["checks"]]
+        self.assertEqual(questions[-1], "`load` 가 이 관점의 가치를 지키는가: value of db",
+                         "a symbol the binding left unasked gets a check from code, on the perspective's own value")
+        self.assertEqual([s["symbols"] for s in perspectives["supplemented"]], [["load"]])
 
     def test_a_tag_picks_a_perspective_and_a_scoped_rule_binds_only_the_tasks_under_it(self) -> None:
         fixtures.write_catalog(self.catalog, {"L6": ("low", "query", False, "value of L6")})

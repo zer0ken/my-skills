@@ -344,6 +344,12 @@ def hunk_ids(changes: dict, unit: dict) -> list[str]:
     return [f"H{n}" for n in range(1, sum(len(changes[f["path"]].hunks) for f in unit["files"]) + 1)]
 
 
+def hunk_texts(changes: dict, unit: dict) -> dict[str, str]:
+    """Each of the unit's hunk ids (`hunk_ids`) with its header and lines, as `labelled_diff` shows them."""
+    hunks = [hunk for f in unit["files"] for hunk in changes[f["path"]].hunks]
+    return {f"H{n}": "\n".join([hunk.header, *hunk.lines]) for n, hunk in enumerate(hunks, 1)}
+
+
 def hunk_files(changes: dict, unit: dict) -> dict[str, str]:
     """The file each of the unit's hunk ids (`hunk_ids`) belongs to."""
     paths = [f["path"] for f in unit["files"] for _ in changes[f["path"]].hunks]
