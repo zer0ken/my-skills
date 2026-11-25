@@ -96,18 +96,46 @@ def build_ledger(areas=("전체",), verdicts=None) -> str:
     return HEADER + "\n".join(rows) + "\n"
 
 
+def turn_of(item_id: str) -> int:
+    """The turn build_ledger gives an item: its position in the catalog, so a test that moves a row does not depend on
+    how many items precede it."""
+    return list(CATALOG).index(item_id) + 1
+
+
+def move_to_selection_turn(text: str, item_id: str) -> str:
+    """The ledger with the item's row moved to the selection turn 1; fails if the row is not there, so the move cannot
+    silently do nothing."""
+    row = f"| 리뷰어:{turn_of(item_id)} | {item_id} |"
+    assert row in text, f"{row} is not in the ledger"
+    return text.replace(row, f"| 리뷰어:1 | {item_id} |")
+
+
 LEDGER = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다"})
 
 
 class CheckLedgerTest(unittest.TestCase):
     def test_catalog_lists_every_item(self):
-        self.assertEqual(len(CATALOG), 20)
+        self.assertEqual(len(CATALOG), 26)
         self.assertEqual(CATALOG["U1-import"].sub_checks, ("1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"))
         self.assertTrue(CATALOG["U3-db"].per_area)
         self.assertFalse(CATALOG["U2-concepts"].per_area)
         self.assertTrue(CATALOG["U3-tests"].always)
         self.assertEqual(CATALOG["U3-tests"].sub_checks[-5:], ("같은 PR", "최소", "사용자 가치", "픽스처 재사용", "준비 범위"))
         self.assertFalse(CATALOG["U3-db"].always, "U3-db is picked only when the change touches the database")
+
+    def test_every_shared_perspective_is_judged_by_some_item(self):
+        # REVIEW-TECHNIQUES.md 8.3 rv-2: rv's items judge the perspectives rv, srv, and prv share, so a perspective no
+        # item names is a criterion rv never applies.
+        catalog = Path(check_review.__file__).resolve().parents[2] / "review-technique" / "perspectives"
+        shared = {path.stem for path in catalog.glob("*.md")}
+        _, sections = check_review.split_sections(check_review.ITEMS_PATH.read_text(encoding="utf-8"))
+        rows = check_review.table_rows(next(body for title, body in sections if title == check_review.CATALOG_SECTION))
+        column = rows[0].index("관점")
+        named = {part.strip() for row in rows[1:] for part in row[column].split(",")} - {"-"}
+        self.assertEqual(len(shared), 29)
+        self.assertEqual(shared - named, set(), "add an item for each perspective listed here to `references/items.md`, "
+                         "with the perspective file as its SKILL.md part; do not drop the perspective from the check")
+        self.assertEqual(named - shared, set(), "an item names a perspective the shared catalog does not have")
 
     def test_complete_ledger_passes(self):
         self.assertEqual(check_review.check_ledger(LEDGER, COMPLETE, CATALOG), [])
@@ -136,13 +164,13 @@ class CheckLedgerTest(unittest.TestCase):
         # User, 2026-11-25, on narrowing the 2026-11-14 one-item-per-turn decision to the picked items: "권장으로해라".
         text = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다",
                                       "U3-db": "해당 없음: DB 파일이 바뀌지 않았다", "U3-docs": "해당 없음: 문서가 바뀌지 않았다"})
-        text = text.replace("| 리뷰어:19 | U3-db |", "| 리뷰어:1 | U3-db |").replace("| 리뷰어:20 | U3-docs |", "| 리뷰어:1 | U3-docs |")
+        text = move_to_selection_turn(move_to_selection_turn(text, "U3-db"), "U3-docs")
         self.assertEqual(check_review.check_ledger(text, COMPLETE, CATALOG), [])
 
     def test_a_selection_turn_cannot_clear_an_always_item_or_examine_one(self):
         text = build_ledger(verdicts={"U1-size": "R-001", "U0-prior": "해당 없음: 첫 리뷰다",
                                       "U3-tests": "해당 없음: 시험이 없다"})
-        text = text.replace("| 리뷰어:17 | U3-tests |", "| 리뷰어:1 | U3-tests |")
+        text = move_to_selection_turn(text, "U3-tests")
         self.assertEqual(len(check_review.check_ledger(text, COMPLETE, CATALOG)), 1,
                          "U3-tests is picked always, so it keeps its own turn even when its verdict is 해당 없음")
 
@@ -292,7 +320,7 @@ class CheckLedgerTest(unittest.TestCase):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(check_review.main([str(review), "--ledger", str(ledger)]), 0)
-            self.assertEqual(out.getvalue(), "rv review format: review and item ledger passed (20 items)\n")
+            self.assertEqual(out.getvalue(), "rv review format: review and item ledger passed (26 items)\n")
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
                 check_review.main([str(review)])
             self.assertEqual(raised.exception.code, 2)

@@ -2,7 +2,7 @@
 
 Read this file before running U0-U3. It is the single source of the review item catalog; `bin/check-review.py` reads the catalog table below, so a change here changes the check.
 
-A review item (검토 항목) is one checklist judgment of U0-U3 that the review must make and record: an item is in the catalog below, and a check that is not in it is part of the item whose `SKILL.md` part holds it. The item ledger (항목 원장) is the record of the items: one row per item, per area for the per-area items, written in the turn that examined that item.
+A review item (검토 항목) is one checklist judgment of U0-U3 that the review must make and record: an item is in the catalog below, and a check that is not in it is part of the item whose `SKILL.md` part holds it. Each item judges the review-technique perspectives in its `관점` column (`~/.agents/skills/review-technique/perspectives/<id>.md`), the yardsticks rv, srv, and prv share, so an item's turn also checks those perspectives' `Broken if` states; an item whose `SKILL.md 부분` is a perspective file takes its criteria from that file alone. Every perspective of the catalog is judged by some item (REVIEW-TECHNIQUES.md 4.4 and 8.3 rv-2); U0-prior judges no perspective, because it is the follow-up step of the technique, not a yardstick. The item ledger (항목 원장) is the record of the items: one row per item, per area for the per-area items, written in the turn that examined that item.
 
 ## One item per turn
 
@@ -35,25 +35,31 @@ A `|` inside a cell, inside a backtick command too, is written `\|`, because a G
 
 ## Catalog
 
-| 항목 | 단위 | 영역별 | SKILL.md 부분 | 세부 | 고르는 조건 |
-|---|---|---|---|---|---|
-| U0-prior | U0 | 아니오 | U0, the recheck of prior_ids, responses, and user decisions | 이전 지적, 응답, 사용자 결정 | 이 PR 에 이전 리뷰, 작성자 응답, 사용자 결정 중 하나가 있다 |
-| U1-import | U1 | 아니오 | U1 item 1 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 | 변경이 import, `__init__.py`, 패키지 공개 경로를 더하거나 바꾼다 |
-| U1-layout | U1 | 아니오 | U1 item 2 | 2.1, 2.2, 2.3 | 변경이 파일이나 디렉터리를 더하거나 옮기거나 지운다 |
-| U1-names | U1 | 아니오 | U1 item 3 | 3.1, 3.2, 3.3 | 변경이 파일, 모듈, 식별자의 이름을 더하거나 바꾼다 |
-| U1-size | U1 | 아니오 | U1 items 4.1-4.3 | 4.1, 4.2, 4.3 | 항상 |
-| U1-split | U1 | 아니오 | U1 item 4.4 | 4.4.1, 4.4.2, 4.4.3 | 항상 |
-| U1-leftovers | U1 | 아니오 | U1 items 4.5-4.6 | 4.5, 4.6 | 항상 |
-| U1-precedent | U1 | 아니오 | U1 item 5 | 5.1, 5.2, 5.3 | 변경의 근거로 기존 코드나 관례를 드는 곳(PR 본문, 응답, 주석, 커밋)이 있다 |
-| U2-concepts | U2 | 아니오 | U2 question 0 | 0.1, 0.2, 0.3, 0.4 | 항상 |
-| U2-structure | U2 | 아니오 | U2 question 1 | 1.1, 1.2, 1.3 | 항상 |
-| U2-quality | U2 | 아니오 | U2 question 2 | 2.1, 2.2, 2.3 | 항상 |
-| U3-safety | U3 | 예 | U3 steps 1-4 | 안전 사실, 심볼 밖 소비자, 실행 증명, 배제 목록 | 항상 |
-| U3-reuse | U3 | 예 | U3, reuse and known implementations | 저장소 재사용, 외부 구현, 의존성, 최소 변경 | 변경이 함수, 클래스, 모듈, 설정 키, 질의, 의존성 같은 새 단위를 더한다 |
-| U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 | 변경이 반복, 검색, 정렬, 집계, 순위, 수치 계산을 더하거나 바꾼다 |
-| U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 | 변경이 외부 호출, I/O, 파싱, 예외 처리, 재시도를 더하거나 바꾼다 |
-| U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 | 변경이 사용자·다른 서비스·파일·모델에서 온 입력, 질의·명령·경로 조립, 비밀, 인증·권한에 닿는다 |
-| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI, 같은 PR, 최소, 사용자 가치, 픽스처 재사용, 준비 범위 | 항상 |
-| U3-claims | U3 | 예 | U3, claims against results | 주장 대조, 검증 조건 | 항상 |
-| U3-db | U3 | 예 | U3, DB schema and usage | 스키마 권고, 호출 수, 인덱스, 트랜잭션 | 변경이 스키마, 질의, 인덱스, 트랜잭션, DB 연결을 더하거나 바꾼다 |
-| U3-docs | U3 | 예 | U3, meaning and organization of documents | 필요성, 순서, 예시 | 변경이 문서, docstring, 주석을 더하거나 바꾼다 |
+| 항목 | 단위 | 영역별 | SKILL.md 부분 | 세부 | 고르는 조건 | 관점 |
+|---|---|---|---|---|---|---|
+| U0-prior | U0 | 아니오 | U0, the recheck of prior_ids, responses, and user decisions | 이전 지적, 응답, 사용자 결정 | 이 PR 에 이전 리뷰, 작성자 응답, 사용자 결정 중 하나가 있다 | - |
+| U1-import | U1 | 아니오 | U1 item 1 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 | 변경이 import, `__init__.py`, 패키지 공개 경로를 더하거나 바꾼다 | H4 |
+| U1-layout | U1 | 아니오 | U1 item 2 | 2.1, 2.2, 2.3 | 변경이 파일이나 디렉터리를 더하거나 옮기거나 지운다 | H4 |
+| U1-names | U1 | 아니오 | U1 item 3 | 3.1, 3.2, 3.3 | 변경이 파일, 모듈, 식별자의 이름을 더하거나 바꾼다 | L12 |
+| U1-size | U1 | 아니오 | U1 items 4.1-4.3 | 4.1, 4.2, 4.3 | 항상 | H5 |
+| U1-split | U1 | 아니오 | U1 item 4.4 | 4.4.1, 4.4.2, 4.4.3 | 항상 | H5 |
+| U1-leftovers | U1 | 아니오 | U1 items 4.5-4.6 | 4.5, 4.6 | 항상 | L12, H5 |
+| U1-precedent | U1 | 아니오 | U1 item 5 | 5.1, 5.2, 5.3 | 변경의 근거로 기존 코드나 관례를 드는 곳(PR 본문, 응답, 주석, 커밋)이 있다 | H1 |
+| U2-concepts | U2 | 아니오 | U2 question 0 | 0.1, 0.2, 0.3, 0.4 | 항상 | H2 |
+| U2-structure | U2 | 아니오 | U2 question 1 | 1.1, 1.2, 1.3 | 항상 | H3 |
+| U2-quality | U2 | 아니오 | U2 question 2 | 2.1, 2.2, 2.3 | 항상 | H2, H3 |
+| U2-intent | U2 | 아니오 | `~/.agents/skills/review-technique/perspectives/H14.md` | 결정 확인, 찾아본 범위, 기록할 자리 | 변경이 대안 선택이나 불변식에 기대는데, 그 결정을 코드만으로는 알 수 없다 | H14 |
+| U3-safety | U3 | 예 | U3 steps 1-4 | 안전 사실, 심볼 밖 소비자, 실행 증명, 배제 목록 | 항상 | L1, L2, L4 |
+| U3-reuse | U3 | 예 | U3, reuse and known implementations | 저장소 재사용, 외부 구현, 의존성, 최소 변경 | 변경이 함수, 클래스, 모듈, 설정 키, 질의, 의존성 같은 새 단위를 더한다 | H6 |
+| U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 | 변경이 반복, 검색, 정렬, 집계, 순위, 수치 계산을 더하거나 바꾼다 | L5 |
+| U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 | 변경이 외부 호출, I/O, 파싱, 예외 처리, 재시도를 더하거나 바꾼다 | L3 |
+| U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 | 변경이 사용자·다른 서비스·파일·모델에서 온 입력, 질의·명령·경로 조립, 비밀, 인증·권한에 닿는다 | H10, L8 |
+| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI, 같은 PR, 최소, 사용자 가치, 픽스처 재사용, 준비 범위 | 항상 | H12, H13, L11 |
+| U3-claims | U3 | 예 | U3, claims against results | 주장 대조, 검증 조건 | 항상 | L15 |
+| U3-db | U3 | 예 | U3, DB schema and usage | 스키마 권고, 호출 수, 인덱스, 트랜잭션 | 변경이 스키마, 질의, 인덱스, 트랜잭션, DB 연결을 더하거나 바꾼다 | H7, L6 |
+| U3-docs | U3 | 예 | U3, meaning and organization of documents | 필요성, 순서, 예시 | 변경이 문서, docstring, 주석을 더하거나 바꾼다 | L13 |
+| U3-concurrency | U3 | 예 | `~/.agents/skills/review-technique/perspectives/H8.md`, `~/.agents/skills/review-technique/perspectives/L7.md` | 결과 상태, 순서 메커니즘, 경쟁 창, 대기 상한 | 변경이 병렬 실행, 잠금, 큐, 재시도, 대기, 공유 상태, 여러 단계 쓰기를 더하거나 바꾼다 | H8, L7 |
+| U3-lifecycle | U3 | 예 | `~/.agents/skills/review-technique/perspectives/H9.md` | 소유자, 회수 경로, 남의 자원 | 변경이 컨테이너, 파일, 프로세스, 잠금, 임시 자원을 만들거나 지운다 | H9 |
+| U3-external | U3 | 예 | `~/.agents/skills/review-technique/perspectives/L9.md` | 문서 근거, 실행 근거, 거부 결과 | 변경이 외부 명령, 라이브러리, API 를 부르거나 그 응답으로 분기한다 | L9 |
+| U3-model | U3 | 예 | `~/.agents/skills/review-technique/perspectives/H11.md`, `~/.agents/skills/review-technique/perspectives/L10.md` | 호출 수, 판단 분리, 스키마 일치, 잘못된 출력 처리 | 변경이 모델 호출, 프롬프트, 출력 스키마, 출력 파싱을 더하거나 바꾼다 | H11, L10 |
+| U3-interface | U3 | 예 | `~/.agents/skills/review-technique/perspectives/L14.md` | 종료값, 메시지의 대상과 원인, 기본값 | 변경이 CLI 인자, 설정, 기본값, 출력 형식, 오류 메시지, 종료값을 바꾼다 | L14 |
