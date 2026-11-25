@@ -4,29 +4,37 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 
 ## Skills
 
-| Skill | Description |
-|-------|-------------|
-| [claude-cookbook](skills/claude-cookbook/SKILL.md) | Find Anthropic Claude Cookbook recipes for a topic. |
-| [ds](skills/ds/SKILL.md) | 저장소 아키텍처와 근거를 대조하는 read-only 설계 기획. |
-| [eli5](skills/eli5/SKILL.md) | 주제를 쉬운 말과 큰 그림으로 설명한다. |
-| [handoff](skills/handoff/SKILL.md) | 대화를 핸드오프 문서로 압축해 다른 에이전트가 이어받게 한다. |
-| [issue](skills/issue/SKILL.md) | 이슈를 올린다. 본문은 항목 이름을 붙인 불릿 한 줄씩, 상세는 코멘트로. |
-| [jhchoi-style](skills/jhchoi-style/SKILL.md) | 논문 형식 한국어 기술 문서(주로 PDF): 절 구성, 도식, HTML과 Chrome 인쇄 경로, 배치 함정, 근거 규칙. |
-| [openai-cookbook](skills/openai-cookbook/SKILL.md) | Find OpenAI Cookbook examples for a topic. |
-| [my-code-plan](skills/my-code-plan/SKILL.md) | 모든 코드 수정 전에 맥락 깊이 0(요구사항)부터 N(코드 변경)까지 한 깊이씩 탑다운으로 계획하고 검사기로 확인한다. |
-| [osiri](skills/osiri/SKILL.md) | Technical reviews of code, designs, and PRs, plus peer audits of reports, claims, evidence, and figures. |
-| [pov](skills/pov/SKILL.md) | 제품과 관련 기술을 조사하고 일곱 전문가 관점의 의견, 근거와 이견을 종합한다. |
-| [pr](skills/pr/SKILL.md) | PR 을 올린다. 불릿 3줄 요약과 이슈 참조, 상세는 코멘트로. |
-| [pr-visual](skills/pr-visual/SKILL.md) | PR 본문 맨 위의 변경 그림을 같은 실제 입력의 as-is 와 to-be 로 그리고, PR head 가 바뀌면 다시 그린다. |
-| [prior-research](skills/prior-research/SKILL.md) | 논문과 저장소 기록을 포함한 선행 연구를 반복 검색으로 조사하고 검색 기록과 근거표를 남긴다. |
-| [prv](skills/prv/SKILL.md) | 계획·설계 문서를 관점별 blind 로컬 모델 리뷰와 다른 계열 한 세션의 검증·정리로 구현 전에 검수한다. |
-| [problem-modeling](skills/problem-modeling/SKILL.md) | 해법 선택 전 문제의 입력·출력·경계 사례와 평가 기준 정의. |
-| [refactor](skills/refactor/SKILL.md) | 기능과 성능을 보존하는 리팩토링 계획·실행과 저장소 예방책 감사. |
-| [rv](skills/rv/SKILL.md) | Adversarial code, design, and PR review with evidence and follow-up findings. |
-| [swarm-review](skills/srv/SKILL.md) | 코드 변경을 rv 항목 관점별 blind 로컬 모델 리뷰어 여러 세션과 운영자 한 세션의 검증·추가 라운드로 리뷰하고 리뷰 문서 하나를 돌려준다. |
-| [sucks](skills/sucks/SKILL.md) | Korean technical prose style rules for docs, issues, PR bodies, and comments. |
-| [tdd-is-dead](skills/tdd-is-dead/SKILL.md) | 범위와 의도를 먼저 파악하고 최소 테스트로 검증하는 코드 작업 순서와, 외부 PoC를 ds 이식 설계로 제품에 반영하는 경로. TDD식 작성-실행-수정 반복을 금지한다. |
-| [teqr](skills/teqr/SKILL.md) | Write and revise technical reports, runbooks, experiment notes, and test or benchmark plans. |
+- [problem-modeling](skills/problem-modeling/SKILL.md) · 문제의 입력·출력·제약과 평가 기준을 정의한다.
+- [prior-research](skills/prior-research/SKILL.md) · 논문·표준 구현·저장소 기록에서 선행 해법을 찾고 근거를 대조한다.
+- [ds](skills/ds/SKILL.md) · 저장소의 아키텍처를 확인하고 변경할 책임과 통합 지점을 설계한다.
+- [pov](skills/pov/SKILL.md) · 제품과 관련 기술을 일곱 전문 분야의 관점에서 조사한다.
+- [my-code-plan](skills/my-code-plan/SKILL.md) · 요구사항에서 파일별 변경까지 계획을 트리로 만들고 검사한다.
+- [expert-skill](skills/expert-skill/SKILL.md) · 분야별 일차 자료에서 검토 방법을 추출해 전문 스킬을 설계한다.
+- [python-expert](skills/python-expert/SKILL.md) · Python의 타입·모듈 경계·예외·자원 수명을 검토한다.
+- [sql-expert](skills/sql-expert/SKILL.md) · 데이터 모델·질의·인덱스·실행 계획·트랜잭션을 검토한다.
+- [llm-expert](skills/llm-expert/SKILL.md) · LLM 파이프라인의 프롬프트·출력 계약·평가 데이터와 오류를 분석한다.
+- [parallel-expert](skills/parallel-expert/SKILL.md) · 병렬 작업의 의존성·동시성·취소·재시도·복구를 검토한다.
+- [claude-cookbook](skills/claude-cookbook/SKILL.md) · 주제에 맞는 Anthropic Cookbook 예제와 노트북을 찾는다.
+- [openai-cookbook](skills/openai-cookbook/SKILL.md) · 주제에 맞는 OpenAI Cookbook 예제와 노트북을 찾는다.
+- [tdd-is-dead](skills/tdd-is-dead/SKILL.md) · 의도와 호출 범위를 확인하고 동작을 검증할 테스트·구현 순서를 정한다.
+- [refactor](skills/refactor/SKILL.md) · 기능과 성능을 유지하면서 코드 구조를 단순화한다.
+- [issue](skills/issue/SKILL.md) · 문제와 완료 조건을 정리하고 GitHub 이슈를 작성한다.
+- [pr](skills/pr/SKILL.md) · PR 작성부터 CI·리뷰·병합까지 진행한다.
+- [pr-visual](skills/pr-visual/SKILL.md) · 같은 입력에서 변경 전후 동작을 비교하는 PR 그림을 만든다.
+- [prv](skills/prv/SKILL.md) · 구현 전에 계획과 설계를 관점별로 독립 검토한다.
+- [rv](skills/rv/SKILL.md) · 코드·설계·PR을 검토하고 근거와 영향 범위를 확인한다.
+- [swarm-review](skills/srv/SKILL.md) · 여러 리뷰어가 관점별로 독립 검토한 뒤 결과를 합친다.
+- [review-technique](skills/review-technique/SKILL.md) · 리뷰 관점과 각 관점의 검사 절차를 정의한다.
+- [response-rv](skills/response-rv/SKILL.md) · 리뷰 지적의 원인을 확인하고 수용 여부·수정·답변을 기록한다.
+- [osiri](skills/osiri/SKILL.md) · 명시적으로 호출하면 코드·설계·보고서의 기술적 주장과 증거를 감사한다.
+- [report](skills/report/SKILL.md) · 보고 요청에 작업 목적·결정·검증 결과·남은 일을 정리한다.
+- [teqr](skills/teqr/SKILL.md) · 명시적으로 호출하면 기술 보고서·런북·실험 기록·검증 계획을 작성한다.
+- [jhchoi-style](skills/jhchoi-style/SKILL.md) · 한국어 기술 문서를 논문 형식의 PDF로 작성한다.
+- [한국어 기술 문체](skills/sucks/SKILL.md) · 한국어 기술 문장을 중립적인 문어체로 다듬는다.
+- [visuals](skills/visuals/SKILL.md) · 차트·도식·UI·슬라이드에 사용자 시각화 규칙을 적용한다.
+- [eli5](skills/eli5/SKILL.md) · 주제를 쉬운 말과 그림으로 설명한다.
+- [handoff](skills/handoff/SKILL.md) · 다음 세션이 이어갈 수 있도록 목표·결정·현재 상태를 인계 문서에 정리한다.
+- [cleanup](skills/cleanup/SKILL.md) · 세션이 만든 자원을 정리하고 재사용할 데이터는 보존한다.
 
 ## Install / Update
 

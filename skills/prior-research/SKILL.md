@@ -3,7 +3,7 @@ name: prior-research
 description: "Investigate prior work on a topic or the problem at hand (papers, standard implementations, the repository's design and decision records) with iterative search, and leave a search log and an evidence table. Use when the user calls /prior-research, asks for prior work, related papers, or existing solutions, or when known solutions must be found before problem definition or design."
 metadata:
   author: hrlee
-  version: "1.2.0"
+  version: "1.3.0"
   domain: research
   triggers: 선행 연구, 관련 연구, 논문 조사, 기존 해법 조사, prior work, related work, literature
 ---
@@ -69,3 +69,7 @@ The search log is a JSON array, and each element has the following fields.
 The evidence table is a JSON array, and each element has `candidate` (under the name its source uses), `search_id` (the search log id that produced the candidate; it must not be a row whose `generated` is `true`), `url` (primary source), `quote` (a quote of 20 or more characters that exists in the body), `limits`, `unresearched`, `accessed_at`, `http_status`, and `body_sha256`.
 
 In the research narrative, write the path of the iterative search (the first keywords, the names found, the fields widened with those names), the reason for stopping, and the unresearched scope, citing evidence table rows. If another procedure (such as R2 of my-workflow) fixes file names and fields, follow that procedure.
+
+## Investigation and experiments
+
+For a design, practical investigation or controlled PoC, [Read the procedure](references/research-and-poc.md).
