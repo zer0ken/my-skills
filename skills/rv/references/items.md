@@ -53,7 +53,7 @@ A `|` inside a cell, inside a backtick command too, is written `\|`, because a G
 | U3-cost | U3 | 예 | U3, implementation cost | 알려진 알고리즘, 입력 규모, 반복 작업 | 변경이 반복, 검색, 정렬, 집계, 순위, 수치 계산을 더하거나 바꾼다 |
 | U3-failure | U3 | 예 | U3, failure paths | 실패 전달, 원인 맥락, 재시도 | 변경이 외부 호출, I/O, 파싱, 예외 처리, 재시도를 더하거나 바꾼다 |
 | U3-security | U3 | 예 | U3, security | 입력 검증, 조립, 비밀, 인증 | 변경이 사용자·다른 서비스·파일·모델에서 온 입력, 질의·명령·경로 조립, 비밀, 인증·권한에 닿는다 |
-| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI | 항상 |
+| U3-tests | U3 | 예 | U3, tests | 결함 시 실패, 공개 동작, 경계, 가짜 형태, CI, 같은 PR, 최소, 사용자 가치, 픽스처 재사용, 준비 범위 | 항상 |
 | U3-claims | U3 | 예 | U3, claims against results | 주장 대조, 검증 조건 | 항상 |
 | U3-db | U3 | 예 | U3, DB schema and usage | 스키마 권고, 호출 수, 인덱스, 트랜잭션 | 변경이 스키마, 질의, 인덱스, 트랜잭션, DB 연결을 더하거나 바꾼다 |
 | U3-docs | U3 | 예 | U3, meaning and organization of documents | 필요성, 순서, 예시 | 변경이 문서, docstring, 주석을 더하거나 바꾼다 |

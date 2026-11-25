@@ -106,6 +106,7 @@ class CheckLedgerTest(unittest.TestCase):
         self.assertTrue(CATALOG["U3-db"].per_area)
         self.assertFalse(CATALOG["U2-concepts"].per_area)
         self.assertTrue(CATALOG["U3-tests"].always)
+        self.assertEqual(CATALOG["U3-tests"].sub_checks[-5:], ("같은 PR", "최소", "사용자 가치", "픽스처 재사용", "준비 범위"))
         self.assertFalse(CATALOG["U3-db"].always, "U3-db is picked only when the change touches the database")
 
     def test_complete_ledger_passes(self):
