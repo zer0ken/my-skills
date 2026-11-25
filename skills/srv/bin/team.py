@@ -351,7 +351,7 @@ def settle(clusters: list[dict], repo: Path, pack: str, changes: dict, options) 
     kept = [c for c in clusters if "merged_into" not in c]
     verify(kept, repo, pack, changes, options)
     by_id = {c["id"]: c for c in clusters}
-    unsettled = [by_id[m] for c in kept if c["verdict"] != "CONFIRMED" for m in c.get("symptoms", [])]
+    unsettled = [by_id[m] for c in kept if c["verdict"] != "CONFIRMED" for m in c.get("duplicates", [])]
     verify(unsettled, repo, pack, changes, options)
     for member in unsettled:
         owner = by_id[member["merged_into"]]
@@ -361,9 +361,9 @@ def settle(clusters: list[dict], repo: Path, pack: str, changes: dict, options) 
             owner["verdict"], owner["severity"] = "CONFIRMED", member["severity"]
         elif owner["verdict"] in ("REJECTED", "OUT-OF-SCOPE"):
             del member["merged_into"]
-            owner["symptoms"].remove(member["id"])
+            owner["duplicates"].remove(member["id"])
     for c in kept:
-        for m in c.get("symptoms", []):
+        for m in c.get("duplicates", []):
             if by_id[m]["verdict"] == "CONFIRMED" and c["verdict"] == "CONFIRMED" and \
                     sweep.SEVERITIES.index(by_id[m]["severity"]) < sweep.SEVERITIES.index(c["severity"]):
                 c["severity"] = by_id[m]["severity"]
@@ -374,14 +374,23 @@ def settle(clusters: list[dict], repo: Path, pack: str, changes: dict, options) 
 
 # ---------------------------------------------------------------- merge high to low
 
-MERGE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["same_as", "reason"],
-                "properties": {"same_as": {"type": "string"}, "reason": {"type": "string"}}}
+# A duplicate is a finding about the same head lines, with the same cause, removed by the same fix as a finding kept
+# before it (the coordinator's definition, 2026-11-25, after replay 14g joined rv R-003, R-007, and part of R-010 into
+# kept findings with other causes in other files). The three judgments are required fields and code counts a sample's
+# `same_as` only when all three are true, so a merge cannot rest on "related" alone.
+MERGE_SCHEMA = {"type": "object", "additionalProperties": False,
+                "required": ["same_as", "same_lines", "same_cause", "same_fix", "reason"],
+                "properties": {"same_as": {"type": "string"}, "same_lines": {"type": "boolean"},
+                               "same_cause": {"type": "boolean"}, "same_fix": {"type": "boolean"},
+                               "reason": {"type": "string"}}}
 MERGE_BRIEF = (
-    "You decide whether one finding of a code review is already covered by findings kept before it. Covered means "
-    "it is a symptom of a kept finding (the kept finding names the structure or cause, this one a place where it "
-    "shows) or the same defect at another place; then `same_as` is that kept finding's id. A finding with its own "
-    "cause, one that fixing the kept finding would not remove, is not covered: `same_as` is the empty string. "
-    "Write `reason` in Korean. Answer with one JSON object."
+    "You decide whether one finding of a code review duplicates a finding kept before it in the same file. A "
+    "duplicate meets all three: `same_lines`, it points at the same head lines, the lines its fix would edit; "
+    "`same_cause`, the condition it states comes from the same cause; `same_fix`, the fix of the kept finding removes "
+    "it with no further edit. Name in `same_as` the kept finding that meets all three and set the three to true; "
+    "when no kept finding meets all three, `same_as` is the empty string and the three say what the nearest kept "
+    "finding fails. A finding that is related to a kept one, shows the same structure elsewhere, or needs its own edit "
+    "is not a duplicate. Write `reason` in Korean. Answer with one JSON object."
 )
 
 
@@ -396,35 +405,38 @@ def merge_order(clusters: list[dict], depth_of: dict[str, str]) -> list[dict]:
 def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]:
     """The user's words (2026-11-24): "계획 이후 리뷰는 병렬로 수행하되, 끝나고 하이레벨 -> 로우레벨 순으로 검토해서
     중복 없는 지적사항만 남겨." Clusters are ordered high-level first (`merge_order`); each is compared with every
-    cluster before it, all comparisons at once, by the majority of `JUDGE_SAMPLES` calls. A cluster that is a
-    symptom or a duplicate of an earlier one joins the cluster that earlier one finally belongs to
-    (`merged_into`), so only clusters with their own cause remain."""
+    cluster before it in the same file, all comparisons at once, by the majority of `JUDGE_SAMPLES` calls. A cluster
+    that duplicates an earlier one (same head lines, same cause, same fix; `MERGE_SCHEMA`) joins the cluster that
+    earlier one finally belongs to (`merged_into`), so only clusters with their own cause remain. Same head lines
+    imply the same file, so comparing within a file drops no duplicate, and a finding with no earlier one in its
+    file is kept without a call."""
     ordered = merge_order(clusters, depth_of)
 
-    def messages(index: int) -> list[dict]:
-        cluster, earlier = ordered[index], ordered[:index]
-        listed = "\n".join(f"- {k['id']} [{k['severity']}] {k['file']}:{k['line']}: {k['condition']}" for k in earlier)
-        user = (f"Kept findings:\n{listed}\n\nFinding to decide:\n- {cluster['id']} [{cluster['severity']}] "
-                f"{cluster['file']}:{cluster['line']}: {cluster['condition']}")
-        return [{"role": "system", "content": MERGE_BRIEF}, {"role": "user", "content": user}]
+    def line(k: dict) -> str:
+        return f"- {k['id']} [{k['severity']}] {k['file']}:{k['line']}\n  condition: {k['condition']}\n  fix: {k['fix']}"
 
-    built = [messages(i) for i in range(1, len(ordered))]
+    asked = [(cluster, earlier) for i, cluster in enumerate(ordered)
+             if (earlier := [k for k in ordered[:i] if k["file"] == cluster["file"]])]
+    built = [[{"role": "system", "content": MERGE_BRIEF},
+              {"role": "user", "content": "Kept findings in the same file:\n" + "\n".join(line(k) for k in earlier)
+               + "\n\nFinding to decide:\n" + line(cluster)}] for cluster, earlier in asked]
     replies = send_calls([(m, MERGE_SCHEMA, "srv-merge") for m in built for _ in range(JUDGE_SAMPLES)], options)
     targets = []
-    for n, cluster in enumerate(ordered[1:]):
+    for n, (cluster, earlier) in enumerate(asked):
         mine = replies[n * JUDGE_SAMPLES:(n + 1) * JUDGE_SAMPLES]
-        ids = {k["id"] for k in ordered[:n + 1]}
-        target = majority([r.answer["same_as"] if r.answer and r.answer["same_as"] in ids else "" for r in mine])
+        ids = {k["id"] for k in earlier}
+        target = majority([a["same_as"] if (a := r.answer) and a["same_as"] in ids and a["same_lines"] and a["same_cause"]
+                           and a["same_fix"] else "" for r in mine])
         targets.append(target if target in ids else "")
         if failures_of(mine):
             cluster["failures"] = failures_of(mine)
     by_id = {c["id"]: c for c in ordered}
-    for cluster, target in zip(ordered[1:], targets):
+    for (cluster, _), target in zip(asked, targets):
         while target and "merged_into" in by_id[target]:
             target = by_id[target]["merged_into"]
         if target:
             cluster["merged_into"] = target
-            by_id[target].setdefault("symptoms", []).append(cluster["id"])
+            by_id[target].setdefault("duplicates", []).append(cluster["id"])
     return clusters
 
 
@@ -470,7 +482,7 @@ def write_document(out: Path, clusters: list[dict], judgment: dict, perspectives
                    summary: dict, head: str) -> None:
     confirmed = [c for c in clusters if c["verdict"] == "CONFIRMED" and "merged_into" not in c]
     counts = Counter(c["severity"] for c in confirmed)
-    rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']}{' (같은 결함: ' + ', '.join(c['symptoms']) + ')' if c.get('symptoms') else ''} | {c['evidence']} | {c['fix']} |"
+    rows = "\n".join(f"| {c['id']} | {c['severity']} | `{c['file']}:{c['line']}` | {c['condition']}{' (같은 결함: ' + ', '.join(c['duplicates']) + ')' if c.get('duplicates') else ''} | {c['evidence']} | {c['fix']} |"
                      for c in confirmed)
     plausible = "\n".join(f"- {c['id']} [{c['severity']}] `{c['file']}:{c['line']}`: {c['condition']}"
                           for c in clusters if c["verdict"] == "PLAUSIBLE" and "merged_into" not in c)

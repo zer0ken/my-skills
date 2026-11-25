@@ -113,20 +113,42 @@ class ModelTest(unittest.TestCase):
         self.assertEqual((found[0]["id"], found[0]["file"], found[0]["line"], found[0]["anchor"]),
                          ("J-K-1", "q.py", 2, "filter_one()"))
 
-    def test_low_findings_merge_into_the_high_finding_they_are_a_symptom_of(self) -> None:
+    def test_low_duplicates_merge_into_the_high_finding_kept_first(self) -> None:
         # User, 2026-11-24: "끝나고 하이레벨 -> 로우레벨 순으로 검토해서 중복 없는 지적사항만 남겨."
         def respond(body: dict) -> str:
             user = body["messages"][1]["content"]
-            return json.dumps({"same_as": "R-001" if "R-001" in user.split("Finding to decide")[0] else "", "reason": "r"})
+            same = "R-001" in user.split("Finding to decide")[0]
+            return json.dumps({"same_as": "R-001" if same else "", "same_lines": same, "same_cause": same,
+                               "same_fix": same, "reason": "r"})
 
         FakeEndpoint.respond = staticmethod(respond)
         def cluster(cid: str, member: str, severity: str = "MAJOR") -> dict:
             return {"id": cid, "verdict": "CONFIRMED", "severity": severity, "members": [member], "file": "q.py",
-                    "line": 1, "condition": "c"}
+                    "line": 1, "condition": "c", "fix": "f"}
         clusters = [cluster("R-002", "K-2:F-1", "BLOCKER"), cluster("R-001", "K-1:J-K-1"), cluster("R-003", "K-2:F-2")]
         team.merge(clusters, {"K-1": "high", "K-2": "low"}, self.options)
         self.assertEqual({c["id"]: c.get("merged_into") for c in clusters}, {"R-001": None, "R-002": "R-001", "R-003": "R-001"},
                          "the high cluster is kept first even when a low one is more severe")
+
+    def test_a_finding_joins_only_when_lines_cause_and_fix_are_all_the_same(self) -> None:
+        # Replay 14g joined rv R-003 into a kept finding with another cause; a sample that names a kept finding but
+        # denies one of the three must not count toward the merge.
+        FakeEndpoint.respond = staticmethod(lambda body: json.dumps(
+            {"same_as": "R-001", "same_lines": True, "same_cause": True, "same_fix": False, "reason": "r"}))
+        clusters = team.candidates([finding("a", "q.py", 1), finding("b", "q.py", 1)])
+        team.merge(clusters, {}, self.options)
+        self.assertEqual([c.get("merged_into") for c in clusters], [None, None],
+                         "a finding whose fix differs from the kept one's is its own defect and must stay a cluster")
+        user = FakeEndpoint.requests[0]["messages"][1]["content"]
+        self.assertIn("  fix: f", user, "the merge call needs each finding's fix to judge same_fix")
+
+    def test_a_finding_in_another_file_is_never_compared(self) -> None:
+        FakeEndpoint.respond = staticmethod(lambda body: json.dumps(
+            {"same_as": "R-001", "same_lines": True, "same_cause": True, "same_fix": True, "reason": "r"}))
+        clusters = team.candidates([finding("a", "q.py", 1), finding("b", "other.py", 1)])
+        team.merge(clusters, {}, self.options)
+        self.assertEqual(FakeEndpoint.requests, [], "same head lines imply the same file, so no call is needed")
+        self.assertEqual([c.get("merged_into") for c in clusters], [None, None])
 
     def test_verify_confirms_only_by_unanimous_calls(self) -> None:
         FakeEndpoint.respond = staticmethod(lambda body: json.dumps({"verdict": "CONFIRMED", "severity": "BLOCKER", "reason": "r"}))
@@ -143,7 +165,7 @@ class ModelTest(unittest.TestCase):
 
         FakeEndpoint.respond = staticmethod(respond)
         clusters = team.candidates([{**finding("a", "q.py", 1), "anchor": "kept"}, finding("b", "q.py", 2)])
-        clusters[1]["merged_into"], clusters[0]["symptoms"] = "R-001", ["R-002"]
+        clusters[1]["merged_into"], clusters[0]["duplicates"] = "R-001", ["R-002"]
         team.settle(clusters, self.repo, "# pack", {}, self.options)
         self.assertEqual((clusters[0]["verdict"], clusters[0]["severity"]), ("CONFIRMED", "BLOCKER"))
         self.assertNotIn("finding", clusters[0], "the raw finding is not written into clusters.json twice")
