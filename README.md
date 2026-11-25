@@ -17,6 +17,7 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 | [osiri](skills/osiri/SKILL.md) | Technical reviews of code, designs, and PRs, plus peer audits of reports, claims, evidence, and figures. |
 | [pov](skills/pov/SKILL.md) | 제품과 관련 기술을 조사하고 일곱 전문가 관점의 의견, 근거와 이견을 종합한다. |
 | [pr](skills/pr/SKILL.md) | PR 을 올린다. 불릿 3줄 요약과 이슈 참조, 상세는 코멘트로. |
+| [pr-visual](skills/pr-visual/SKILL.md) | PR 본문 맨 위의 변경 그림을 같은 실제 입력의 as-is 와 to-be 로 그리고, PR head 가 바뀌면 다시 그린다. |
 | [prior-research](skills/prior-research/SKILL.md) | 논문과 저장소 기록을 포함한 선행 연구를 반복 검색으로 조사하고 검색 기록과 근거표를 남긴다. |
 | [prv](skills/prv/SKILL.md) | 계획·설계 문서를 관점별 blind 로컬 모델 리뷰와 다른 계열 한 세션의 검증·정리로 구현 전에 검수한다. |
 | [problem-modeling](skills/problem-modeling/SKILL.md) | 해법 선택 전 문제의 입력·출력·경계 사례와 평가 기준 정의. |

@@ -2,7 +2,7 @@
 name: visuals
 description: Apply the user's visual preferences to HTML, UI, data charts, diagrams, slides, and other visual materials; read it before making any data chart. Use ztd-charts for data charts and hand-positioned SVG for structural diagrams, with a light theme, readable fonts, and interaction where possible.
 metadata:
-  version: "1.9.0"
+  version: "1.10.0"
 ---
 
 # Visual materials
@@ -56,35 +56,7 @@ For an as-is structure, first inspect the code that computes each element's posi
 
 ## PR change visual
 
-The change visual is the one image at the top of a PR body that shows what the PR changes at a glance; the `pr` skill (`~/.agents/skills/pr/SKILL.md`, "Change visual") holds the requirement and how it is posted. Whatever the kind of change, code hygiene, behaviour, or performance, it draws two states of the same real input side by side, `AS-IS · main` and `TO-BE · 이 PR`, and it shows the PR's observable result: what a reader could see or measure differ between the two states. The user's words (2026-11-18), shown a performance PR's change visual that was only a `ztd-charts` bar of the speedup per path ("main ÷ 이 PR" over 16 paths), the form this section then prescribed for performance changes: "그림이 저게 최선인가. 뭘 바꾼건지 안드러나고 숫자만 드러나잖아.", and, as a general instruction for this skill: "스킬도 개선해.as-is, to-be가 반드시 드러나야 하고, 코드 위생 / 기능 변화 / 성능 변화 등 PR의 관찰 가능한 결과를 보여줘야돼". These words replace the split by kind that the user's words of 2026-11-17 had set, after approving three as-is/to-be examples: "기능 변경의 경우 이런 시각화가 유용하고, 성능 개선의 경우는 chart 시각화를 넣어라." A performance change still shows its numbers, as the result part of the as-is/to-be drawing; a chart of numbers alone is not a change visual, because it does not show what changed.
-
-The kind of change decides what the two states draw and which result they show:
-
-| Kind of change | As-is and to-be draw | Observable result |
-| --- | --- | --- |
-| Code hygiene, such as duplication, dead code, or a misplaced responsibility | The code's shape: each definition as a shape joined to the callers that use it, for example 33 copies of one SQL projection, each tied to its own query, against one definition every query points to | Counts the reader can check in the tree: definitions, call sites, files, lines |
-| Behaviour or output | What the code produces from the input, drawn by the table below | The outputs that differ and their count, such as extracted items or returned rows |
-| Performance | The work the code does on the input: the path it takes, the calls it makes, the rows or items it touches, for example a function called once per document row against one join with a group index | The measured or proved numbers of each state, such as time, calls, or rows read |
-
-So every change visual is a hand-positioned SVG drawing of both states. **The change visual is a drawing, not text in boxes.** The user's words (2026-11-17), shown PR change visuals that listed each state's items as text rows in boxes: "야. PR에 그림 넣는거, (…) 그냥 글자만 대충 상자 안에 넣고 올리잖아. 장난하냐? 그림을 그리라고 그림을", then "SVG 몰라?" and "강조해". So the body is an SVG whose shapes, positions, connectors, and arrows carry the change, with text only as short labels on them, as the "Charts and diagrams" and "Structural visualization" sections describe; two columns of text rows, with or without colored tags, are not a change visual however the rows are styled.
-
-Choose the drawing by what the change acts on, and draw that thing; a performance or hygiene change acts on calls, resources, or relations between definitions as much as a behaviour change acts on data:
-
-| The change acts on | Draw |
-| --- | --- |
-| Flow of data, such as which input becomes which output | The input pieces and the outputs as shapes joined by arrows; a dropped path ends in a cut mark where it stops |
-| Relations, such as a reference, a merge, or a split | Nodes and the edges between them, with the new or removed edge in the accent color |
-| Time, such as a lifetime, an order, a timeout, or a retry | One shared time axis with a lane per state and bars for what lives when, the event that ends each bar drawn as an arrow from its cause |
-| An amount of a resource, such as CPU cores, memory, or calls | The amount as a grid of unit cells or a bar to scale per state, filled to what each state uses |
-| Text, such as a document, a rule, or a prompt | The real passage before and after, with the changed spans marked on the text and joined to what they cause |
-
-Each state comes from the same real input, read from an actual run of the base commit and of the PR head, or the actual text of the file before and after. What the change touches is in the accent color, what the change removes stays in place in gray with its path cut, so the two states line up, and unchanged parts stay neutral gray. Each state ends with one line of its observable result, the numbers from the table above, such as the count of extracted items, the definitions left, or the time of one run. Pick the input that shows the difference most plainly and cut it to the part where the difference lies.
-
-When the result spans many cases, such as the time of each search path, the drawing shows one representative case and the per-case numbers go under it in the same card as a `ztd-charts` chart of main against this PR per case, such as a grouped bar of the two values per case or a bar of the speedup per path. Write the spec and render it as the "Charts and diagrams" section says, and place the PNG as an `<img>` below the drawing, so the PR still carries one image.
-
-The visual uses one card style, the `ztd-charts` light theme card: a title, a one-line subtitle naming what is compared, the body, a bold one-line takeaway at the bottom, one accent color for what changed and neutral gray for the rest, and a small source line naming the input or the measurement. The user's words (2026-11-17), asking for this while the examples were made: "디자인 스타일을 좀 통일해주면 좋겠어", and, told that the card puts a title inside the figure against the rule above: "좋아. 일단 이렇게 하자". So the rule against titles and explanatory sentences inside a figure does not apply to the change visual. Write the card as HTML on `examples/card.css`, which holds the theme tokens, the card frame, and the SVG classes, with the drawing as an inline `<svg class="fig">` between the subtitle and the takeaway, and with no margin outside the card's border, so the card's border is the edge of the PNG, and with no background outside the border, so the page is transparent and the PNG's only fill is the card (the user's words, 2026-11-19: "pr 이미지 만들때 여백 없게 해라", "테두리 여백", then "테두리 바깥 배경색 없애"), with a `fonts/` directory beside it holding the Pretendard files copied from `~/.local/share/ztd-charts-runtime/node_modules/ztd-charts-cli/fonts`, and render it to PNG with `~/.agents/skills/browser-render/SKILL.md` using `--viewport 900x100 --fullpage --transparent`, where `--transparent` drops the browser's default white page background, which keeps the page 900px wide, about the width GitHub shows a body at, and grows its height to the content. Inspect the PNG before posting: Korean text renders in Pretendard, nothing overlaps or is clipped, the difference is visible without zooming, and a reader who skips every label still sees what changed from the shapes and arrows.
-
-The examples in `examples/` show the shape; a real PR draws its own real data. `pr1415` (flow: lines without facts cut before they become nodes) and `pr1437` (relation: a `refers_to` edge merges two nodes) are as-is/to-be drawings on placeholder data, each as its HTML source and PNG. `container-cleanup` (time and amount: on one time axis from the SIGKILL, each state's container lifetime bar with the 10-second observations as filled and hollow dots, the Ryuk arrow that ends the container, and a 64-cell core grid filled per state) is an SVG and PNG drawn on the real numbers of its PR; shown it beside the same PR's text-row card, the user said "이게 더 낫다" (2026-11-17). `pr1460-chart` (keyword search: p50 speedup per path) and `pr1423-chart` (thread count, main against this PR per case) are per-case result charts, each as its `ztd-charts` spec and PNG; each is the part that goes under a drawing, and neither is a change visual alone.
+The image at the top of a PR body is drawn with `~/.agents/skills/pr-visual/SKILL.md`, not with this skill.
 
 ## Render verification
 
