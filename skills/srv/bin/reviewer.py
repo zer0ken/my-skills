@@ -39,6 +39,7 @@ The file also runs inside the jail as the inner end of the relay: `reviewer.py r
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
 import resource
@@ -90,65 +91,90 @@ SANDBOX_GUIDANCE = (
 )
 
 
-def pump(source: socket.socket, target: socket.socket) -> None:
+async def relay_connection(client: tuple[asyncio.StreamReader, asyncio.StreamWriter], open_upstream,
+                           errors: list[str]) -> None:
+    """One connection: open its upstream, copy both ways, and close both ends when either side ends."""
+    reader, writer = client
     try:
-        while data := source.recv(65536):
-            target.sendall(data)
-    except OSError:
-        pass
-    finally:
-        for end in (source, target):
-            try:
-                end.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-        # Each socket is the source of exactly one of the connection's two threads, which closes it.
-        source.close()
-
-
-def relay(client: socket.socket, connect, errors: list[str]) -> None:
-    """One connection: open its upstream here, not in the accept loop, so a slow connect delays only this one."""
-    try:
-        upstream = connect()
+        up_reader, up_writer = await open_upstream()
     except OSError as error:
         errors.append(f"relay: upstream connect failed: {error}")
-        client.close()
+        writer.close()
         return
-    threading.Thread(target=pump, args=(upstream, client), daemon=True).start()
-    pump(client, upstream)
+
+    async def copy(source: asyncio.StreamReader, target: asyncio.StreamWriter) -> None:
+        while data := await source.read(65536):
+            target.write(data)
+            await target.drain()
+
+    copies = [asyncio.ensure_future(copy(reader, up_writer)), asyncio.ensure_future(copy(up_reader, writer))]
+    try:
+        await asyncio.wait(copies, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for task in copies:
+            task.cancel()
+        for end in (writer, up_writer):
+            end.close()
+        await asyncio.gather(*copies, return_exceptions=True)
 
 
-def serve(listener: socket.socket, connect, errors: list[str] | None = None) -> None:
-    """Relay every accepted connection to a new upstream connection until the listener is closed.
+async def start_relay(listener: socket.socket, open_upstream, errors: list[str]) -> asyncio.Server:
+    """A server on the listening socket that relays every connection it accepts to a new upstream connection."""
+    async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        await relay_connection((reader, writer), open_upstream, errors)
 
-    One failed accept or connect must not end the loop: in the first full run the loop ended while 29 sessions
-    waited, and every later connection stayed in the accept queue until the sessions timed out.
-    """
-    errors = [] if errors is None else errors
-    while listener.fileno() != -1:
-        try:
-            client, _ = listener.accept()
-        except OSError as error:
-            if listener.fileno() == -1:
-                return
-            errors.append(f"relay: accept failed: {error}")
-            time.sleep(0.1)
-            continue
-        threading.Thread(target=relay, args=(client, connect, errors), daemon=True).start()
+    if listener.family == socket.AF_UNIX:
+        return await asyncio.start_unix_server(handle, sock=listener)
+    return await asyncio.start_server(handle, sock=listener)
+
+
+class Relay:
+    """The relay outside the jail: every connection on one event-loop thread, so the threads it uses stay one however
+    many connections the sessions open. Run 14i (PR #1726) made two threads per connection, reached the user's thread
+    limit while other processes held 7,402 of its 8,192 threads, and its accept loop ended with `can't start new
+    thread`, after which 34 sessions waited out their time limit without reaching the model."""
+
+    def __init__(self, listener: socket.socket, open_upstream, errors: list[str]) -> None:
+        self.loop = asyncio.new_event_loop()
+        self.server = self.loop.run_until_complete(start_relay(listener, open_upstream, errors))
+        self.thread = threading.Thread(target=self.loop.run_forever, daemon=True)
+
+    def start(self) -> Self:
+        self.thread.start()
+        return self
+
+    def close(self) -> None:
+        """Stop accepting, cancel the open connections, let them close their ends, and close the loop."""
+        def stop() -> None:
+            self.server.close()
+            for task in asyncio.all_tasks(self.loop):
+                task.cancel()
+            self.loop.stop()
+
+        self.loop.call_soon_threadsafe(stop)
+        self.thread.join()
+        cancelled = asyncio.all_tasks(self.loop)
+
+        async def finish() -> None:
+            await asyncio.gather(*cancelled, return_exceptions=True)
+
+        self.loop.run_until_complete(finish())
+        self.loop.close()
 
 
 def relay_inner(path: str, port: int) -> None:
-    listener = socket.socket(socket.AF_INET)
-    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener.bind(("127.0.0.1", port))
-    listener.listen(256)
+    """The relay inside the jail, from omp's TCP port to the unix socket mounted from outside, on the process's own
+    thread."""
+    async def main() -> None:
+        listener = socket.socket(socket.AF_INET)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", port))
+        listener.listen(256)
+        server = await start_relay(listener, lambda: asyncio.open_unix_connection(path), [])
+        async with server:
+            await server.serve_forever()
 
-    def connect() -> socket.socket:
-        upstream = socket.socket(socket.AF_UNIX)
-        upstream.connect(path)
-        return upstream
-
-    serve(listener, connect)
+    asyncio.run(main())
 
 
 def model_config(model: str, key: str, max_tokens: int, reasoning: bool) -> dict:
@@ -236,14 +262,18 @@ def omp_arguments(options: argparse.Namespace, system: str, tools: tuple[str, ..
     return args
 
 
-def read_events(stdout: str) -> tuple[str, dict, str, list[dict]]:
-    """The last assistant text, summed usage, its stop reason, and the tool calls of one `--mode json` run."""
+def session_trace(stdout: str) -> tuple[dict, list[dict], dict | None]:
+    """The summed usage, the tool calls, and the last assistant message of one `--mode json` run, from the events it
+    wrote; a line cut off when the session was killed is skipped, so a failed session is still recorded."""
     usage = {"prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0}
     last, tools = None, []
     for line in stdout.splitlines():
         if not line.strip():
             continue
-        event = json.loads(line)
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
         if event.get("type") == "tool_execution_start":
             usage["tool_calls"] += 1
             tools.append({"tool": event.get("toolName"), "args": event.get("args")})
@@ -253,6 +283,12 @@ def read_events(stdout: str) -> tuple[str, dict, str, list[dict]]:
         used = last.get("usage") or {}
         usage["prompt_tokens"] += sum(int(used.get(k) or 0) for k in ("input", "cacheRead", "cacheWrite"))
         usage["completion_tokens"] += int(used.get("output") or 0)
+    return usage, tools, last
+
+
+def read_events(stdout: str) -> tuple[str, dict, str, list[dict]]:
+    """The last assistant text, summed usage, its stop reason, and the tool calls of one `--mode json` run."""
+    usage, tools, last = session_trace(stdout)
     if last is None or last.get("stopReason") not in {"stop", "length"}:
         reason = (last or {}).get("errorMessage") or (last or {}).get("stopReason") or "no final assistant message"
         raise ValueError(f"the omp session did not finish its answer: {reason}")
@@ -310,18 +346,19 @@ class Jail:
         self.slots = session_slots()
         self.admission = threading.BoundedSemaphore(self.slots)
         self.record({"event": "start", "slots": self.slots})
-        threading.Thread(target=serve, args=(self.listener, self.connect_upstream, self.relay_errors), daemon=True).start()
+        self.relay = Relay(self.listener, self.open_upstream, self.relay_errors).start()
         tracked = subprocess.run(["git", "-C", str(self.head), "ls-files", "-z"], capture_output=True, check=True).stdout
         self.sandbox_files = self.temp / "tracked.txt"
         self.sandbox_files.write_bytes(tracked)
         return self
 
-    def connect_upstream(self) -> socket.socket:
+    async def open_upstream(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """A connection to the model server; the timeout bounds the connect only, because a model may stay silent
-        for minutes while it reasons, and a read timeout would cut the answer off."""
-        upstream = socket.create_connection(self.upstream, timeout=30)
-        upstream.settimeout(None)
-        return upstream
+        for minutes while it reasons, and a read timeout would cut the answer off (stream reads have none)."""
+        try:
+            return await asyncio.wait_for(asyncio.open_connection(*self.upstream), 30)
+        except TimeoutError as error:
+            raise OSError(f"no connection to {self.upstream[0]}:{self.upstream[1]} within 30 s") from error
 
     def next_cpus(self) -> list[int]:
         """The next SESSION_CPUS of the CPUs this process may use, in turn, so concurrent sessions spread over them."""
@@ -341,6 +378,7 @@ class Jail:
     def __exit__(self, *_exc) -> None:
         for error in self.relay_errors:
             self.record({"event": "relay_error", "error": error})
+        self.relay.close()
         self.listener.close()
         shutil.rmtree(self.temp, ignore_errors=True)
 
@@ -366,13 +404,15 @@ class Jail:
                 raise TimeoutError(f"the omp session ran past {options.timeout + 60:.0f} s") from error
         row = {"event": "session", "label": label, "schema": schema_name, "toolset": list(tools),
                "seconds": round(time.monotonic() - started, 1), "exit": result.returncode}
+        usage, tool_calls, last = session_trace(result.stdout)
+        trace = {"usage": usage, "tools": tool_calls, "stop": (last or {}).get("stopReason")}
         if result.returncode:
-            self.record({**row, "error": result.stderr.strip()[-800:]})
+            self.record({**row, **trace, "error": result.stderr.strip()[-800:]})
             raise ValueError(f"omp exited {result.returncode}: {result.stderr.strip()[-800:]}")
         try:
             content, usage, finish, tool_calls = read_events(result.stdout)
         except ValueError as error:
-            self.record({**row, "error": str(error)})
+            self.record({**row, **trace, "error": str(error)})
             raise
         self.record({**row, "usage": usage, "tools": tool_calls, "answer_tail": content[-300:]})
         return content, usage, finish

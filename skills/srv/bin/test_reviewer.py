@@ -4,6 +4,7 @@ The jail tests run a stand-in for omp, a shell script that probes the jail from 
 the final assistant message, so they need bwrap but neither omp nor a model.
 """
 import argparse
+import asyncio
 import http.server
 import importlib.util
 import json
@@ -51,6 +52,15 @@ class EventsTest(unittest.TestCase):
                          '{"findings": [], "checked": [{"x": "}"}]}')
         self.assertEqual(reviewer.answer_object('```json\n{"a": 1}\n```'), '{"a": 1}')
         self.assertEqual(reviewer.answer_object("no json here"), "no json here", "the caller reports what is not JSON")
+
+    def test_a_cut_stream_still_counts_its_tool_calls_and_tokens(self) -> None:
+        # Run 14i: 34 sessions were killed at the time limit and their records held no tool call or token, so what they
+        # did could not be read. A killed session's stream ends in a cut line; what it wrote before is still counted.
+        stream = "\n".join([assistant("", "toolUse", input=100, output=5),
+                            event("tool_execution_start", toolName="grep", args={"pattern": "x"}), '{"type": "mess'])
+        usage, tools, last = reviewer.session_trace(stream)
+        self.assertEqual(usage, {"prompt_tokens": 100, "completion_tokens": 5, "tool_calls": 1})
+        self.assertEqual((tools, last["stopReason"]), ([{"tool": "grep", "args": {"pattern": "x"}}], "toolUse"))
 
     def test_a_session_that_ends_on_an_error_has_no_answer(self) -> None:
         stream = event("message_end", message={"role": "assistant", "stopReason": "error", "errorMessage": "HTTP 500",
@@ -148,45 +158,76 @@ class AdmissionTest(unittest.TestCase):
 
 
 class RelayTest(unittest.TestCase):
+    def relay(self, open_upstream, errors: list[str]):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        listener = socket.socket(socket.AF_UNIX)
+        listener.bind(f"{tmp.name}/s")
+        listener.listen(8)
+        relay = reviewer.Relay(listener, open_upstream, errors).start()
+        self.addCleanup(listener.close)
+        self.addCleanup(relay.close)
+        return f"{tmp.name}/s"
+
+    def echo_upstream(self):
+        """An upstream that echoes what one connection sends and closes, served on the relay's own loop."""
+        async def open_upstream():
+            server, peer = socket.socketpair()
+            reader, writer = await asyncio.open_connection(sock=server)
+
+            async def echo() -> None:
+                writer.write(await reader.read(5))
+                await writer.drain()
+                writer.close()
+
+            asyncio.ensure_future(echo())
+            return await asyncio.open_connection(sock=peer)
+        return open_upstream
+
+    def exchange(self, path: str, payload: bytes) -> bytes:
+        client = socket.socket(socket.AF_UNIX)
+        client.settimeout(5)
+        client.connect(path)
+        if payload:
+            client.sendall(payload)
+        try:
+            return client.recv(5)
+        finally:
+            client.close()
+
     def test_a_failed_connect_does_not_stop_the_relay(self) -> None:
         # In the first full run the accept loop ended while 29 sessions waited; every later connection then stayed
         # in the accept queue. One failed upstream connect must cost only its own connection.
-        with tempfile.TemporaryDirectory() as tmp:
-            listener = socket.socket(socket.AF_UNIX)
-            listener.bind(f"{tmp}/s")
-            listener.listen(8)
-            attempts = []
+        echo, attempts = self.echo_upstream(), []
 
-            def connect():
-                attempts.append(1)
-                if len(attempts) == 1:
-                    raise ConnectionRefusedError("first upstream refused")
-                server, peer = socket.socketpair()
-                threading.Thread(target=lambda: (server.sendall(server.recv(5)), server.close()), daemon=True).start()
-                return peer
+        async def open_upstream():
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise ConnectionRefusedError("first upstream refused")
+            return await echo()
 
-            errors: list[str] = []
-            threading.Thread(target=reviewer.serve, args=(listener, connect, errors), daemon=True).start()
-            for expected in (b"", b"hello"):
-                client = socket.socket(socket.AF_UNIX)
-                client.settimeout(5)
-                client.connect(f"{tmp}/s")
-                if expected:
-                    client.sendall(expected)
-                self.assertEqual(client.recv(5), expected)
-                client.close()
-            listener.close()
+        errors: list[str] = []
+        path = self.relay(open_upstream, errors)
+        self.assertEqual(self.exchange(path, b""), b"", "the refused connection is closed")
+        self.assertEqual(self.exchange(path, b"hello"), b"hello")
         self.assertEqual(errors, ["relay: upstream connect failed: first upstream refused"])
 
-    def test_the_upstream_connection_has_no_read_timeout(self) -> None:
-        # A model may stay silent for minutes while it reasons; a read timeout would cut the answer off.
-        server = socket.create_server(("127.0.0.1", 0))
-        jail = reviewer.Jail.__new__(reviewer.Jail)
-        jail.upstream = server.getsockname()
-        upstream = jail.connect_upstream()
-        self.assertIsNone(upstream.gettimeout())
-        upstream.close()
-        server.close()
+    def test_the_relay_uses_one_thread_for_any_number_of_connections(self) -> None:
+        # Run 14i: two threads per connection reached the user's thread limit and ended the accept loop.
+        real, made = reviewer.threading.Thread, []
+
+        def counting(*args, **kwargs):
+            made.append(kwargs.get("target"))
+            return real(*args, **kwargs)
+
+        reviewer.threading.Thread = counting
+        try:
+            path = self.relay(self.echo_upstream(), [])
+            replies = [self.exchange(path, f"m{n:04d}".encode()) for n in range(8)]
+        finally:
+            reviewer.threading.Thread = real
+        self.assertEqual(replies, [f"m{n:04d}".encode() for n in range(8)])
+        self.assertEqual(len(made), 1, "the relay runs every connection on its one event-loop thread")
 
 
 @unittest.skipUnless(shutil.which("bwrap"), "the jail needs bubblewrap")
