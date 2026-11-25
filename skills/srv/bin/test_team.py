@@ -149,5 +149,40 @@ class ModelTest(unittest.TestCase):
         self.assertNotIn("finding", clusters[0], "the raw finding is not written into clusters.json twice")
 
 
+    def test_stage_calls_go_through_the_one_bounded_pool(self) -> None:
+        # Run 14f sent every merge and verify call at once and 90 clusters got no answer; the bound holds only when every
+        # model call of judge, merge, and verify is sent by `send_calls`, whose pool has CALLS_IN_FLIGHT workers.
+        sent = []
+        real = team.send_calls
+
+        def recording(requests, options):
+            sent.extend(requests)
+            return real(requests, options)
+
+        team.send_calls = recording
+        try:
+            FakeEndpoint.respond = staticmethod(lambda body: json.dumps(
+                {"verdict": "CONFIRMED", "severity": "MAJOR", "reason": "r", "same_as": "", "decisive": [1]}))
+            team.judge_perspectives([perspective("K-1", ["U-1/E-1"])],
+                                    {"K-1": [{"checked": [{"item": "1", "location": "q.py:1", "result": "x"}]}]}, self.options)
+            clusters = team.candidates([finding("a", "q.py", 1), finding("b", "q.py", 2)])
+            team.merge(clusters, {}, self.options)
+            team.verify(clusters, self.repo, "# pack", {}, self.options)
+        finally:
+            team.send_calls = real
+        self.assertEqual(len(FakeEndpoint.requests), len(sent),
+                         "a judge, merge, or verify call was sent outside send_calls, so CALLS_IN_FLIGHT does not bound it")
+        self.assertEqual(len(sent), team.JUDGE_SAMPLES + team.JUDGE_SAMPLES + 2 * team.VERIFY_SAMPLES)
+
+    def test_a_call_without_answer_leaves_its_errors_on_the_cluster(self) -> None:
+        FakeEndpoint.respond = staticmethod(lambda body: "not json")
+        clusters = team.candidates([finding("a", "q.py", 2)])
+        team.verify(clusters, self.repo, "# pack", {}, self.options)
+        self.assertEqual(clusters[0]["verdict"], "PLAUSIBLE")
+        self.assertEqual(len(clusters[0]["failures"]), team.VERIFY_SAMPLES,
+                         "each verify call that ended without an answer must leave its errors on the cluster, so a run "
+                         "can tell server load from a bad request (run 14f lost the cause of 90 such clusters)")
+        self.assertTrue(all(errors for errors in clusters[0]["failures"]))
+
 if __name__ == "__main__":
     unittest.main()

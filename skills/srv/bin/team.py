@@ -100,10 +100,28 @@ JUDGE_BRIEF = (
 )
 
 
-def parallel(call, times: int) -> list:
-    """`times` independent samples of one call, sent at once: the samples' wall time is one call's, not their sum."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=times) as pool:
-        return list(pool.map(lambda _: call(), range(times)))
+# Model calls the judge, merge, and verify stages keep in flight at once. Run 14f (PR #1726) sent its 789 merge and
+# about 636 verify calls at once and 90 kept clusters got no verify answer within the call timeout, while the same
+# requests sent one by one each answered in 1-2 s; replay 14g with this bound had no failed call, merge 189 s against
+# 935 s and verify 354 s against 1,050 s (~/agent-assets/rebot/srv-measure-14/replay-14g.py).
+CALLS_IN_FLIGHT = 64
+
+
+def send_calls(requests: list[tuple[list[dict], dict, str]], options) -> list:
+    """Send each (messages, schema, schema name) request once, at most `CALLS_IN_FLIGHT` at a time, and return the
+    replies in request order; every sample of every item of a stage goes through one pool, so the bound holds for the
+    stage as a whole."""
+    def one(request: tuple[list[dict], dict, str]):
+        messages, schema, name = request
+        return sweep.request_json(messages, options, lambda a: [], schema, name)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CALLS_IN_FLIGHT) as pool:
+        return list(pool.map(one, requests))
+
+
+def failures_of(replies: list) -> list[list[str]]:
+    """The errors of each reply that ended without an answer, kept beside the decision it would have made."""
+    return [r.errors for r in replies if r.answer is None]
 
 
 def strip(text: str) -> str:
@@ -186,20 +204,21 @@ def majority(verdicts: list[str]) -> str:
 
 def judge_perspectives(perspectives: list[dict], results: dict[str, list[dict]], options) -> dict[str, dict]:
     """One judgment per perspective from `JUDGE_SAMPLES` calls, run all at once."""
-    def one(perspective: dict) -> dict:
-        facts = facts_of(results.get(perspective["id"], []))
-        if not facts:
-            return {"verdict": "undecided", "facts": [], "decisive": [], "reasons": ["관찰이 보고되지 않았다"]}
-        messages = judge_messages(perspective, facts)
-        replies = parallel(lambda: sweep.request_json(messages, options, lambda a: [], JUDGE_SCHEMA, "srv-judge"), JUDGE_SAMPLES)
-        answers = [r.answer for r in replies if r.answer]
+    facts = {p["id"]: facts_of(results.get(p["id"], [])) for p in perspectives}
+    asked = [p for p in perspectives if facts[p["id"]]]
+    built = [judge_messages(p, facts[p["id"]]) for p in asked]
+    replies = send_calls([(m, JUDGE_SCHEMA, "srv-judge") for m in built for _ in range(JUDGE_SAMPLES)], options)
+    judgments = {p["id"]: {"verdict": "undecided", "facts": [], "decisive": [], "reasons": ["관찰이 보고되지 않았다"]}
+                 for p in perspectives if not facts[p["id"]]}
+    for n, p in enumerate(asked):
+        mine = replies[n * JUDGE_SAMPLES:(n + 1) * JUDGE_SAMPLES]
+        answers = [r.answer for r in mine if r.answer]
         decided = majority([a["verdict"] for a in answers])
-        decisive = sorted({n for a in answers if a["verdict"] == decided for n in a["decisive"] if 1 <= n <= len(facts)})
-        return {"verdict": decided, "facts": facts, "decisive": decisive,
-                "reasons": [a["reason"] for a in answers if a["verdict"] == decided]}
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(perspectives))) as pool:
-        return dict(zip((p["id"] for p in perspectives), pool.map(one, perspectives)))
+        decisive = sorted({k for a in answers if a["verdict"] == decided for k in a["decisive"] if 1 <= k <= len(facts[p["id"]])})
+        judgments[p["id"]] = {"verdict": decided, "facts": facts[p["id"]], "decisive": decisive,
+                              "reasons": [a["reason"] for a in answers if a["verdict"] == decided],
+                              "failures": failures_of(mine)}
+    return {p["id"]: judgments[p["id"]] for p in perspectives}
 
 
 def judged_findings(perspectives: dict[str, dict], judgments: dict[str, dict], repo: Path) -> list[dict]:
@@ -314,15 +333,15 @@ def verify(clusters: list[dict], repo: Path, pack: str, changes: dict, options) 
     """Set each given cluster's verdict and severity from `VERIFY_SAMPLES` calls on its finding, all at once."""
     brief = strip((REFERENCES / "verify.md").read_text(encoding="utf-8"))
 
-    def one(cluster: dict) -> list[dict]:
-        messages = verify_messages([cluster["finding"]], repo, pack, brief, changes)
-        return [r.answer for r in parallel(lambda: sweep.request_json(messages, options, lambda a: [], VERIFY_SCHEMA,
-                                                                      "srv-verify"), VERIFY_SAMPLES) if r.answer]
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(clusters))) as pool:
-        for cluster, answers in zip(clusters, pool.map(one, clusters)):
-            cluster["verdict"], cluster["severity"] = decide_cluster([cluster["finding"]], answers)
-            cluster["reasons"] = [a["reason"] for a in answers]
+    built = [verify_messages([c["finding"]], repo, pack, brief, changes) for c in clusters]
+    replies = send_calls([(m, VERIFY_SCHEMA, "srv-verify") for m in built for _ in range(VERIFY_SAMPLES)], options)
+    for n, cluster in enumerate(clusters):
+        mine = replies[n * VERIFY_SAMPLES:(n + 1) * VERIFY_SAMPLES]
+        answers = [r.answer for r in mine if r.answer]
+        cluster["verdict"], cluster["severity"] = decide_cluster([cluster["finding"]], answers)
+        cluster["reasons"] = [a["reason"] for a in answers]
+        if failures_of(mine):  # appended: merge may already have left its own failed calls on this cluster
+            cluster["failures"] = cluster.get("failures", []) + failures_of(mine)
 
 
 def settle(clusters: list[dict], repo: Path, pack: str, changes: dict, options) -> list[dict]:
@@ -382,19 +401,23 @@ def merge(clusters: list[dict], depth_of: dict[str, str], options) -> list[dict]
     (`merged_into`), so only clusters with their own cause remain."""
     ordered = merge_order(clusters, depth_of)
 
-    def compare(index: int) -> str:
+    def messages(index: int) -> list[dict]:
         cluster, earlier = ordered[index], ordered[:index]
         listed = "\n".join(f"- {k['id']} [{k['severity']}] {k['file']}:{k['line']}: {k['condition']}" for k in earlier)
         user = (f"Kept findings:\n{listed}\n\nFinding to decide:\n- {cluster['id']} [{cluster['severity']}] "
                 f"{cluster['file']}:{cluster['line']}: {cluster['condition']}")
-        messages = [{"role": "system", "content": MERGE_BRIEF}, {"role": "user", "content": user}]
-        replies = parallel(lambda: sweep.request_json(messages, options, lambda a: [], MERGE_SCHEMA, "srv-merge"), JUDGE_SAMPLES)
-        ids = {k["id"] for k in earlier}
-        target = majority([r.answer["same_as"] if r.answer and r.answer["same_as"] in ids else "" for r in replies])
-        return target if target in ids else ""
+        return [{"role": "system", "content": MERGE_BRIEF}, {"role": "user", "content": user}]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(ordered))) as pool:
-        targets = list(pool.map(compare, range(1, len(ordered))))
+    built = [messages(i) for i in range(1, len(ordered))]
+    replies = send_calls([(m, MERGE_SCHEMA, "srv-merge") for m in built for _ in range(JUDGE_SAMPLES)], options)
+    targets = []
+    for n, cluster in enumerate(ordered[1:]):
+        mine = replies[n * JUDGE_SAMPLES:(n + 1) * JUDGE_SAMPLES]
+        ids = {k["id"] for k in ordered[:n + 1]}
+        target = majority([r.answer["same_as"] if r.answer and r.answer["same_as"] in ids else "" for r in mine])
+        targets.append(target if target in ids else "")
+        if failures_of(mine):
+            cluster["failures"] = failures_of(mine)
     by_id = {c["id"]: c for c in ordered}
     for cluster, target in zip(ordered[1:], targets):
         while target and "merged_into" in by_id[target]:
@@ -574,6 +597,12 @@ def run_team(options: argparse.Namespace) -> int:
     merge_options = argparse.Namespace(**{**vars(judge_options), "reasoning_effort": options.merge_effort})
     clusters = stages.run("merge", lambda: merge(candidates(findings), depth_of, merge_options))
     clusters = stages.run("verify", lambda: settle(clusters, repo, pack, changes, verify_options))
+    failed = sum(len(c.get("failures", [])) for c in clusters) + sum(len(j.get("failures", [])) for j in judgments.values())
+    if failed:
+        print(f"team: {failed} model calls of the judge, merge, and verify stages ended without an answer; their errors are "
+              "under `failures` in judgments.json and clusters.json. A decision short of its samples is weaker, not "
+              "wrong: read the errors (timeout, refusal, length) and fix their cause, such as server load, before rerunning; "
+              "do not raise the call timeout to hide it.", file=sys.stderr)
     (out / "clusters.json").write_text(json.dumps(clusters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     ran = ran_counterexample(out, questions)
     record = {
