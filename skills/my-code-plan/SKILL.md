@@ -3,7 +3,7 @@ name: my-code-plan
 description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before the first code edit. Use once per task whose purpose is to modify code, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation. Not for writing documents, notes, plans, or rules, and not per file write. 코드 수정이 목적인 작업이면 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 그 작업을 시작할 때 한 번 사용한다."
 metadata:
   author: hrlee
-  version: "1.2.1"
+  version: "1.2.2"
   domain: planning
   triggers: 코드 계획, 알려진 해법, 웹 조사, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
 ---
@@ -56,7 +56,7 @@ A node is concrete enough to be a leaf when an implementer can make the edit wit
   3.1 Completeness: the siblings together make the parent hold. Name the observation that would show a gap.\
   3.2 Necessity: each node is needed by its parent. A node nothing depends on is removed, and so is what exists only to support it; prefer removal to addition.\
   3.3 One step: the node is exactly one step more concrete than its parent. A depth-1 condition that already names a function skipped a depth; split it.\
-  3.4 Grounds: the node rests on what the "Grounded in" column names and on the survey of step 2, checked at its source, and on existing practice for the same pattern in the codebase.\
+  3.4 Grounds: the node rests on what the "Grounded in" column names and on the survey of step 2, checked at its source. Existing practice for the same pattern in the codebase is checked against those grounds, not counted as one: the node follows it only where the check shows it correct for this case, and a practice the check finds wrong is named in the plan as a defect, with the issue that replaces it.\
   3.5 Algorithm: a node that specifies a computation, usually a contract at depth 3, has its row in the algorithm table before it is settled. Name the problem by its known type, list the formal definitions the requirement's words admit, and for each the known algorithms with their complexity in the input sizes, the platform's native features among them (a DB aggregate or index, a library routine); the one that first meets the definition is one candidate, not the answer. Choose the cheapest that meets the requirement and the user's decisions, and when candidate definitions give results that differ in a way the requirement cares about and its words do not decide, ask. A small current input does not keep a higher-complexity candidate. The case (2026-11-20): "embedding 기준으로, 묶인 정보 중 중앙에 있는 것을 대표로 삼자" was built as an all-pairs medoid, O(m²), where the member nearest the centroid takes O(m) and is the member with the least sum of squared distances; the user asked "Centroid 몰라?" and "왜 이런 알고리즘을 말 안하면 안쓰는거야?".\
   Then mark every node at depth d `settled`. Only then write depth d+1 as `draft`.
 4. Descend until every branch ends in a leaf. A leaf names one change; a rename across files is one leaf per file.
