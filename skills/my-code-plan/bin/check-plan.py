@@ -6,7 +6,10 @@ Usage: python3 -I check-plan.py <plan.md> --repo <repository or worktree root>
 The plan file holds one Markdown table under the heading `## Plan tree` with the
 columns id, depth, parents, node, check, code, status, and under `## Algorithms`
 either a table with the columns node, problem, candidates, chosen, grounds or the
-one line `none: <reason>` (see ../SKILL.md). The check enforces the structure of
+one line `none: <reason>`, and under `## Known solutions` the survey the plan rests on:
+a `문제 유형:` line and `S<n>: <solution> | <source read> | <support in the target>` lines
+with at least one web URL among the sources, or, inside a my-workflow run, the one line
+`run: <analyze record path>` (see ../SKILL.md). The check enforces the structure of
 top-down refinement: every node descends exactly one depth from its parents, a
 depth is settled before the next is written, every branch ends in a leaf that names
 a real code change, and every computation the plan records was chosen from at least
@@ -43,6 +46,19 @@ ALGORITHM_DONT = (
     " strawman, or copying the definition you already implemented into `chosen`; name the problem by its known"
     " type, look up its known algorithms and the platform's native features, and choose by complexity."
 )
+SURVEY_WHY = (
+    "The known-solutions survey exists because a plan built from the code in hand and memory repeats what the"
+    " field already solved better: the instructions' research order is the official documentation on the web,"
+    " then a web search, then the repository's own records, and it ends before the plan (user, 2026-11-25:"
+    " \"계획을 세울 때 웹 조사를 안한다. 개선해라.\")."
+)
+SURVEY_DONT = (
+    "Do not satisfy it by writing a URL from memory, a documentation front page you did not read, or a single"
+    " solution line with no search behind it; search now, read the pages, and write what they say. Inside a"
+    " my-workflow run, point `run:` at the analyze record instead of surveying twice."
+)
+WEB_URL = re.compile(r"https?://(?!localhost|127\.|0\.0\.0\.0)[^\s|`)>]+")
+SOLUTION = re.compile(r"S\d+:\s*(.*)")
 
 
 def read_rows(text, heading="Plan tree", columns=COLUMNS):
@@ -127,11 +143,55 @@ def check_algorithms(text, node_ids):
     return errors
 
 
+def check_survey(text):
+    """Errors of the `## Known solutions` section: a `run: <analyze record>` line naming a file with a
+    `## 알려진 해법` section, or a `문제 유형:` line and `S<n>:` lines of three `|` fields, one source a web URL."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if re.fullmatch(r"##\s+Known solutions\s*", line)), None)
+    if start is None:
+        return ["the file has no `## Known solutions` heading; survey the problem's known solutions on the web"
+                " first and write them there as SKILL.md shows"]
+    body = []
+    for line in lines[start + 1:]:
+        if line.startswith("#"):
+            break
+        if line.strip():
+            body.append(line.strip())
+    if body and body[0].startswith("run:"):
+        record = os.path.expanduser(body[0][len("run:"):].strip().strip("`"))
+        if len(body) > 1:
+            return ["`## Known solutions` with `run:` holds that one line only"]
+        if not os.path.isfile(record):
+            return [f"`run:` names {record}, which is not a file; give the path of the run's analyze record"]
+        with open(record, encoding="utf-8") as handle:
+            if not re.search(r"^##\s+알려진 해법\s*$", handle.read(), re.M):
+                return [f"{record} has no `## 알려진 해법` section; finish the analyze survey first"]
+        return []
+    errors = []
+    if not any(re.match(r"문제 유형:\s*\S", line) for line in body):
+        errors.append("no `문제 유형: <known problem>` line; name the known problem this change is an instance of")
+    solutions = [m.group(1) for m in map(SOLUTION.match, body) if m]
+    if not solutions:
+        errors.append("no `S<n>: <solution> | <source read> | <support in the target>` line")
+    sources = []
+    for solution in solutions:
+        fields = [field.strip() for field in solution.split("|")]
+        if len(fields) != 3 or not all(fields):
+            errors.append(f"`S: {solution}` does not have the three fields solution | source read | support")
+        else:
+            sources.append(fields[1])
+    if solutions and not any(WEB_URL.search(source) for source in sources):
+        errors.append("every source is local; at least one must be a web URL you read in this task (official"
+                      " documentation first, then a web search)")
+    return errors
+
+
 def leaf_path(code, repo):
     """(absolute path, is new) of a leaf's code cell `path`, `path::symbol`, or `new:path`."""
+    code = code.strip("`")
     new = code.startswith("new:")
     path = code[4:] if new else code
-    path = path.split("::", 1)[0].strip().strip("`")
+    path = path.split("::", 1)[0].strip()
     return os.path.normpath(os.path.join(repo, path)), new
 
 
@@ -201,7 +261,7 @@ def check(rows, repo):
             errors.append(f"{where}: a leaf at depth {row['depth']}; a code change sits at depth {MIN_LEAF_DEPTH} or"
                           " deeper, under a completion condition at depth 1")
         path, new = leaf_path(row["code"], repo)
-        if not os.path.isabs(row["code"].removeprefix("new:")) and not path.startswith(repo + os.sep):
+        if not os.path.isabs(row["code"].strip("`").removeprefix("new:")) and not path.startswith(repo + os.sep):
             errors.append(f"{where}: `{row['code']}` resolves outside --repo {repo}")
         elif new and os.path.exists(path):
             errors.append(f"{where}: `{row['code']}` is marked new: but {path} exists")
@@ -228,7 +288,8 @@ def main():
         else:
             errors, approved = check(rows, repo)
     algorithm_errors = check_algorithms(text, {row["id"] for row in rows or []})
-    if errors or algorithm_errors:
+    survey_errors = check_survey(text)
+    if errors or algorithm_errors or survey_errors:
         print(f"my-code-plan: plan {args.plan} is not ready for editing.", file=sys.stderr)
         if errors:
             print(WHY, file=sys.stderr)
@@ -240,6 +301,11 @@ def main():
             for error in algorithm_errors:
                 print(f"  - {error}", file=sys.stderr)
             print(ALGORITHM_DONT, file=sys.stderr)
+        if survey_errors:
+            print(SURVEY_WHY, file=sys.stderr)
+            for error in survey_errors:
+                print(f"  - {error}", file=sys.stderr)
+            print(SURVEY_DONT, file=sys.stderr)
         return 1
     for path in sorted(set(approved)):
         print(f"approved: {path}")

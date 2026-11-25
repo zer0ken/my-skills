@@ -3,9 +3,9 @@ name: my-code-plan
 description: "Plan every code change top-down as a tree of context depths, from depth 0 (the user story or requirement in the user's wording) down to depth N (the actual code changes), refining exactly one depth at a time, and pass the tree through the bundled checker before the first code edit. Use once per task whose purpose is to modify code, whatever its size or source: a one-line fix, a review finding, an issue, a script written during an investigation. Not for writing documents, notes, plans, or rules, and not per file write. 코드 수정이 목적인 작업이면 단위가 크든 작든, 리뷰 지적 수정이든 이슈 해결이든 조사든 그 작업을 시작할 때 한 번 사용한다."
 metadata:
   author: hrlee
-  version: "1.1.0"
+  version: "1.2.0"
   domain: planning
-  triggers: 코드 계획, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
+  triggers: 코드 계획, 알려진 해법, 웹 조사, 코드 수정, 맥락 깊이, 탑다운 계획, 계획 트리, 리뷰 지적 수정, 이슈 해결, code plan, context depth, top-down plan, stepwise refinement
 ---
 
 # my-code-plan
@@ -42,7 +42,7 @@ The number of depths is not fixed; descend until every branch reaches a leaf. A 
 | --- | --- | --- |
 | 0 | The user story or requirement, quoted in the original wording (user, issue, reviewer). | The original message, issue, or review comment. |
 | 1 | A completion condition: an observable state that must hold for the requirement to be met. | The requirement and the user's decisions; not the code in hand. |
-| 2 | The behavior or component that produces the condition, placed in the architecture's known pattern, with its current state. | The code as it is, read with LSP or Serena, and the records that introduced it. |
+| 2 | The behavior or component that produces the condition, placed in the architecture's known pattern, with its current state. | The known solutions surveyed in `## Known solutions`, the code as it is, read with LSP or Serena, and the records that introduced it. |
 | 3 | The contract the component needs: interface, data model, query, prompt, or schema, with the callers it touches. | The callers and write paths, listed by search. |
 | N | The leaf: `path::symbol`, the edit, and the test or observation that pins it. | The contract above it. |
 
@@ -51,23 +51,34 @@ A node is concrete enough to be a leaf when an implementer can make the edit wit
 ## Procedure
 
 1. Write depth 0. Quote the requirement in its original wording, with its situation. Do not paraphrase it into a solution. When the plan sets a target level for something measurable (time, accuracy, cost), set it at an absurdly high level, write it as achievable, and write next to it "나는 할 수 있다, 그것은 이론상 가능한 수치이다.", as the user's Philosophy requires.
-2. Settle depth d before writing depth d+1. For each node at depth d, check its refinement from depth d-1:\
-  2.1 Completeness: the siblings together make the parent hold. Name the observation that would show a gap.\
-  2.2 Necessity: each node is needed by its parent. A node nothing depends on is removed, and so is what exists only to support it; prefer removal to addition.\
-  2.3 One step: the node is exactly one step more concrete than its parent. A depth-1 condition that already names a function skipped a depth; split it.\
-  2.4 Grounds: the node rests on what the "Grounded in" column names, checked at its source, and on existing practice for the same pattern in the codebase.\
-  2.5 Algorithm: a node that specifies a computation, usually a contract at depth 3, has its row in the algorithm table before it is settled. Name the problem by its known type, list the formal definitions the requirement's words admit, and for each the known algorithms with their complexity in the input sizes, the platform's native features among them (a DB aggregate or index, a library routine); the one that first meets the definition is one candidate, not the answer. Choose the cheapest that meets the requirement and the user's decisions, and when candidate definitions give results that differ in a way the requirement cares about and its words do not decide, ask. A small current input does not keep a higher-complexity candidate. The case (2026-11-20): "embedding 기준으로, 묶인 정보 중 중앙에 있는 것을 대표로 삼자" was built as an all-pairs medoid, O(m²), where the member nearest the centroid takes O(m) and is the member with the least sum of squared distances; the user asked "Centroid 몰라?" and "왜 이런 알고리즘을 말 안하면 안쓰는거야?".\
+2. Survey the known solutions before writing depth 1, because a tree grounded only in the code in hand and memory repeats what the field already solved better. Name the problem this change is an instance of the way the field names it, and search in the instructions' investigation order: the official documentation on the web of the product, library, or API the change touches, then a web search for the known solutions to that problem, then the repository's and organization's own records. Read each page you cite; a URL recalled from memory or a front page you did not read is not a source. Write the result in `## Known solutions` as the plan file section shows, with at least one web source, also for a one-line fix, where the source is the documentation of what the line calls. Inside a my-workflow run, the analyze step already surveyed: write only `run: <path of the analyze record>`. The user's words (2026-11-25), given as a general instruction with no particular plan named, after sessions planned from local code: "계획을 세울 때 웹 조사를 안한다. 개선해라."; of 73 Claude sessions of the week before that ran this checker or wrote a `PLAN-*.md`, 52 had made no web search or fetch before it.
+3. Settle depth d before writing depth d+1. For each node at depth d, check its refinement from depth d-1:\
+  3.1 Completeness: the siblings together make the parent hold. Name the observation that would show a gap.\
+  3.2 Necessity: each node is needed by its parent. A node nothing depends on is removed, and so is what exists only to support it; prefer removal to addition.\
+  3.3 One step: the node is exactly one step more concrete than its parent. A depth-1 condition that already names a function skipped a depth; split it.\
+  3.4 Grounds: the node rests on what the "Grounded in" column names and on the survey of step 2, checked at its source, and on existing practice for the same pattern in the codebase.\
+  3.5 Algorithm: a node that specifies a computation, usually a contract at depth 3, has its row in the algorithm table before it is settled. Name the problem by its known type, list the formal definitions the requirement's words admit, and for each the known algorithms with their complexity in the input sizes, the platform's native features among them (a DB aggregate or index, a library routine); the one that first meets the definition is one candidate, not the answer. Choose the cheapest that meets the requirement and the user's decisions, and when candidate definitions give results that differ in a way the requirement cares about and its words do not decide, ask. A small current input does not keep a higher-complexity candidate. The case (2026-11-20): "embedding 기준으로, 묶인 정보 중 중앙에 있는 것을 대표로 삼자" was built as an all-pairs medoid, O(m²), where the member nearest the centroid takes O(m) and is the member with the least sum of squared distances; the user asked "Centroid 몰라?" and "왜 이런 알고리즘을 말 안하면 안쓰는거야?".\
   Then mark every node at depth d `settled`. Only then write depth d+1 as `draft`.
-3. Descend until every branch ends in a leaf. A leaf names one change; a rename across files is one leaf per file.
-4. Run the checker and fix what it reports until it prints the approval line:\
+4. Descend until every branch ends in a leaf. A leaf names one change; a rename across files is one leaf per file.
+5. Run the checker and fix what it reports until it prints the approval line:\
   `python3 -I ~/.agents/skills/my-code-plan/bin/check-plan.py <plan file> --repo <repository or worktree root>`\
   Keep the plan file outside the repository, in the work artifact directory, so it is not committed by accident.
-5. Edit only what the leaves name. A needed edit that no leaf names means the tree has a gap: add it under the node it serves, from the highest depth that changes, and run the checker again.
-6. When a problem appears during or after the edit (a failing test, a review finding, a wrong result), trace it up to the highest node whose content caused it, fix that node, and rewrite every node under it. A fix at the leaf where the problem surfaced is not a fix.
+6. Edit only what the leaves name. A needed edit that no leaf names means the tree has a gap: add it under the node it serves, from the highest depth that changes, and run the checker again.
+7. When a problem appears during or after the edit (a failing test, a review finding, a wrong result), trace it up to the highest node whose content caused it, fix that node, and rewrite every node under it. A fix at the leaf where the problem surfaced is not a fix.
 
 ## Plan file
 
-The plan is a Markdown file with one table under the heading `## Plan tree`. Above the table, write the goal in the user's wording and the user's decisions, each with the situation it answered.
+The plan is a Markdown file with one table under the heading `## Plan tree`. Above the table, write the goal in the user's wording and the user's decisions, each with the situation it answered, and then the survey under the heading `## Known solutions`:
+
+```
+## Known solutions
+
+문제 유형: account lockout after repeated failed authentication
+S1: lock after a failure threshold within a window | https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html | `src/auth/service.py::AuthService.login` has no counter yet
+S2: <solution> | <source you read: URL or path:line> | <whether the target offers it and where you checked, or 미확인>
+```
+
+One `문제 유형:` line and one `S<n>:` line per solution, each with the three `|` fields; at least one source is a web URL, not `localhost`. Inside a my-workflow run the section is the one line `run: <path of the analyze record>`, whose `## 알려진 해법` section holds the survey.
 
 | id | depth | parents | node | check | code | status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -89,8 +100,8 @@ The columns of the plan tree are fixed: `id` is unique, `depth` an integer, `par
 
 ## Checker
 
-`bin/check-plan.py` enforces the structure: unique ids, a depth-0 root, parents exactly one depth up, no draft depth above a deeper one, a check on every node, children for every inner node, no children under a leaf, leaves at depth 2 or deeper, leaf paths that exist (or, with `new:`, do not yet exist) under `--repo`, and an `## Algorithms` section that is either `none: <reason>` or rows naming a tree node, a problem, at least two candidates each with a big-O bound, a chosen candidate, and grounds. On success it prints `approved: <absolute path>` per leaf and the line `my-code-plan: plan OK`. The checker cannot judge completeness, necessity, grounds, or whether every computation has its row and the candidates are the known ones; step 2 does. `bin/test_check_plan.py` pins the algorithm-table check; run it after changing the checker.
+`bin/check-plan.py` enforces the structure: unique ids, a depth-0 root, parents exactly one depth up, no draft depth above a deeper one, a check on every node, children for every inner node, no children under a leaf, leaves at depth 2 or deeper, leaf paths that exist (or, with `new:`, do not yet exist) under `--repo`, a `## Known solutions` section that is either `run:` naming a record with a `## 알려진 해법` section or a `문제 유형:` line and `S<n>:` lines of three fields with at least one web URL, and an `## Algorithms` section that is either `none: <reason>` or rows naming a tree node, a problem, at least two candidates each with a big-O bound, a chosen candidate, and grounds. On success it prints `approved: <absolute path>` per leaf and the line `my-code-plan: plan OK`. The checker cannot judge completeness, necessity, grounds, or whether every computation has its row and the candidates are the known ones; step 2 does. In Claude Code the hook `~/.claude/hooks/plan-source-gate.py` also blocks running the checker while a web URL the survey cites appears in no tool result or user message of the session, since a URL written from memory passes the text check. `bin/test_check_plan.py` pins the algorithm-table and survey checks; run it after changing the checker.
 
 ## Report
 
-When reporting a plan, show the tree from depth 0 down with the algorithm table, mark which depths are settled, and name the leaves still unedited. When a node changed after a problem, say which node it was, why it was the highest cause, and which nodes under it were rewritten.
+When reporting a plan, show the survey and the tree from depth 0 down with the algorithm table, mark which depths are settled, and name the leaves still unedited. When a node changed after a problem, say which node it was, why it was the highest cause, and which nodes under it were rewritten.
