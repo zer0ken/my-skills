@@ -417,5 +417,35 @@ class CheckReviewTest(unittest.TestCase):
         self.assertTrue(any("`## 개념과 정의`" in v for v in violations))
 
 
+class RoundReviewTest(unittest.TestCase):
+    def review(self, findings):
+        fields = "ID 심각도 신뢰도 근거 분류 이름 요약 권고".split()
+        header = "".join(f"<th>{field}</th>" for field in fields)
+        rows, folds = [], []
+        for rid, severity, confidence in findings:
+            cells = (rid, severity, confidence, "관찰", "문서", "이름", "요약", "권고")
+            rows.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+            folds.append(f"<details><summary><h3>{rid} {severity}: 이름</h3></summary><p>내용</p></details>")
+        judgments = "".join(f"<h3>{h}</h3><p>해당 없음: 문서 예시</p>" for h in check_review.REQUIRED_SECTIONS)
+        count = len(findings)
+        breakdown = f"<ul><li>MINOR {count}건</li></ul>" if count else ""
+        return (f"# 1차 리뷰\n<p>판정: COMMENT</p><ul><li>지적 사항 총계: {count}건{breakdown}</li></ul>"
+                f"<h3>지적 사항 요약</h3><table><tr>{header}</tr>{''.join(rows)}</table>"
+                f"<details><summary><h2>지적 사항 상세</h2></summary>{''.join(folds)}</details>"
+                f"<details><summary><h2>기타 정보</h2></summary>{judgments}</details>")
+
+    def test_summary_and_folds(self):
+        good = self.review([("R-002", "MINOR", "높음"), ("R-001", "MINOR", "조건부")])
+        self.assertEqual(check_review.check_document(good), [])
+        for old, new in [("총계: 2건", "총계: 1건"), ("MINOR 2건", "MINOR 0건"),
+                         ("R-002 MINOR: 이름", "R-001 MINOR: 이름"), ("<td>높음", "<td>낮음"),
+                         ("<h3>시험</h3>", "<h3>다른 절</h3>"), ("<th>근거", "<th>방법")]:
+            with self.subTest(old=old):
+                self.assertTrue(check_review.check_document(good.replace(old, new)))
+
+    def test_no_findings(self):
+        self.assertEqual(check_review.check_document(self.review([])), [])
+
+
 if __name__ == "__main__":
     unittest.main()

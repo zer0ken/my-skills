@@ -3,7 +3,7 @@ name: response-rv
 description: "Respond to findings on your work in five ordered stages (understand, root cause, decide, act, reply), leaving a completion record per stage so the work survives compaction and can be shown at once when asked whether it was done properly. Use when a review (a person's, or an rv, srv, or prv result), a review comment, a gate verdict, or a user's criticism of a delivered artifact points out something wrong in your work and asks for a change (리뷰·코멘트·게이트·사용자 지적에 대응할 때), and when asked whether a response round was done properly (지적 대응을 똑바로 했냐고 물을 때)."
 metadata:
   author: hrlee
-  version: "0.5.2"
+  version: "0.6.0"
   domain: workflow
   triggers: 리뷰 대응, 지적 대응, 리뷰 회신, review response, 근본 원인, 스펙 수정
   dependencies:
@@ -73,6 +73,9 @@ Completion check: every accepted decision maps to a change that exists and was v
 ### 5. Reply (답변 작성)
 
 Write the reply only from the records of stages 1 to 4, in the form and place the `pr` skill's review-response section sets: a formal review answered in the repository's response form, a colleague's prose answered in prose, the whole round delivered as one review. Per finding, say what was accepted and changed with its commit, the layer the cause sat in, and when it was the specification, the specification change and the implementation and test that followed it, the root cause when it changed more than the line pointed to, including the same-cause places fixed, the grounds of a rejection, the open issue or base evidence that places a 범위 밖 claim outside the scope, and the question of a 불명 finding. Apply `sucks` to Korean prose. Do not link or name the stage records in the reply; they are local working files, and the reply carries their content in plain words. After posting, write the review link in the round index.
+
+For a formal round, start with `# N차 리뷰 대응` using the target review's N. Name the reviewed and response heads, list nonzero acceptance counts (수용 / 축소 / 거부) and the response total with one nested bullet per nonzero status. Use one visible 응답 요약 table: ID / 대상 지적 / 판정 / 상태 / 분류 / 이름 / 조치, in the target review's finding order. Fold 응답 상세 and each `A-ID: 이름` under it. Cite the R-ID, disposition, status, evidence, action or rejection reason, response head and file:line, and verification. Fold 기타 정보 and end with 검증 범위. Use summary with h2 for main folds and h3 for individual responses, and HTML throughout the folds. Omit next actor. The author marks a response ANSWERED; only a reviewer who checks the change and evidence marks it RESOLVED. Keep ordinary discussion replies in prose.
+
 
 Completion check: every finding is answered, every statement in the reply traces to a stage record, and the posted review link is recorded.
 

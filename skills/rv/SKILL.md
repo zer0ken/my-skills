@@ -3,7 +3,7 @@ name: rv
 description: "Apply when the user asks for a review or calls /rv or $rv. Read all project rules and review procedures first and consult osiri and refactor together. The project decides the result's form, while this skill's mandatory judgment sections, including size and growth, and its blocking criteria always apply."
 metadata:
   author: hrlee
-  version: "2.34.0"
+  version: "2.35.0"
   domain: workflow
   triggers: 리뷰, review, rv, 코드 리뷰
   dependencies:
@@ -277,7 +277,6 @@ Before posting or handing the document over, run `uv run --no-project python ~/.
 
 The markdown document is the primary output. In Claude Code, if the ReportFindings tool exists, report the findings separately from the markdown document. Map to ReportFindings: file (the file path, with the line number split into the line field as an integer), summary (condition), failure_scenario (condition), and verdict. The judgment sections have no fields in the ReportFindings schema, so include them only in the markdown.
 
-A review body over 50 lines folds every heading into `<details>` blocks holding `<summary><h3>제목</h3></summary>`, with consecutive blocks separated by one blank line and no `---` line; `~/.agents/skills/issue/SKILL.md` holds the rule with its grounds.
 
 ## Termination condition
 
@@ -287,33 +286,12 @@ When the round cap is reached, mark unverified propagated findings as PLAUSIBLE 
 
 ## Result format
 
-Identifiers (commits, issues, PRs, files) are written for a person to read easily and reach, as the global instructions on replies and reports say, and this is not settled by the stricter-rule comparison below. The project decides the form: finding IDs, statuses, severity labels, sentence style, and sections added to the ones below. The review criteria are the union of the project's and rv's, and where both judge the same thing the stricter wins. A project severity scale does not lower an rv blocking class: map each rv BLOCKER and MAJOR onto a level the project treats as blocking. The mandatory sections below stay in every format, under these exact `##` headings and in this order; a body over 50 lines folded for posting writes each heading line as `<summary><h3>제목</h3></summary>` with the same title (`references/posting.md`), and the format check reads that line as the same section. Write one judgment per line, and put the reproduction steps, scripts, execution output, and aggregate lists that support a judgment not in the body but in separate material. Attach separate material to a scratchpad directory or a PR comment thread.
+Start a formal review with `# N차 리뷰` (N is its round number). Use the same round for its response. The opening names the head and merge-base as linked seven-character SHAs. List 판정 (APPROVE / REQUEST_CHANGE / COMMENT) and 지적 사항 총계 (unresolved findings); under the total, use a separate nested bullet per nonzero severity. OPEN, ANSWERED and RECHECK are unresolved. Report RESOLVED and SKIP only under 기타 정보. Do not add a next-actor column or an area index. Use keyboard punctuation, commas for enumeration in sentences and slashes for standalone labels.
 
-1. Verdict: in two or three sentences of the first paragraph, write the verdict, the target head and merge-base each as a commit link whose text is the 7-character short SHA (the 40-character SHA does not appear in the prose), the number of findings and the count per severity, and the meaning of statuses and evidence kinds.
-
-2. Index: if findings span two or more areas or it is a follow-up review, include a table of section, scope, severity, status, and latest comment / next actor.
-
-3. Judgment sections: one `##` section per judgment, in the order below. Each holds short sentences or tables, one judgment per line, and a judgment that does not apply is written as `해당 없음: <이유>`. Record defects in the finding list and point to them by R-ID. A follow-up review keeps every section for the current head; a section whose judgment did not change says so in one line with the earlier review link, but `크기와 증가` is always remeasured.
-  3.0 `## 개념과 정의`: U2 question 0. A table of every unit with columns 단위, 정의, 정의한 곳, 판정; an undefined unit's row points to its R-ID.
-  3.1 `## 설계와 원인`: U2 question 1. Whether the change removes the cause or bypasses the symptom, the alternative structure compared in one sentence, and which is better.
-  3.2 `## 기능과 완료 기준`: whether the change does what the issue's completion criteria and the PR's claims say for the code's users, whether it adds functionality nobody asked for, and the failure path and security judgments of U3.
-  3.3 `## 크기와 증가`: U1 item 4. The dimension table, the new unit table, deletion candidates, and the split judgment.
-  3.4 `## 품질`: U2 question 2. Where the implementation, prompts, queries, and documents fall short of the ceiling the structure allows, including complexity a simpler implementation would remove and the implementation cost judged in U3, and every metric against the baseline or the measurement gap. Size and reuse belong to `크기와 증가`, tests to `시험`, and failure paths and security to `기능과 완료 기준`.
-  3.5 `## 시험`: the test judgment of U3.
-  3.6 `## 이름과 문서`: U1 items 3 and 4.6 and the document review of U3.
-
-4. Findings: under a `##` section per review area, write one finding as one `-` item.
-  4.1 The format is `R-001 심각도, 근거 구분: 문제. 위치. 조치.`, where 근거 구분 is the project classification or 재현, 관찰, 추론.
-  4.2 The problem states the occurrence condition and result in one sentence, with numbers short in parentheses.
-  4.3 The location is only the target head's `file:line`, and the action is one sentence that also names the problem it solves, so the author can weigh it and the same mistake does not recur.
-  4.4 If an item exceeds three sentences, split the finding or trim the evidence.
-  4.5 Mark the verdict on BLOCKER and MAJOR findings.
-
-5. Human review recommendation: if there is a DB schema change, write the change target and the risks a person should check in a `## 사람 리뷰 권고` section after the findings. It is not counted among defects, and do not presume whether the reviewer approves.
-
-6. `## 확인하고 배제한 항목`: the risks checked and cleared in U3 step 4, each with the reason it is fine and how far its safety fact was proven. An undefined unit from U2 question 0 cannot be cleared here.
-
-7. `## 검증 범위`: the last section. Write in one or two sentences the verification run with pass and fail counts, the verification not run, and the unconfirmed scope. Only HTML comment lines, such as a machine-read verdict marker, may follow it.
+1. Keep 지적 사항 요약 visible. Write one table with columns ID / 심각도 / 신뢰도 / 근거 / 분류 / 이름 / 요약 / 권고. Sort first by BLOCKER / MAJOR / MINOR / NIT, then by 높음 / 조건부 / 낮음. 신뢰도 describes confidence that the defect applies: 높음 when the condition and defect are established, 조건부 when applicability depends on an unconfirmed condition, 낮음 for a low-likelihood concern worth checking. 근거 describes the method: 재현 / 관찰 / 추론. Keep the two independent.
+2. Fold 지적 사항 상세 and nest one fold per finding in the same order, titled `R-ID 심각도: 이름`. Explain the condition, consequence, evidence, confidence, status, head-relative file:line, requested action and reason; retain the U4 verdict for serious findings. Put long logs in separate material.
+3. Fold 기타 정보. Preserve the judgments and their evidence in this order: 개념과 정의 (unit / definition / source / verdict table; undefined units cite their finding), 설계와 원인 (cause and feasible alternative), 기능과 완료 기준 (including failure paths and security), 크기와 증가 (U1 dimension and new unit tables, reuse, deletion and split judgment), 품질 (including baseline or measurement gap), 시험, 이름과 문서, 확인하고 배제한 항목. Include recommendations for human review of DB schema changes, reasons to keep a design, and resolved/excluded findings here where applicable. End with 검증 범위, giving the tested SHA, inputs, passes, failures, unrun paths and limits. Give a reason for each inapplicable judgment. A follow-up preserves IDs and prior opinions, links unchanged judgments and remeasures growth on the current head.
+4. Use HTML for the summary table and all material inside details. Make the first child of each details a summary containing h2 for the two main folds or h3 for individual findings; use h3 for judgments inside 기타 정보. Inside a fold write paragraphs, lists, tables, code and links as HTML. The review body may end with a machine-readable comment. A GitHub review event uses REQUEST_CHANGES for the visible REQUEST_CHANGE verdict.
 
 Request changes when an unresolved BLOCKER or MAJOR finding remains or the structure is worse than an alternative. Approve when no blocking finding remains, the change meets the issue's completion criteria, and it does not worsen the code health of the codebase it leaves behind; Google's standard is that reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health of the system being worked on, even if the CL isn't perfect." (https://google.github.io/eng-practices/review/reviewer/standard.html). MINOR and NIT findings do not block approval, and the review labels them as non-blocking. The review and CI are independent checks: the review exists to catch what CI cannot, so it starts and ends on the head without waiting for CI, and its verdict neither requires a CI pass nor rests on one. CI is the author's merge condition, judged in the merge check. The user's words (2026-11-25), given as a general instruction with no PR named: "리뷰할 때 CI를 기다리지 마라. 리뷰는 CI가 잡지 못하는 것을 잡기 위해 있는 것이다. 서로 독립이다."; and earlier, on the author's loop (2026-11-16): "리뷰 루프는 ci를 기다리지 않는다. Ci는 병합에서만 기다린다." A change that works or passes CI is not approved when it worsens code health. If a core verification gap prevents judgment, the verdict is withheld.
 

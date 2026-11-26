@@ -15,11 +15,8 @@ unverifiable, so this check fails it too. With `--units`, the
 areas of the per-area items must be the units of `bin/plan-units.py`, so a
 unit that no row reviewed fails as well.
 
-A review body over 50 lines is posted with each heading folded into
-`<details>` as `<summary><h3>제목</h3></summary>` (`references/posting.md`), so
-that line is read as the section `## 제목`, and the `<details>` and `<summary>`
-tag lines around it are not section content. A `|` inside a table cell is
-written `\\|`, as GFM tables require, and is not a cell separator.
+Round reviews use a visible summary table and folded HTML detail and judgment
+sections. Archived Markdown reviews and their item ledgers remain readable.
 
 Usage: check-review.py REVIEW.md --ledger LEDGER.md [--units units.json]
 Exit codes: 0 the review and ledger pass, 1 a format violation,
@@ -30,7 +27,9 @@ import argparse
 import json
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+from xml.etree.ElementTree import Element, TreeBuilder
 from typing import NamedTuple
 
 REQUIRED_SECTIONS = (
@@ -125,7 +124,133 @@ def check_concepts(lines: list[str]) -> list[str]:
     return violations
 
 
+class ReviewHTML(HTMLParser):
+    """Build a tree of the posted fragment, including inline text in table cells."""
+
+    def __init__(self):
+        super().__init__()
+        self.tree = TreeBuilder()
+        self.tree.start("review", {})
+        self.open_tags = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tree.start(tag, dict(attrs))
+        if tag in {"br", "hr", "img", "input", "wbr"}:
+            self.tree.end(tag)
+        else:
+            self.open_tags.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        self.tree.start(tag, dict(attrs))
+        self.tree.end(tag)
+
+    def handle_endtag(self, tag):
+        if not self.open_tags or self.open_tags.pop() != tag:
+            raise ValueError(f"닫는 HTML 태그를 확인한다: {tag}")
+        self.tree.end(tag)
+
+    def handle_data(self, data):
+        self.tree.data(data)
+
+    def parse(self, source):
+        self.feed(source)
+        self.close()
+        if self.open_tags:
+            raise ValueError(f"닫히지 않은 HTML 태그: {self.open_tags[-1]}")
+        self.tree.end("review")
+        return self.tree.close()
+
+
+def node_text(node: Element) -> str:
+    return "".join(node.itertext()).strip()
+
+
+def html_rows(table):
+    return [[node_text(cell) for cell in row if cell.tag in {"td", "th"}]
+            for row in table.iter("tr")]
+
+
+def fold_title(fold, level):
+    if len(fold) and fold[0].tag == "summary":
+        heading = fold[0].find(level)
+        if heading is not None:
+            return node_text(heading)
+    return ""
+
+
+def check_round(text):
+    try:
+        root = ReviewHTML().parse(text)
+    except ValueError as error:
+        return [str(error)]
+    folds = root.findall("details")
+    if [fold_title(fold, "h2") for fold in folds] != ["지적 사항 상세", "기타 정보"]:
+        return ["지적 사항 상세와 기타 정보를 이 순서로 접는다."]
+    detail, info = folds
+    opening = list(root)[:list(root).index(detail)]
+    tables = [table for element in opening for table in element.iter("table")]
+    if len(tables) != 1:
+        return ["지적 사항 요약 표가 하나여야 한다."]
+    rows = html_rows(tables[0])
+    columns = "ID 심각도 신뢰도 근거 분류 이름 요약 권고".split()
+    if not rows or rows[0] != columns:
+        return ["지적 사항 요약 표의 열을 확인한다."]
+    severities = ["BLOCKER", "MAJOR", "MINOR", "NIT"]
+    confidence = ["높음", "조건부", "낮음"]
+    titles, ranks, ids = [], [], set()
+    for row in rows[1:]:
+        if len(row) != len(columns) or not all(row):
+            return ["요약 행에 빈 값 또는 열 누락이 있다."]
+        rid, severity, trust, evidence, _, name, _, _ = row
+        if not re.fullmatch(r"R-\d+", rid) or rid in ids:
+            return ["지적 ID가 잘못되거나 중복되었다."]
+        ids.add(rid)
+        if severity not in severities or trust not in confidence or evidence not in {"재현", "관찰", "추론"}:
+            return ["심각도, 신뢰도 또는 근거 값을 확인한다."]
+        titles.append(f"{rid} {severity}: {name}")
+        ranks.append((severities.index(severity), confidence.index(trust)))
+    violations = []
+    preamble = text.split("<details", 1)[0].split("<table", 1)[0]
+    plain = re.sub(r"<[^>]+>", " ", preamble).replace("*", "")
+    if not re.search(r"판정\s*[:/]?\s*(APPROVE|REQUEST_CHANGE|COMMENT)\b", plain):
+        violations.append("여는말에 리뷰 판정을 적는다.")
+    total = re.search(r"지적 사항 총계\s*[:/]?\s*(?:미해결\s*)?(\d+)\s*건", plain)
+    if not total or int(total[1]) != len(rows) - 1:
+        violations.append("지적 사항 총계와 요약의 행 수가 다르다.")
+    counts = [(severity, str(sum(rank[0] == index for rank in ranks)))
+              for index, severity in enumerate(severities) if any(rank[0] == index for rank in ranks)]
+    if re.findall(r"\b(BLOCKER|MAJOR|MINOR|NIT)\s*[:/]?\s*(\d+)\s*건", plain) != counts:
+        violations.append("심각도별 건수와 요약을 대조한다.")
+    if ranks != sorted(ranks):
+        violations.append("지적을 심각도와 신뢰도 순으로 정렬한다.")
+    if titles != [fold_title(fold, "h3") for fold in detail.findall("details")]:
+        violations.append("요약과 상세의 지적 ID, 심각도, 이름, 순서가 다르다.")
+
+    # Reuse the judgment checks for both archived Markdown and the new HTML body.
+    judgment_lines = ["판정"]
+    for child in info:
+        if child.tag == "summary":
+            continue
+        if child.tag == "h3":
+            judgment_lines.append("## " + node_text(child))
+        elif child.tag == "table":
+            for index, row in enumerate(html_rows(child)):
+                judgment_lines.append("| " + " | ".join(v.replace("|", r"\|") for v in row) + " |")
+                if index == 0:
+                    judgment_lines.append("|" + "---|" * len(row))
+            judgment_lines.append("")
+        else:
+            judgment_lines.append(node_text(child))
+    return violations + check_judgments("\n".join(judgment_lines))
+
+
 def check_document(text: str) -> list[str]:
+    if re.match(r"^# [1-9]\d*차 리뷰[ \t]*$", text.lstrip().splitlines()[0] if text.strip() else ""):
+        return check_round(text)
+    return check_judgments(text)
+
+
+def check_judgments(text: str) -> list[str]:
     preamble, sections = split_sections(text)
     violations: list[str] = []
     if not [line for line in content_lines(preamble) if not line.startswith("# ")]:
