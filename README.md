@@ -16,6 +16,7 @@ Personal agent skills, one source copy per skill under [skills/](skills/). Each 
 - [claude-cookbook](skills/claude-cookbook/SKILL.md) · 주제에 맞는 Anthropic Cookbook 예제와 노트북을 찾는다.
 - [openai-cookbook](skills/openai-cookbook/SKILL.md) · 주제에 맞는 OpenAI Cookbook 예제와 노트북을 찾는다.
 - [tdd-is-dead](skills/tdd-is-dead/SKILL.md) · 의도와 호출 범위를 확인하고 동작을 검증할 테스트·구현 순서를 정한다.
+- [better-test](skills/better-test/SKILL.md) · 테스트를 설계하고 기존 검출력의 보존 여부를 검토하며 주제별 참고문서를 찾는다.
 - [refactor](skills/refactor/SKILL.md) · 기능과 성능을 유지하면서 코드 구조를 단순화한다.
 - [issue](skills/issue/SKILL.md) · 문제와 완료 조건을 정리하고 GitHub 이슈를 작성한다.
 - [pr](skills/pr/SKILL.md) · PR 작성부터 CI·리뷰·병합까지 진행한다.
